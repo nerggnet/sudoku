@@ -4,6 +4,7 @@ import gleam/dict
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/set
 import sudoku/board.{type Board}
 import sudoku/generator.{type Puzzle}
 import sudoku/key.{type Key}
@@ -20,6 +21,8 @@ pub type Game {
     message: String,
     /// Whether wrong digits are being called out.
     checking: Bool,
+    /// Whether the digit keys write pencil marks instead of answers.
+    marking: Bool,
     show_help: Bool,
     hints: Int,
     /// Set when the grid was revealed rather than solved by the player.
@@ -44,6 +47,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     history: [],
     message: "Press ? for help.",
     checking: False,
+    marking: False,
     show_help: False,
     hints: 0,
     revealed: False,
@@ -96,9 +100,13 @@ pub fn update(game: Game, pressed: Key) -> Step {
     key.Left | key.Char("h") | key.Char("a") -> Continue(move(game, 0, -1))
     key.Right | key.Char("l") | key.Char("d") -> Continue(move(game, 0, 1))
 
+    key.Digit(digit) if game.marking -> Continue(mark(game, digit))
     key.Digit(digit) -> Continue(place(game, digit))
+
+    key.Erase if game.marking -> Continue(unmark(game))
     key.Erase -> Continue(erase(game))
 
+    key.Char("m") -> Continue(toggle_marking(game))
     key.Char("u") -> Continue(undo(game))
     key.Char("c") -> Continue(toggle_check(game))
     key.Char("H") -> Continue(hint(game))
@@ -122,6 +130,47 @@ fn place(game: Game, digit: Int) -> Game {
       |> remember
       |> with_board(board.place(game.board, game.cursor, digit))
       |> settle
+  }
+}
+
+fn toggle_marking(game: Game) -> Game {
+  case game.marking {
+    True -> Game(..game, marking: False, message: "Back to writing digits.")
+    False ->
+      Game(
+        ..game,
+        marking: True,
+        message: "Marking: 1-9 pencils a digit in, 0 clears the cell.",
+      )
+  }
+}
+
+/// Pencil a digit into the cell, or rub it out if it is already there.
+fn mark(game: Game, digit: Int) -> Game {
+  case
+    board.is_given(game.board, game.cursor),
+    board.value(game.board, game.cursor)
+  {
+    True, _ -> Game(..game, message: "That cell is a clue and cannot change.")
+    _, 0 ->
+      game
+      |> remember
+      |> with_board(board.toggle_mark(game.board, game.cursor, digit))
+    _, _ ->
+      Game(
+        ..game,
+        message: "There is a digit here already. Press 0 to clear it first.",
+      )
+  }
+}
+
+fn unmark(game: Game) -> Game {
+  case set.is_empty(board.marks_at(game.board, game.cursor)) {
+    True -> Game(..game, message: "")
+    False ->
+      game
+      |> remember
+      |> with_board(board.clear_marks(game.board, game.cursor))
   }
 }
 

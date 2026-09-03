@@ -176,6 +176,99 @@ pub fn blank_cells_can_be_written_and_cleared_test() {
 }
 
 // ---------------------------------------------------------------------------
+// Pencil marks
+// ---------------------------------------------------------------------------
+
+pub fn cells_start_unmarked_test() {
+  let start = board.from_grid(grid(puzzle_text))
+  assert set.is_empty(board.marks_at(start, 2))
+  assert board.sorted_marks(start, 2) == []
+}
+
+pub fn marks_toggle_on_and_off_test() {
+  let start = board.from_grid(grid(puzzle_text))
+
+  let marked = board.toggle_mark(start, 2, 4)
+  assert board.sorted_marks(marked, 2) == [4]
+
+  let more = marked |> board.toggle_mark(2, 1) |> board.toggle_mark(2, 9)
+  assert board.sorted_marks(more, 2) == [1, 4, 9]
+
+  // Marking a digit that is already there rubs it out again.
+  assert board.sorted_marks(board.toggle_mark(more, 2, 4), 2) == [1, 9]
+}
+
+pub fn marks_do_not_count_as_digits_test() {
+  let start = board.from_grid(grid(puzzle_text))
+  let marked = board.toggle_mark(start, 2, 4)
+
+  assert board.value(marked, 2) == 0
+  assert board.empty_count(marked) == board.empty_count(start)
+  assert set.is_empty(board.conflicts(marked))
+}
+
+pub fn clues_cannot_be_marked_test() {
+  let start = board.from_grid(grid(puzzle_text))
+  assert board.sorted_marks(board.toggle_mark(start, 0, 4), 0) == []
+}
+
+pub fn marks_can_be_cleared_test() {
+  let marked =
+    board.from_grid(grid(puzzle_text))
+    |> board.toggle_mark(2, 1)
+    |> board.toggle_mark(2, 4)
+
+  assert board.sorted_marks(board.clear_marks(marked, 2), 2) == []
+}
+
+pub fn writing_a_digit_clears_that_cell_s_marks_test() {
+  let marked =
+    board.from_grid(grid(puzzle_text))
+    |> board.toggle_mark(2, 1)
+    |> board.toggle_mark(2, 4)
+
+  assert board.sorted_marks(board.place(marked, 2, 4), 2) == []
+}
+
+pub fn writing_a_digit_retracts_it_from_cells_that_see_it_test() {
+  // Empty cells that can all see A3: A9 shares its row, D3 its column and B2
+  // its box. E5 can see none of them. Mark a 4 and a 7 in each.
+  let seen = [board.at(0, 8), board.at(3, 2), board.at(1, 1)]
+  let unseen = board.at(4, 4)
+
+  let marked = {
+    use current, index <- list.fold(
+      [unseen, ..seen],
+      board.from_grid(grid(puzzle_text)),
+    )
+    current |> board.toggle_mark(index, 4) |> board.toggle_mark(index, 7)
+  }
+
+  // Every cell really did take both marks, or the test proves nothing.
+  use index <- list.each([unseen, ..seen])
+  assert board.sorted_marks(marked, index) == [4, 7]
+
+  let placed = board.place(marked, board.at(0, 2), 4)
+
+  // The 4s that the new digit rules out are gone, and only those.
+  use index <- list.each(seen)
+  assert board.sorted_marks(placed, index) == [7]
+  assert board.sorted_marks(placed, unseen) == [4, 7]
+  assert board.sorted_marks(placed, board.at(0, 2)) == []
+}
+
+pub fn peers_of_a_cell_are_its_twenty_neighbours_test() {
+  use index <- list.each(board.indices())
+  let peers = board.peers_of(index)
+
+  assert list.length(peers) == 20
+  assert !list.contains(peers, index)
+  // The arithmetic version agrees with the table the solver uses.
+  let assert Ok(tabled) = dict.get(board.peers_table(), index)
+  assert set.from_list(peers) == tabled
+}
+
+// ---------------------------------------------------------------------------
 // Solving
 // ---------------------------------------------------------------------------
 
@@ -528,10 +621,108 @@ pub fn the_clock_runs_from_the_start_test() {
 }
 
 // ---------------------------------------------------------------------------
+// Marking during play
+// ---------------------------------------------------------------------------
+
+pub fn m_switches_between_writing_and_marking_test() {
+  let start = fixture()
+  assert !start.marking
+
+  let marking = step(start, key.Char("m"))
+  assert marking.marking
+  assert !step(marking, key.Char("m")).marking
+}
+
+pub fn digits_pencil_marks_in_while_marking_test() {
+  let marked =
+    fixture() |> step(key.Char("m")) |> step(key.Digit(4)) |> step(key.Digit(1))
+
+  assert board.sorted_marks(marked.board, 2) == [1, 4]
+  // The cell is still empty as far as the puzzle is concerned.
+  assert board.value(marked.board, 2) == 0
+}
+
+pub fn marking_the_same_digit_twice_rubs_it_out_test() {
+  let marked =
+    fixture() |> step(key.Char("m")) |> step(key.Digit(4)) |> step(key.Digit(4))
+
+  assert board.sorted_marks(marked.board, 2) == []
+}
+
+pub fn erase_clears_every_mark_on_the_cell_test() {
+  let cleared =
+    fixture()
+    |> step(key.Char("m"))
+    |> step(key.Digit(4))
+    |> step(key.Digit(1))
+    |> step(key.Erase)
+
+  assert board.sorted_marks(cleared.board, 2) == []
+}
+
+pub fn marking_a_filled_cell_is_refused_test() {
+  let played =
+    fixture()
+    |> step(key.Digit(4))
+    |> step(key.Char("m"))
+    |> step(key.Digit(1))
+
+  assert board.sorted_marks(played.board, 2) == []
+  assert board.value(played.board, 2) == 4
+  assert string.contains(played.message, "already")
+}
+
+pub fn marking_a_clue_is_refused_test() {
+  let played =
+    game.Game(..fixture(), cursor: 0)
+    |> step(key.Char("m"))
+    |> step(key.Digit(1))
+
+  assert board.sorted_marks(played.board, 0) == []
+  assert string.contains(played.message, "clue")
+}
+
+pub fn undo_walks_back_through_marks_test() {
+  let marked =
+    fixture() |> step(key.Char("m")) |> step(key.Digit(4)) |> step(key.Digit(1))
+
+  let once = step(marked, key.Char("u"))
+  assert board.sorted_marks(once.board, 2) == [4]
+
+  let twice = step(once, key.Char("u"))
+  assert board.sorted_marks(twice.board, 2) == []
+}
+
+pub fn writing_a_digit_during_play_tidies_up_marks_test() {
+  // Mark a 4 two cells along the top row, then write a 4 in the first.
+  let marked =
+    game.Game(..fixture(), cursor: board.at(0, 8))
+    |> step(key.Char("m"))
+    |> step(key.Digit(4))
+    |> step(key.Char("m"))
+
+  let placed = game.Game(..marked, cursor: board.at(0, 2)) |> step(key.Digit(4))
+
+  assert board.sorted_marks(placed.board, board.at(0, 8)) == []
+}
+
+pub fn hints_and_reveals_tidy_up_marks_too_test() {
+  let marked =
+    fixture()
+    |> step(key.Char("m"))
+    |> step(key.Digit(1))
+    |> step(key.Digit(4))
+    |> step(key.Char("m"))
+
+  assert board.sorted_marks(step(marked, key.Char("H")).board, 2) == []
+  assert board.sorted_marks(step(marked, key.Char("R")).board, 2) == []
+}
+
+// ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
 
-const grid_width = 28
+const grid_width = 55
 
 /// Drop ANSI escape sequences so that the layout underneath can be checked.
 fn plain(text: String) -> String {
@@ -581,18 +772,44 @@ pub fn escape_stripping_leaves_the_text_test() {
 
 pub fn the_frame_draws_a_grid_test() {
   let lines = visible_lines(fixture())
+  let dot = "\u{b7}"
+  let bar = "\u{2502}"
 
-  assert list.contains(lines, "     1 2 3   4 5 6   7 8 9")
-  assert list.contains(lines, "   \u{250c}───────┬───────┬───────\u{2510}")
   assert list.contains(
     lines,
-    " A \u{2502} 5 3 \u{b7} \u{2502} \u{b7} 7 \u{b7} \u{2502} \u{b7} \u{b7} \u{b7} \u{2502}",
+    "        1    2    3      4    5    6      7    8    9",
   )
   assert list.contains(
     lines,
-    " I \u{2502} \u{b7} \u{b7} \u{b7} \u{2502} \u{b7} 8 \u{b7} \u{2502} \u{b7} 7 9 \u{2502}",
+    "   \u{250c}────────────────┬────────────────┬────────────────\u{2510}",
   )
-  assert list.contains(lines, "   \u{2514}───────┴───────┴───────\u{2518}")
+  assert list.contains(
+    lines,
+    " A "
+      <> bar
+      <> "    5    3    "
+      <> dot
+      <> " "
+      <> bar
+      <> "    "
+      <> dot
+      <> "    7    "
+      <> dot
+      <> " "
+      <> bar
+      <> "    "
+      <> dot
+      <> "    "
+      <> dot
+      <> "    "
+      <> dot
+      <> " "
+      <> bar,
+  )
+  assert list.contains(
+    lines,
+    "   \u{2514}────────────────┴────────────────┴────────────────\u{2518}",
+  )
 }
 
 pub fn all_nine_rows_are_drawn_test() {
@@ -612,13 +829,84 @@ pub fn grid_lines_all_have_the_same_width_test() {
 
 pub fn the_column_ruler_lines_up_with_the_cells_test() {
   let lines = visible_lines(fixture())
+  // The ruler is the line just above the top of the box.
   let assert Ok(ruler) =
-    list.first(list.filter(lines, string.contains(_, "1 2 3")))
+    lines
+    |> list.take_while(fn(line) { !string.contains(line, "\u{250c}") })
+    |> list.last
   let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
 
   // The first column's heading sits directly above the first cell's digit.
-  assert string.slice(ruler, 5, 1) == "1"
-  assert string.slice(row, 5, 1) == "5"
+  assert string.slice(ruler, 8, 1) == "1"
+  assert string.slice(row, 8, 1) == "5"
+}
+
+/// Pencil `digits` into the cell under the cursor and return to writing.
+fn with_marks(current: game.Game, digits: List(Int)) -> game.Game {
+  digits
+  |> list.fold(step(current, key.Char("m")), fn(marking, digit) {
+    step(marking, key.Digit(digit))
+  })
+  |> step(key.Char("m"))
+}
+
+pub fn marks_sit_against_the_left_of_the_cell_test() {
+  // A3 is the cursor cell, and its neighbour A2 holds the answer 3.
+  let lines = visible_lines(with_marks(fixture(), [4]))
+  let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
+
+  // A single mark sits where no answer ever could, so the two cannot be
+  // confused even without colour: marks left, answers right.
+  assert string.slice(row, 8, 1) == "5"
+  assert string.slice(row, 13, 1) == "3"
+  assert string.slice(row, 15, 1) == "4"
+  assert string.slice(row, 18, 1) != "4"
+}
+
+pub fn a_full_house_of_marks_fits_a_cell_test() {
+  let lines = visible_lines(with_marks(fixture(), [3, 1, 4, 2]))
+  assert list.any(lines, string.contains(_, "1234"))
+}
+
+pub fn marks_that_overflow_are_flagged_test() {
+  let crowded = with_marks(fixture(), [1, 2, 3, 4, 5])
+  let lines = visible_lines(crowded)
+
+  assert list.any(lines, string.contains(_, "123+"))
+  // Nothing is lost: the status line spells the cursor cell's marks out.
+  assert list.any(lines, string.contains(_, "A3 marked 1 2 3 4 5"))
+}
+
+pub fn the_status_line_names_the_cursor_cell_test() {
+  let marked = game.Game(..fixture(), cursor: board.at(6, 3)) |> with_marks([7])
+  assert list.any(visible_lines(marked), string.contains(_, "G4 marked 7"))
+
+  // An unmarked cell says nothing at all.
+  assert !list.any(visible_lines(fixture()), string.contains(_, "marked"))
+}
+
+pub fn marking_mode_is_announced_test() {
+  let marking = step(fixture(), key.Char("m"))
+  let lines = visible_lines(marking)
+
+  assert list.any(lines, string.contains(_, "S U D O K U    Medium    marking"))
+  assert list.any(lines, string.contains(_, "1-9 mark"))
+  assert list.any(lines, string.contains(_, "m write"))
+
+  // Writing mode says the opposite, and never says "marking" in the header.
+  let writing = visible_lines(fixture())
+  assert list.any(writing, string.contains(_, "1-9 place"))
+  assert !list.any(writing, string.contains(_, "marking"))
+}
+
+pub fn marks_do_not_change_the_grid_width_test() {
+  let widths =
+    visible_lines(with_marks(fixture(), [1, 2, 3, 4]))
+    |> list.filter(fn(line) { is_grid_row(line) || string.contains(line, "─") })
+    |> list.map(string.length)
+    |> list.unique
+
+  assert widths == [grid_width]
 }
 
 pub fn the_status_line_reports_progress_test() {
@@ -648,7 +936,12 @@ pub fn the_help_screen_lists_the_keys_test() {
 
 pub fn every_frame_fits_a_short_terminal_test() {
   let start = fixture()
-  let frames = [start, step(start, key.Char("?")), step(start, key.Char("R"))]
+  let frames = [
+    start,
+    step(start, key.Char("?")),
+    step(start, key.Char("R")),
+    with_marks(start, [1, 2, 3, 4, 5]),
+  ]
 
   use current <- list.each(frames)
   assert list.length(visible_lines(current)) <= 24
@@ -662,7 +955,7 @@ pub fn finishing_shows_a_result_test() {
 
 pub fn the_cursor_is_highlighted_test() {
   // Reverse video, then the empty cell the cursor starts on.
-  assert string.contains(render.frame(fixture()), "7;90m \u{b7}")
+  assert string.contains(render.frame(fixture()), "7;90m    \u{b7}")
 }
 
 pub fn the_frame_starts_at_the_top_of_the_screen_test() {
