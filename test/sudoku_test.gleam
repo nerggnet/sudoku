@@ -1,0 +1,670 @@
+import gleam/dict
+import gleam/int
+import gleam/list
+import gleam/set
+import gleam/string
+import gleeunit
+import sudoku/board
+import sudoku/game
+import sudoku/generator
+import sudoku/key
+import sudoku/render
+import sudoku/solver
+
+pub fn main() -> Nil {
+  gleeunit.main()
+}
+
+// A puzzle with a single solution, and that solution.
+const puzzle_text = "
+  53. .7. ...
+  6.. 195 ...
+  .98 ... .6.
+  8.. .6. ..3
+  4.. 8.3 ..1
+  7.. .2. ..6
+  .6. ... 28.
+  ... 419 ..5
+  ... .8. .79
+"
+
+const solution_text = "
+  534 678 912
+  672 195 348
+  198 342 567
+  859 761 423
+  426 853 791
+  713 924 856
+  961 537 284
+  287 419 635
+  345 286 179
+"
+
+fn grid(text: String) -> board.Grid {
+  let assert Ok(parsed) = board.parse(text) as "test fixture should parse"
+  parsed
+}
+
+// ---------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------
+
+pub fn span_is_inclusive_test() {
+  assert board.span(0, 3) == [0, 1, 2, 3]
+  assert board.span(4, 4) == [4]
+}
+
+pub fn indices_cover_the_grid_test() {
+  assert list.length(board.indices()) == 81
+  assert list.first(board.indices()) == Ok(0)
+  assert list.last(board.indices()) == Ok(80)
+}
+
+pub fn cell_coordinates_round_trip_test() {
+  use index <- list.each(board.indices())
+  assert board.at(board.row_of(index), board.col_of(index)) == index
+}
+
+pub fn boxes_are_three_by_three_test() {
+  assert board.box_of(board.at(0, 0)) == 0
+  assert board.box_of(board.at(2, 2)) == 0
+  assert board.box_of(board.at(0, 3)) == 1
+  assert board.box_of(board.at(4, 4)) == 4
+  assert board.box_of(board.at(8, 8)) == 8
+}
+
+pub fn there_are_twenty_seven_units_of_nine_test() {
+  let units = board.units()
+  assert list.length(units) == 27
+
+  use unit <- list.each(units)
+  assert list.length(unit) == 9
+  // No cell appears twice within a unit.
+  assert set.size(set.from_list(unit)) == 9
+}
+
+pub fn every_cell_has_twenty_peers_test() {
+  let peers = board.peers_table()
+
+  use index <- list.each(board.indices())
+  let assert Ok(cells) = dict.get(peers, index)
+  assert set.size(cells) == 20
+  assert !set.contains(cells, index)
+}
+
+// ---------------------------------------------------------------------------
+// Parsing
+// ---------------------------------------------------------------------------
+
+pub fn parse_ignores_layout_test() {
+  let parsed = grid(puzzle_text)
+  assert dict.get(parsed, 0) == Ok(5)
+  assert dict.get(parsed, 2) == Ok(0)
+  assert dict.get(parsed, 75) == Ok(0)
+  assert dict.get(parsed, 80) == Ok(9)
+}
+
+pub fn parse_round_trips_test() {
+  let text = board.to_string(grid(solution_text))
+  assert string.length(text) == 81
+  assert board.to_string(grid(text)) == text
+}
+
+pub fn parse_rejects_the_wrong_number_of_cells_test() {
+  assert board.parse("123") == Error(Nil)
+  assert board.parse(solution_text <> "5") == Error(Nil)
+}
+
+// ---------------------------------------------------------------------------
+// Candidates and conflicts
+// ---------------------------------------------------------------------------
+
+pub fn candidates_exclude_peers_test() {
+  let peers = board.peers_table()
+  let start = grid(puzzle_text)
+
+  // A1 holds a 5, and the empty cell A3 sees it along with 3, 7, 6, 9 and 8.
+  assert board.candidates(start, peers, board.at(0, 2)) == [1, 2, 4]
+}
+
+pub fn a_solved_grid_has_no_conflicts_test() {
+  let solved = board.from_grid(grid(solution_text))
+  assert set.is_empty(board.conflicts(solved))
+  assert board.is_solved(solved)
+}
+
+pub fn duplicates_in_a_unit_are_conflicts_test() {
+  // Two 5s in the top row.
+  let clashing =
+    board.from_grid(grid(solution_text))
+    |> fn(solved) {
+      board.Board(..solved, values: dict.insert(solved.values, 1, 5))
+    }
+
+  let clashes = board.conflicts(clashing)
+  assert set.contains(clashes, 0)
+  assert set.contains(clashes, 1)
+  assert !board.is_solved(clashing)
+}
+
+pub fn an_incomplete_grid_is_not_solved_test() {
+  assert !board.is_solved(board.from_grid(grid(puzzle_text)))
+}
+
+// ---------------------------------------------------------------------------
+// Board editing
+// ---------------------------------------------------------------------------
+
+pub fn givens_cannot_be_edited_test() {
+  let start = board.from_grid(grid(puzzle_text))
+
+  assert board.is_given(start, 0)
+  assert board.value(board.place(start, 0, 9), 0) == 5
+  assert board.value(board.erase(start, 0), 0) == 5
+}
+
+pub fn blank_cells_can_be_written_and_cleared_test() {
+  let start = board.from_grid(grid(puzzle_text))
+  let empty_before = board.empty_count(start)
+
+  let filled = board.place(start, 2, 4)
+  assert board.value(filled, 2) == 4
+  assert board.empty_count(filled) == empty_before - 1
+
+  assert board.value(board.erase(filled, 2), 2) == 0
+  assert board.empty_count(board.erase(filled, 2)) == empty_before
+}
+
+// ---------------------------------------------------------------------------
+// Solving
+// ---------------------------------------------------------------------------
+
+pub fn solver_finds_the_solution_test() {
+  let assert Ok(solved) = solver.solve(grid(puzzle_text))
+  assert board.to_string(solved) == board.to_string(grid(solution_text))
+}
+
+pub fn solver_leaves_a_finished_grid_alone_test() {
+  let assert Ok(solved) = solver.solve(grid(solution_text))
+  assert board.to_string(solved) == board.to_string(grid(solution_text))
+}
+
+pub fn solver_rejects_a_contradictory_grid_test() {
+  // Two 1s in the top row. Rejected up front rather than searched for.
+  let clashing = dict.insert(dict.insert(board.empty_grid(), 0, 1), 1, 1)
+  assert solver.solve(clashing) == Error(Nil)
+  assert solver.solve_random(clashing) == Error(Nil)
+  assert solver.count_solutions(clashing, 5) == 0
+}
+
+pub fn solver_rejects_a_dead_end_test() {
+  // Consistent so far, but A1 is left with no legal digit: the rest of its
+  // row, column and box between them use up all nine.
+  let dead_end =
+    grid(
+      ".23 456 789
+       1.. ... ...
+       4.. ... ...
+       7.. ... ...
+       2.. ... ...
+       5.. ... ...
+       8.. ... ...
+       3.. ... ...
+       6.. ... ...",
+    )
+  assert solver.solve(dead_end) == Error(Nil)
+}
+
+pub fn solver_fills_the_empty_grid_test() {
+  let assert Ok(filled) = solver.solve_random(board.empty_grid())
+  assert board.is_solved(board.from_grid(filled))
+}
+
+pub fn a_proper_puzzle_has_exactly_one_solution_test() {
+  assert solver.count_solutions(grid(puzzle_text), 5) == 1
+}
+
+pub fn too_few_clues_allow_many_solutions_test() {
+  // Blanking every 1 and every 2 leaves a grid that can be finished two ways,
+  // since the two digits can be swapped throughout.
+  let loosened =
+    grid(solution_text)
+    |> dict.map_values(fn(_index, digit) {
+      case digit {
+        1 | 2 -> 0
+        _ -> digit
+      }
+    })
+
+  assert solver.count_solutions(loosened, 5) == 2
+}
+
+pub fn counting_stops_at_the_limit_test() {
+  assert solver.count_solutions(board.empty_grid(), 3) == 3
+}
+
+// ---------------------------------------------------------------------------
+// Generating
+// ---------------------------------------------------------------------------
+
+pub fn generated_puzzles_are_well_formed_test() {
+  use difficulty <- list.each([generator.Easy, generator.Hard])
+  let puzzle = generator.generate(difficulty)
+
+  assert puzzle.difficulty == difficulty
+  assert board.is_solved(board.from_grid(puzzle.solution))
+  assert set.is_empty(board.conflicts(puzzle.board))
+
+  // Every clue agrees with the solution it was carved from.
+  use index <- list.each(board.indices())
+  case board.value(puzzle.board, index) {
+    0 -> Nil
+    digit -> {
+      assert Ok(digit) == dict.get(puzzle.solution, index)
+    }
+  }
+}
+
+pub fn generated_puzzles_have_one_answer_test() {
+  let puzzle = generator.generate(generator.Medium)
+  assert solver.count_solutions(puzzle.board.values, 5) == 1
+}
+
+pub fn generated_puzzles_hit_their_clue_target_test() {
+  use difficulty <- list.each(generator.difficulties)
+  let puzzle = generator.generate(difficulty)
+  let clues = 81 - board.empty_count(puzzle.board)
+
+  assert clues <= generator.target_clues(difficulty)
+  // Carving never goes below the 17-clue floor for a unique Sudoku.
+  assert clues >= 17
+}
+
+pub fn difficulty_targets_descend_test() {
+  let targets = list.map(generator.difficulties, generator.target_clues)
+  assert targets == list.reverse(list.sort(targets, by: int.compare))
+}
+
+// ---------------------------------------------------------------------------
+// Decoding keystrokes
+// ---------------------------------------------------------------------------
+
+/// Decode a keystroke from a fixed run of bytes.
+fn press(bytes: List(Int)) -> key.Key {
+  let #(pressed, _) = {
+    use remaining <- key.decode(bytes)
+    case remaining {
+      [] -> #(-1, [])
+      [byte, ..rest] -> #(byte, rest)
+    }
+  }
+  pressed
+}
+
+pub fn digits_decode_test() {
+  assert press([0x31]) == key.Digit(1)
+  assert press([0x39]) == key.Digit(9)
+}
+
+pub fn erasing_keys_decode_test() {
+  // 0, space, backspace, delete.
+  assert press([0x30]) == key.Erase
+  assert press([0x20]) == key.Erase
+  assert press([0x08]) == key.Erase
+  assert press([0x7f]) == key.Erase
+}
+
+pub fn arrow_keys_decode_test() {
+  assert press([0x1b, 0x5b, 0x41]) == key.Up
+  assert press([0x1b, 0x5b, 0x42]) == key.Down
+  assert press([0x1b, 0x5b, 0x43]) == key.Right
+  assert press([0x1b, 0x5b, 0x44]) == key.Left
+  // Some terminals send the application-mode form, `ESC O A`.
+  assert press([0x1b, 0x4f, 0x41]) == key.Up
+}
+
+pub fn the_delete_key_decodes_test() {
+  assert press([0x1b, 0x5b, 0x33, 0x7e]) == key.Erase
+}
+
+pub fn letter_case_is_kept_test() {
+  // `h` moves the cursor and `H` asks for a hint, so they must stay distinct.
+  assert press([0x68]) == key.Char("h")
+  assert press([0x48]) == key.Char("H")
+  assert press([0x72]) == key.Char("r")
+  assert press([0x52]) == key.Char("R")
+  assert press([0x3f]) == key.Char("?")
+}
+
+pub fn a_lone_escape_does_not_eat_the_next_key_test() {
+  assert press([0x1b, 0x71]) == key.Char("q")
+}
+
+pub fn running_out_of_input_quits_test() {
+  assert press([]) == key.Quit
+  assert press([0x1b]) == key.Quit
+  assert press([0x1b, 0x5b]) == key.Quit
+  // Ctrl-C.
+  assert press([0x03]) == key.Quit
+}
+
+pub fn enter_does_nothing_test() {
+  // Line mode delivers a newline after every key; it must not be a command.
+  assert press([0x0d]) == key.Unknown
+  assert press([0x0a]) == key.Unknown
+}
+
+// ---------------------------------------------------------------------------
+// Game rules
+// ---------------------------------------------------------------------------
+
+fn fixture() -> game.Game {
+  game.new(generator.Puzzle(
+    board: board.from_grid(grid(puzzle_text)),
+    solution: grid(solution_text),
+    difficulty: generator.Medium,
+  ))
+}
+
+fn step(current: game.Game, pressed: key.Key) -> game.Game {
+  let assert game.Continue(next) = game.update(current, pressed)
+  next
+}
+
+pub fn a_new_game_starts_on_the_first_empty_cell_test() {
+  let started = fixture()
+  assert started.cursor == 2
+  assert !game.is_finished(started)
+}
+
+pub fn the_cursor_wraps_around_the_edges_test() {
+  let at_start = game.Game(..fixture(), cursor: board.at(0, 0))
+
+  assert step(at_start, key.Left).cursor == board.at(0, 8)
+  assert step(at_start, key.Up).cursor == board.at(8, 0)
+  assert step(at_start, key.Right).cursor == board.at(0, 1)
+  assert step(at_start, key.Down).cursor == board.at(1, 0)
+}
+
+pub fn vim_and_wasd_keys_move_too_test() {
+  let middle = game.Game(..fixture(), cursor: board.at(4, 4))
+
+  assert step(middle, key.Char("k")).cursor == board.at(3, 4)
+  assert step(middle, key.Char("j")).cursor == board.at(5, 4)
+  assert step(middle, key.Char("a")).cursor == board.at(4, 3)
+  assert step(middle, key.Char("d")).cursor == board.at(4, 5)
+}
+
+pub fn digits_land_in_the_cell_under_the_cursor_test() {
+  let played = step(fixture(), key.Digit(4))
+  assert board.value(played.board, 2) == 4
+}
+
+pub fn clues_refuse_to_change_test() {
+  let on_a_clue = game.Game(..fixture(), cursor: 0)
+  let played = step(on_a_clue, key.Digit(9))
+
+  assert board.value(played.board, 0) == 5
+  assert played.message != ""
+  // A refused move is not worth undoing.
+  assert played.history == []
+}
+
+pub fn undo_walks_back_through_edits_test() {
+  let played =
+    fixture()
+    |> step(key.Digit(4))
+    |> step(key.Right)
+    |> step(key.Digit(7))
+
+  let once = step(played, key.Char("u"))
+  assert board.value(once.board, 3) == 0
+  assert board.value(once.board, 2) == 4
+
+  let twice = step(once, key.Char("u"))
+  assert board.value(twice.board, 2) == 0
+  assert twice.history == []
+
+  // Undoing past the beginning is harmless.
+  assert step(twice, key.Char("u")).history == []
+}
+
+pub fn erasing_clears_a_filled_cell_test() {
+  let played = fixture() |> step(key.Digit(4)) |> step(key.Erase)
+  assert board.value(played.board, 2) == 0
+}
+
+pub fn checking_counts_wrong_digits_test() {
+  // A3 is a 4 in the solution, so a 1 there is wrong.
+  let played = step(fixture(), key.Digit(1))
+  assert game.is_wrong(played, 2)
+
+  let checked = step(played, key.Char("c"))
+  assert checked.checking
+  assert checked.message == "1 digit is wrong."
+
+  // Pressing it again turns checking back off.
+  assert !step(checked, key.Char("c")).checking
+}
+
+pub fn a_hint_fills_the_cell_under_the_cursor_test() {
+  let hinted = step(fixture(), key.Char("H"))
+  assert board.value(hinted.board, 2) == 4
+  assert hinted.hints == 1
+}
+
+pub fn a_hint_on_a_filled_cell_moves_to_the_next_gap_test() {
+  let on_a_clue = game.Game(..fixture(), cursor: 0)
+  let hinted = step(on_a_clue, key.Char("H"))
+
+  assert hinted.cursor == 2
+  assert board.value(hinted.board, 2) == 4
+}
+
+pub fn revealing_finishes_the_puzzle_test() {
+  let revealed = step(fixture(), key.Char("R"))
+
+  assert revealed.revealed
+  assert game.is_finished(revealed)
+  assert board.is_solved(revealed.board)
+  assert board.to_string(revealed.board.values)
+    == board.to_string(grid(solution_text))
+}
+
+pub fn filling_the_last_cell_wins_test() {
+  let start = fixture()
+  let blanks =
+    list.filter(board.indices(), fn(index) {
+      board.value(start.board, index) == 0
+    })
+  let assert Ok(last) = list.last(blanks)
+
+  let almost = {
+    use current, index <- list.fold(blanks, start)
+    case index == last {
+      True -> current
+      False ->
+        game.Game(..current, cursor: index)
+        |> step(key.Digit(game.answer(current, index)))
+    }
+  }
+
+  assert !game.is_finished(almost)
+  assert board.empty_count(almost.board) == 1
+
+  let won =
+    game.Game(..almost, cursor: last)
+    |> step(key.Digit(game.answer(almost, last)))
+
+  assert game.is_finished(won)
+  assert !won.revealed
+  assert board.is_solved(won.board)
+}
+
+pub fn a_finished_puzzle_ignores_further_edits_test() {
+  let revealed = step(fixture(), key.Char("R"))
+  let poked = step(game.Game(..revealed, cursor: 2), key.Erase)
+  assert board.value(poked.board, 2) == 4
+}
+
+pub fn help_opens_and_any_key_closes_it_test() {
+  let opened = step(fixture(), key.Char("?"))
+  assert opened.show_help
+
+  assert !step(opened, key.Char("?")).show_help
+  assert !step(opened, key.Down).show_help
+  // Dismissing help does not also move the cursor.
+  assert step(opened, key.Down).cursor == opened.cursor
+}
+
+pub fn quit_and_restart_leave_the_loop_test() {
+  assert game.update(fixture(), key.Char("q")) == game.Exit
+  assert game.update(fixture(), key.Quit) == game.Exit
+  assert game.update(fixture(), key.Char("n")) == game.Restart
+}
+
+pub fn the_clock_runs_from_the_start_test() {
+  assert game.elapsed_ms(fixture()) >= 0
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+
+const grid_width = 28
+
+/// Drop ANSI escape sequences so that the layout underneath can be checked.
+fn plain(text: String) -> String {
+  strip(string.to_graphemes(text), [], Text)
+}
+
+type Scan {
+  Text
+  SawEscape
+  InSequence
+}
+
+fn strip(characters: List(String), kept: List(String), scan: Scan) -> String {
+  case characters, scan {
+    [], _ -> kept |> list.reverse |> string.concat
+    ["\u{1b}", ..rest], _ -> strip(rest, kept, SawEscape)
+    // The `[` introducing a control sequence.
+    [_, ..rest], SawEscape -> strip(rest, kept, InSequence)
+    [character, ..rest], InSequence ->
+      case string.contains("0123456789;?", character) {
+        True -> strip(rest, kept, InSequence)
+        False -> strip(rest, kept, Text)
+      }
+    [character, ..rest], Text -> strip(rest, [character, ..kept], Text)
+  }
+}
+
+fn visible_lines(current: game.Game) -> List(String) {
+  render.frame(current)
+  |> plain
+  |> string.split("\r\n")
+  |> list.map(string.trim_end)
+}
+
+fn is_grid_row(line: String) -> Bool {
+  ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+  |> list.any(fn(label) {
+    string.starts_with(line, " " <> label <> " \u{2502}")
+  })
+}
+
+pub fn escape_stripping_leaves_the_text_test() {
+  assert plain("\u{1b}[1;95mS U D O K U\u{1b}[0m") == "S U D O K U"
+  // `H` and `J` end sequences just as `m` does, and text can contain an `m`.
+  assert plain("\u{1b}[H\u{1b}[Jtime\u{1b}[0m") == "time"
+}
+
+pub fn the_frame_draws_a_grid_test() {
+  let lines = visible_lines(fixture())
+
+  assert list.contains(lines, "     1 2 3   4 5 6   7 8 9")
+  assert list.contains(lines, "   \u{250c}───────┬───────┬───────\u{2510}")
+  assert list.contains(
+    lines,
+    " A \u{2502} 5 3 \u{b7} \u{2502} \u{b7} 7 \u{b7} \u{2502} \u{b7} \u{b7} \u{b7} \u{2502}",
+  )
+  assert list.contains(
+    lines,
+    " I \u{2502} \u{b7} \u{b7} \u{b7} \u{2502} \u{b7} 8 \u{b7} \u{2502} \u{b7} 7 9 \u{2502}",
+  )
+  assert list.contains(lines, "   \u{2514}───────┴───────┴───────\u{2518}")
+}
+
+pub fn all_nine_rows_are_drawn_test() {
+  let rows = visible_lines(fixture()) |> list.filter(is_grid_row)
+  assert list.length(rows) == 9
+}
+
+pub fn grid_lines_all_have_the_same_width_test() {
+  let widths =
+    visible_lines(fixture())
+    |> list.filter(fn(line) { is_grid_row(line) || string.contains(line, "─") })
+    |> list.map(string.length)
+    |> list.unique
+
+  assert widths == [grid_width]
+}
+
+pub fn the_column_ruler_lines_up_with_the_cells_test() {
+  let lines = visible_lines(fixture())
+  let assert Ok(ruler) =
+    list.first(list.filter(lines, string.contains(_, "1 2 3")))
+  let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
+
+  // The first column's heading sits directly above the first cell's digit.
+  assert string.slice(ruler, 5, 1) == "1"
+  assert string.slice(row, 5, 1) == "5"
+}
+
+pub fn the_status_line_reports_progress_test() {
+  let lines = visible_lines(fixture())
+  assert list.any(lines, string.contains(_, "empty 51"))
+  assert list.any(lines, string.contains(_, "clashes 0"))
+  assert list.any(lines, string.contains(_, "time 00:"))
+}
+
+pub fn the_status_line_counts_clashes_test() {
+  // A 6 at C1 clashes twice over: with the 6 above it at B1, and with the 6
+  // further along row C. All three cells are counted.
+  let clashing =
+    game.Game(..fixture(), cursor: board.at(2, 0)) |> step(key.Digit(6))
+
+  assert list.any(visible_lines(clashing), string.contains(_, "clashes 3"))
+}
+
+pub fn the_help_screen_lists_the_keys_test() {
+  let lines = visible_lines(step(fixture(), key.Char("?")))
+  assert list.any(lines, string.contains(_, "write a digit"))
+  assert list.any(lines, string.contains(_, "reveal the whole solution"))
+
+  // Help takes the screen over rather than sharing it with the board.
+  assert !list.any(lines, is_grid_row)
+}
+
+pub fn every_frame_fits_a_short_terminal_test() {
+  let start = fixture()
+  let frames = [start, step(start, key.Char("?")), step(start, key.Char("R"))]
+
+  use current <- list.each(frames)
+  assert list.length(visible_lines(current)) <= 24
+}
+
+pub fn finishing_shows_a_result_test() {
+  let lines = visible_lines(step(fixture(), key.Char("R")))
+  assert list.any(lines, string.contains(_, "Solution revealed."))
+  assert list.any(lines, string.contains(_, "n new puzzle"))
+}
+
+pub fn the_cursor_is_highlighted_test() {
+  // Reverse video, then the empty cell the cursor starts on.
+  assert string.contains(render.frame(fixture()), "7;90m \u{b7}")
+}
+
+pub fn the_frame_starts_at_the_top_of_the_screen_test() {
+  assert string.starts_with(render.frame(fixture()), "\u{1b}[H")
+}
