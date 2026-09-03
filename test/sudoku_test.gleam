@@ -722,7 +722,20 @@ pub fn hints_and_reveals_tidy_up_marks_too_test() {
 // Rendering
 // ---------------------------------------------------------------------------
 
-const grid_width = 55
+/// One grid's worth of columns, and the whole frame's worth: two grids and
+/// the gap between them.
+const grid_columns = 27
+
+const frame_width = 59
+
+/// The board half of a line, and the marks half beside it.
+fn board_half(line: String) -> String {
+  string.slice(line, 1, grid_columns)
+}
+
+fn marks_half(line: String) -> String {
+  string.slice(line, 1 + grid_columns + 4, grid_columns)
+}
 
 /// Drop ANSI escape sequences so that the layout underneath can be checked.
 fn plain(text: String) -> String {
@@ -772,49 +785,48 @@ pub fn escape_stripping_leaves_the_text_test() {
 
 pub fn the_frame_draws_a_grid_test() {
   let lines = visible_lines(fixture())
-  let dot = "\u{b7}"
-  let bar = "\u{2502}"
 
   assert list.contains(
     lines,
-    "        1    2    3      4    5    6      7    8    9",
+    "     1 2 3   4 5 6   7 8 9          1 2 3   4 5 6   7 8 9",
   )
   assert list.contains(
     lines,
-    "   \u{250c}────────────────┬────────────────┬────────────────\u{2510}",
+    "   ┌───────┬───────┬───────┐      ┌───────┬───────┬───────┐",
   )
   assert list.contains(
     lines,
-    " A "
-      <> bar
-      <> "    5    3    "
-      <> dot
-      <> " "
-      <> bar
-      <> "    "
-      <> dot
-      <> "    7    "
-      <> dot
-      <> " "
-      <> bar
-      <> "    "
-      <> dot
-      <> "    "
-      <> dot
-      <> "    "
-      <> dot
-      <> " "
-      <> bar,
+    " A │ 5 3 · │ · 7 · │ · · · │    A │ · · · │ · · · │ · · · │",
   )
   assert list.contains(
     lines,
-    "   \u{2514}────────────────┴────────────────┴────────────────\u{2518}",
+    " I │ · · · │ · 8 · │ · 7 9 │    I │ · · · │ · · · │ · · · │",
   )
+  assert list.contains(
+    lines,
+    "   └───────┴───────┴───────┘      └───────┴───────┴───────┘",
+  )
+}
+
+pub fn the_two_grids_are_labelled_test() {
+  let lines = visible_lines(fixture())
+  let assert Ok(caption) =
+    list.first(list.filter(lines, string.contains(_, "board")))
+
+  // Each caption sits over the left edge of the grid it names.
+  assert string.starts_with(caption, "   board")
+  assert string.slice(caption, 1 + grid_columns + 4 + 2, 5) == "marks"
 }
 
 pub fn all_nine_rows_are_drawn_test() {
   let rows = visible_lines(fixture()) |> list.filter(is_grid_row)
   assert list.length(rows) == 9
+
+  // Every row is drawn twice over, once in each grid, to the same shape.
+  use row <- list.each(rows)
+  assert string.length(board_half(row)) == grid_columns
+  assert string.length(marks_half(row)) == grid_columns
+  assert string.starts_with(marks_half(row), string.slice(row, 1, 4))
 }
 
 pub fn grid_lines_all_have_the_same_width_test() {
@@ -824,7 +836,7 @@ pub fn grid_lines_all_have_the_same_width_test() {
     |> list.map(string.length)
     |> list.unique
 
-  assert widths == [grid_width]
+  assert widths == [frame_width]
 }
 
 pub fn the_column_ruler_lines_up_with_the_cells_test() {
@@ -832,14 +844,20 @@ pub fn the_column_ruler_lines_up_with_the_cells_test() {
   // The ruler is the line just above the top of the box.
   let assert Ok(ruler) =
     lines
-    |> list.take_while(fn(line) { !string.contains(line, "\u{250c}") })
+    |> list.take_while(fn(line) { !string.contains(line, "┌") })
     |> list.last
   let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
 
-  // The first column's heading sits directly above the first cell's digit.
-  assert string.slice(ruler, 8, 1) == "1"
-  assert string.slice(row, 8, 1) == "5"
+  // The first column's heading sits directly above the first cell's digit,
+  // in the grid of marks just as in the board.
+  assert string.slice(ruler, 5, 1) == "1"
+  assert string.slice(row, 5, 1) == "5"
+  assert string.slice(ruler, 5 + grid_columns + 4, 1) == "1"
 }
+
+// ---------------------------------------------------------------------------
+// The grid of marks
+// ---------------------------------------------------------------------------
 
 /// Pencil `digits` into the cell under the cursor and return to writing.
 fn with_marks(current: game.Game, digits: List(Int)) -> game.Game {
@@ -850,31 +868,38 @@ fn with_marks(current: game.Game, digits: List(Int)) -> game.Game {
   |> step(key.Char("m"))
 }
 
-pub fn marks_sit_against_the_left_of_the_cell_test() {
-  // A3 is the cursor cell, and its neighbour A2 holds the answer 3.
+pub fn a_lone_mark_shows_as_itself_test() {
+  // A3 is the cursor cell, so the mark lands in the third column of row A.
   let lines = visible_lines(with_marks(fixture(), [4]))
   let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
 
-  // A single mark sits where no answer ever could, so the two cannot be
-  // confused even without colour: marks left, answers right.
-  assert string.slice(row, 8, 1) == "5"
-  assert string.slice(row, 13, 1) == "3"
-  assert string.slice(row, 15, 1) == "4"
-  assert string.slice(row, 18, 1) != "4"
+  assert marks_half(row) == "A │ · · 4 │ · · · │ · · · │"
+  // The board itself is untouched: A3 is still empty.
+  assert board_half(row) == "A │ 5 3 · │ · 7 · │ · · · │"
 }
 
-pub fn a_full_house_of_marks_fits_a_cell_test() {
-  let lines = visible_lines(with_marks(fixture(), [3, 1, 4, 2]))
-  assert list.any(lines, string.contains(_, "1234"))
+pub fn several_marks_show_as_an_asterisk_test() {
+  let lines = visible_lines(with_marks(fixture(), [4, 1]))
+  let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
+
+  assert marks_half(row) == "A │ · · * │ · · · │ · · · │"
 }
 
-pub fn marks_that_overflow_are_flagged_test() {
-  let crowded = with_marks(fixture(), [1, 2, 3, 4, 5])
+pub fn an_asterisk_can_be_read_back_from_the_status_line_test() {
+  let crowded = with_marks(fixture(), [9, 1, 5, 3, 7])
   let lines = visible_lines(crowded)
+  let assert Ok(row) = list.first(list.filter(lines, is_grid_row))
 
-  assert list.any(lines, string.contains(_, "123+"))
-  // Nothing is lost: the status line spells the cursor cell's marks out.
-  assert list.any(lines, string.contains(_, "A3 marked 1 2 3 4 5"))
+  assert string.contains(marks_half(row), "*")
+  assert list.any(lines, string.contains(_, "A3 marked 1 3 5 7 9"))
+}
+
+pub fn unmarked_cells_stay_empty_in_the_marks_grid_test() {
+  let rows = visible_lines(fixture()) |> list.filter(is_grid_row)
+
+  use row <- list.each(rows)
+  assert !string.contains(marks_half(row), "*")
+  assert marks_half(row) == string.slice(row, 1, 4) <> "· · · │ · · · │ · · · │"
 }
 
 pub fn the_status_line_names_the_cursor_cell_test() {
@@ -901,12 +926,12 @@ pub fn marking_mode_is_announced_test() {
 
 pub fn marks_do_not_change_the_grid_width_test() {
   let widths =
-    visible_lines(with_marks(fixture(), [1, 2, 3, 4]))
+    visible_lines(with_marks(fixture(), [1, 2, 3, 4, 5]))
     |> list.filter(fn(line) { is_grid_row(line) || string.contains(line, "─") })
     |> list.map(string.length)
     |> list.unique
 
-  assert widths == [grid_width]
+  assert widths == [frame_width]
 }
 
 pub fn the_status_line_reports_progress_test() {
@@ -955,7 +980,7 @@ pub fn finishing_shows_a_result_test() {
 
 pub fn the_cursor_is_highlighted_test() {
   // Reverse video, then the empty cell the cursor starts on.
-  assert string.contains(render.frame(fixture()), "7;90m    \u{b7}")
+  assert string.contains(render.frame(fixture()), "7;90m \u{b7}")
 }
 
 pub fn the_frame_starts_at_the_top_of_the_screen_test() {

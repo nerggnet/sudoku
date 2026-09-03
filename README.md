@@ -12,22 +12,23 @@ have exactly one solution.
 ```
  S U D O K U    Medium    marking
 
-        1    2    3      4    5    6      7    8    9
-   ┌────────────────┬────────────────┬────────────────┐
- A │ 123+    ·    1 │    5    ·    · │    4    3    · │
- B │    ·    ·    5 │    ·    ·    · │    7    ·    · │
- C │    6    ·    7 │    4    ·    1 │    ·    5    8 │
-   ├────────────────┼────────────────┼────────────────┤
- D │    3    7    · │    9    ·    · │    ·    6    4 │
- E │    ·    ·    · │    8    ·    6 │    ·    ·    · │
- F │    5    9    · │    ·    ·    7 │    ·    8    3 │
-   ├────────────────┼────────────────┼────────────────┤
- G │    2    6    · │    7    ·    8 │    3    ·    9 │
- H │    ·    ·    3 │    ·    ·    · │    6    ·    · │
- I │    ·    5    9 │    ·    ·    4 │    8    ·    · │
-   └────────────────┴────────────────┴────────────────┘
+   board                          marks
+     1 2 3   4 5 6   7 8 9          1 2 3   4 5 6   7 8 9
+   ┌───────┬───────┬───────┐      ┌───────┬───────┬───────┐
+ A │ · · 1 │ 8 3 · │ 9 5 · │    A │ * · · │ · · · │ · · · │
+ B │ · · · │ 9 · · │ 7 3 6 │    B │ · · · │ · · · │ · · · │
+ C │ · · 7 │ · · · │ · 8 · │    C │ · · · │ · · · │ · · · │
+   ├───────┼───────┼───────┤      ├───────┼───────┼───────┤
+ D │ · · 3 │ 2 1 · │ · 4 · │    D │ 7 · · │ · · · │ · · · │
+ E │ 9 2 8 │ · · · │ 3 1 7 │    E │ · · · │ · · · │ · · · │
+ F │ · 5 · │ · 7 9 │ 6 · · │    F │ · · · │ · · · │ · · · │
+   ├───────┼───────┼───────┤      ├───────┼───────┼───────┤
+ G │ · 1 · │ · · · │ 8 · · │    G │ · · · │ · · · │ · · · │
+ H │ 4 7 9 │ · · 3 │ · · · │    H │ · · · │ · · · │ · · · │
+ I │ · 3 2 │ · 5 6 │ 4 · · │    I │ · · · │ · · · │ · · · │
+   └───────┴───────┴───────┘      └───────┴───────┴───────┘
 
- empty 45  │  clashes 0  │  time 00:00  │  A1 marked 1 2 3 4 5
+ empty 45  │  clashes 0  │  time 00:00  │  A1 marked 1 3 5
 ```
 
 ## Keys
@@ -57,20 +58,21 @@ Press `m` to switch to marking, then `1`–`9` to pencil candidates into a cell
 and the same key again to rub one out. `m` switches back to writing digits;
 the header and the key hints along the bottom say which mode you are in.
 
-Marks are amber and sit against the left of their cell, while answers are
-white or cyan and sit against the right, so a cell marked with a single digit
-can never be mistaken for a solved one even without colour. Four marks fit in
-a cell; beyond that the cell shows `123+` and the status line spells the
-cursor cell's marks out in full, so nothing you wrote is ever out of reach.
+Marks get a grid of their own beside the board rather than being squeezed into
+it, which leaves the board as compact and readable as it was without them. The
+two grids are the same shape and share the cursor and its shading, so a cell in
+one is easy to find in the other. A cell given a single reading shows that
+digit; a cell given several shows `*`. Move onto it and the status line spells
+its marks out in full:
+
+```
+ empty 45  │  clashes 0  │  time 00:00  │  A1 marked 1 3 5
+```
 
 Writing a digit tidies up after itself: the cell's own marks go, and so does
 that digit's mark in every cell that can see it. Erasing a digit leaves marks
 alone, so taking back a wrong guess does not cost you the reasoning behind it.
 Undo covers marks as well as digits.
-
-Marks are display-limited by width, not by the model — a cell can hold all
-nine. Showing more of them inline is one constant, `content_width` in
-`sudoku/render`: at four the grid is 55 columns wide, at nine it is 91.
 
 ## How it works
 
@@ -84,8 +86,10 @@ nine. Showing more of them inline is one constant, `content_width` in
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |
 
-Pencil marks live on the board rather than beside it, which is what lets undo
-capture them without any extra bookkeeping.
+Pencil marks live on the board rather than in the game around it, which is
+what lets undo capture them without any extra bookkeeping. Both grids come out
+of one function that takes the cell renderer as an argument, so they cannot
+drift apart in shape.
 
 The solver expands the empty cell with the fewest candidates first, which
 keeps the search small enough that generating even an Expert puzzle takes

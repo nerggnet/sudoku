@@ -16,12 +16,19 @@ import sudoku/term
 
 const empty_cell = "\u{00b7}"
 
-/// How many characters of a cell hold its contents, and so how many pencil
-/// marks fit in one. Height is what a terminal is short of, not width: at
-/// four the grid is 55 columns across and still only fourteen rows tall.
-const content_width = 4
+/// Stands in for a cell carrying more than one pencil mark. Which digits
+/// those are is spelled out in the status line when the cursor reaches it.
+const crowded_cell = "*"
 
 const row_labels = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+
+/// How many columns one grid takes up. Cells are two columns wide, so a band
+/// of three plus its trailing space is seven, four box rules bring the row to
+/// 25, and the row label and its space make 27.
+const grid_columns = 27
+
+/// What separates the board from the marks beside it.
+const grid_gap = "    "
 
 // Foreground colours.
 const given_style = "1;97"
@@ -62,7 +69,7 @@ pub fn frame(current: Game) -> String {
       term.screen(
         list.flatten([
           header(current),
-          grid(current, clashes),
+          grids(current, clashes),
           status(current, clashes),
           footer(current),
         ]),
@@ -96,10 +103,33 @@ fn footer(current: Game) -> List(String) {
 }
 
 // ---------------------------------------------------------------------------
-// The grid
+// The grids
 // ---------------------------------------------------------------------------
 
-/// Lay nine cells out as `│abc │def │ghi │`. The column ruler is built with
+/// The board, and beside it a grid of the same shape holding the pencil
+/// marks. Keeping the two apart lets the board stay as compact and readable
+/// as it was before there were any marks to show.
+fn grids(current: Game, clashes: Set(Int)) -> List(String) {
+  let board_grid = grid(fn(index) { board_cell(current, clashes, index) })
+  let marks_grid = grid(fn(index) { mark_cell(current, index) })
+
+  [
+    caption("board", "marks"),
+    ..list.map2(board_grid, marks_grid, fn(left, right) {
+      left <> grid_gap <> right
+    })
+  ]
+}
+
+fn caption(left: String, right: String) -> String {
+  term.styled(
+    dim_style,
+    string.pad_end("  " <> left, grid_columns, " ") <> grid_gap <> "  " <> right,
+  )
+}
+
+/// Lay nine cells out as `│abc │def │ghi │`, with every cell two columns wide
+/// so that a highlight reads as a solid block. The column ruler is built with
 /// the same helper, which is what keeps it aligned with the cells.
 fn banded(cells: List(String), separator: String) -> String {
   cells
@@ -109,15 +139,18 @@ fn banded(cells: List(String), separator: String) -> String {
   |> fn(bands) { separator <> bands <> separator }
 }
 
-fn grid(current: Game, clashes: Set(Int)) -> List(String) {
+/// One grid, from its column ruler down to its bottom rule. What goes in each
+/// cell is left to the caller, which is how the board and the marks beside it
+/// come out exactly the same shape.
+fn grid(cell: fn(Int) -> String) -> List(String) {
   let ruler =
     board.span(1, board.side)
-    |> list.map(fn(column) { " " <> answer_column(int.to_string(column)) })
+    |> list.map(fn(column) { " " <> int.to_string(column) })
     |> banded(" ")
 
   let bands =
     row_labels
-    |> list.index_map(fn(label, row) { row_line(current, clashes, row, label) })
+    |> list.index_map(fn(label, row) { row_line(cell, row, label) })
     |> list.sized_chunk(3)
     |> list.intersperse([rule("\u{251c}", "\u{253c}", "\u{2524}")])
     |> list.flatten
@@ -131,99 +164,88 @@ fn grid(current: Game, clashes: Set(Int)) -> List(String) {
 }
 
 fn rule(left: String, join: String, right: String) -> String {
-  // Three cells to a band, each a leading space wide plus its contents,
-  // and the trailing space `banded` puts on the end of the band.
-  let bar = string.repeat("\u{2500}", 3 * { content_width + 1 } + 1)
+  let bar = string.repeat("\u{2500}", 7)
   "  "
   <> term.styled(dim_style, left <> bar <> join <> bar <> join <> bar <> right)
 }
 
-fn row_line(
-  current: Game,
-  clashes: Set(Int),
-  row: Int,
-  label: String,
-) -> String {
+fn row_line(cell: fn(Int) -> String, row: Int, label: String) -> String {
   let cells =
     board.span(0, board.side - 1)
-    |> list.map(fn(column) { cell(current, clashes, board.at(row, column)) })
+    |> list.map(fn(column) { cell(board.at(row, column)) })
 
   term.styled(dim_style, label)
   <> " "
   <> banded(cells, term.styled(dim_style, "\u{2502}"))
 }
 
-/// A cell holds either an answer or a set of pencil marks, never both.
-///
-/// Answers sit against the right of the cell and marks against the left, so
-/// that a cell marked with a single digit still cannot be mistaken for a
-/// filled-in one, whatever the terminal does with colour.
-fn cell(current: Game, clashes: Set(Int), index: Int) -> String {
+/// A cell of the board itself.
+fn board_cell(current: Game, clashes: Set(Int), index: Int) -> String {
   let digit = board.value(current.board, index)
-
-  let text = case digit, board.sorted_marks(current.board, index) {
-    0, [] -> answer_column(empty_cell)
-    0, marks -> string.pad_end(mark_column(marks), content_width, " ")
-    _, _ -> answer_column(int.to_string(digit))
+  let glyph = case digit {
+    0 -> empty_cell
+    _ -> int.to_string(digit)
   }
 
+  let focus = board.value(current.board, current.cursor)
+  let colour = board_colour(current, clashes, index, digit)
+
+  painted(current, index, digit != 0 && digit == focus, glyph, colour)
+}
+
+/// A cell of the grid of marks: the digit itself where a cell has been given
+/// exactly one reading, an asterisk where it has been given several.
+fn mark_cell(current: Game, index: Int) -> String {
+  let #(glyph, colour) = case board.sorted_marks(current.board, index) {
+    [] -> #(empty_cell, empty_style)
+    [only] -> #(int.to_string(only), mark_style)
+    _ -> #(crowded_cell, mark_style)
+  }
+
+  painted(current, index, False, glyph, colour)
+}
+
+/// Two columns: a leading space so that a highlight reads as a solid block,
+/// then the character itself.
+fn painted(
+  current: Game,
+  index: Int,
+  matching: Bool,
+  glyph: String,
+  colour: String,
+) -> String {
   let styles =
-    [
-      background(current, index, digit),
-      foreground(current, clashes, index, digit),
-    ]
+    [background(current, index, matching), colour]
     |> list.filter(fn(style) { style != "" })
     |> string.join(";")
 
-  term.styled(styles, " " <> text)
+  term.styled(styles, " " <> glyph)
 }
 
-fn answer_column(text: String) -> String {
-  string.pad_start(text, content_width, " ")
-}
-
-/// Marks that do not fit lose their tail to a `+`. The status line below the
-/// board always spells out the cursor cell's marks in full, so nothing the
-/// player wrote is ever out of reach.
-fn mark_column(marks: List(Int)) -> String {
-  let digits = list.map(marks, int.to_string)
-
-  case list.length(digits) > content_width {
-    False -> string.concat(digits)
-    True -> string.concat(list.take(digits, content_width - 1)) <> "+"
-  }
-}
-
-fn foreground(
+fn board_colour(
   current: Game,
   clashes: Set(Int),
   index: Int,
   digit: Int,
 ) -> String {
   case
-    digit == 0 && !set.is_empty(board.marks_at(current.board, index)),
     digit == 0,
     current.checking && game.is_wrong(current, index),
     set.contains(clashes, index),
     board.is_given(current.board, index)
   {
-    True, _, _, _, _ -> mark_style
-    _, True, _, _, _ -> empty_style
-    _, _, True, _, _ -> wrong_style
-    _, _, _, True, _ -> conflict_style
-    _, _, _, _, True -> given_style
-    _, _, _, _, _ -> entered_style
+    True, _, _, _ -> empty_style
+    _, True, _, _ -> wrong_style
+    _, _, True, _ -> conflict_style
+    _, _, _, True -> given_style
+    _, _, _, _ -> entered_style
   }
 }
 
-fn background(current: Game, index: Int, digit: Int) -> String {
-  let focus = board.value(current.board, current.cursor)
-
-  case
-    index == current.cursor,
-    digit != 0 && digit == focus,
-    shares_unit(index, current.cursor)
-  {
+/// The cursor and the cells it can see are shaded the same way in both grids,
+/// which is what ties one to the other.
+fn background(current: Game, index: Int, matching: Bool) -> String {
+  case index == current.cursor, matching, shares_unit(index, current.cursor) {
     True, _, _ -> cursor_style
     _, True, _ -> match_background
     _, _, True -> peer_background
@@ -238,7 +260,7 @@ fn shares_unit(one: Int, other: Int) -> Bool {
 }
 
 // ---------------------------------------------------------------------------
-// Everything below the grid
+// Everything below the grids
 // ---------------------------------------------------------------------------
 
 fn status(current: Game, clashes: Set(Int)) -> List(String) {
@@ -258,8 +280,8 @@ fn status(current: Game, clashes: Set(Int)) -> List(String) {
   ["", term.styled(dim_style, facts) <> marks, current.message]
 }
 
-/// The cursor cell's marks, written out in full. This is where marks too
-/// numerous to fit in the cell itself can still be read.
+/// The cursor cell's marks, written out in full. This is where an asterisk in
+/// the grid of marks can be read back as the digits behind it.
 fn cursor_marks(current: Game) -> String {
   case board.sorted_marks(current.board, current.cursor) {
     [] -> ""
@@ -343,8 +365,14 @@ fn help() -> List(String) {
       "",
       term.styled(
         dim_style,
-        "Writing a digit rubs out that digit's marks in every cell it can see.",
+        "Marks show in the grid beside the board: the digit itself where a cell",
       ),
+      term.styled(
+        dim_style,
+        "has one, an asterisk where it has several. Move onto a cell to read",
+      ),
+      term.styled(dim_style, "all of its marks in the status line."),
+      "",
       term.styled(dim_style, "Any key returns to the board."),
     ],
   ])
