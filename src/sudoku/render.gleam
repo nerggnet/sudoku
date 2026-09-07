@@ -10,6 +10,7 @@ import gleam/list
 import gleam/set.{type Set}
 import gleam/string
 import sudoku/board
+import sudoku/editor.{type Editor}
 import sudoku/game.{type Game}
 import sudoku/generator
 import sudoku/term
@@ -62,13 +63,19 @@ const cursor_style = "7"
 /// The help takes over the screen rather than sitting under the board: the
 /// two together are taller than a 24-row terminal.
 pub fn frame(current: Game) -> String {
+  let mode = case current.marking {
+    True -> "marking"
+    False -> ""
+  }
+  let head = header(generator.origin_label(current.puzzle.origin), mode)
+
   case current.show_help {
-    True -> term.screen(list.flatten([header(current), help()]))
+    True -> term.screen(list.flatten([head, keys(key_reference, mark_notes)]))
     False -> {
       let clashes = board.conflicts(current.board)
       term.screen(
         list.flatten([
-          header(current),
+          head,
           grids(current, clashes),
           status(current, clashes),
           footer(current),
@@ -78,19 +85,18 @@ pub fn frame(current: Game) -> String {
   }
 }
 
-fn header(current: Game) -> List(String) {
-  let marking = case current.marking {
-    True -> term.styled(mark_style, "    marking")
-    False -> ""
+/// The title line: what puzzle this is, and which mode it is being worked on
+/// in when that is worth saying.
+fn header(name: String, mode: String) -> List(String) {
+  let badge = case mode {
+    "" -> ""
+    _ -> term.styled(mark_style, "    " <> mode)
   }
 
   [
     term.styled(title_style, "S U D O K U")
-      <> term.styled(
-      dim_style,
-      "    " <> generator.label(current.puzzle.difficulty),
-    )
-      <> marking,
+      <> term.styled(dim_style, "    " <> name)
+      <> badge,
     "",
   ]
 }
@@ -190,7 +196,7 @@ fn board_cell(current: Game, clashes: Set(Int), index: Int) -> String {
   let focus = board.value(current.board, current.cursor)
   let colour = board_colour(current, clashes, index, digit)
 
-  painted(current, index, digit != 0 && digit == focus, glyph, colour)
+  painted(current.cursor, index, digit != 0 && digit == focus, glyph, colour)
 }
 
 /// A cell of the grid of marks: the digit itself where a cell has been given
@@ -202,20 +208,20 @@ fn mark_cell(current: Game, index: Int) -> String {
     _ -> #(crowded_cell, mark_style)
   }
 
-  painted(current, index, False, glyph, colour)
+  painted(current.cursor, index, False, glyph, colour)
 }
 
 /// Two columns: a leading space so that a highlight reads as a solid block,
 /// then the character itself.
 fn painted(
-  current: Game,
+  cursor: Int,
   index: Int,
   matching: Bool,
   glyph: String,
   colour: String,
 ) -> String {
   let styles =
-    [background(current, index, matching), colour]
+    [background(cursor, index, matching), colour]
     |> list.filter(fn(style) { style != "" })
     |> string.join(";")
 
@@ -244,8 +250,8 @@ fn board_colour(
 
 /// The cursor and the cells it can see are shaded the same way in both grids,
 /// which is what ties one to the other.
-fn background(current: Game, index: Int, matching: Bool) -> String {
-  case index == current.cursor, matching, shares_unit(index, current.cursor) {
+fn background(cursor: Int, index: Int, matching: Bool) -> String {
+  case index == cursor, matching, shares_unit(index, cursor) {
     True, _, _ -> cursor_style
     _, True, _ -> match_background
     _, _, True -> peer_background
@@ -350,31 +356,31 @@ const key_reference = [
   #("q", "quit"),
 ]
 
-fn help() -> List(String) {
+const mark_notes = [
+  "Marks show in the grid beside the board: the digit itself where a cell",
+  "has one, an asterisk where it has several. Move onto a cell to read",
+  "all of its marks in the status line.",
+]
+
+/// A key reference, with a paragraph under it. Used for both the game's help
+/// and the editor's.
+fn keys(
+  reference: List(#(String, String)),
+  notes: List(String),
+) -> List(String) {
   let entries = {
-    use #(keys, meaning) <- list.map(key_reference)
+    use #(pressed, meaning) <- list.map(reference)
     "  "
-    <> term.styled(entered_style, string.pad_end(keys, 22, " "))
+    <> term.styled(entered_style, string.pad_end(pressed, 22, " "))
     <> term.styled(dim_style, meaning)
   }
 
   list.flatten([
     [term.styled("1", "Keys"), ""],
     entries,
-    [
-      "",
-      term.styled(
-        dim_style,
-        "Marks show in the grid beside the board: the digit itself where a cell",
-      ),
-      term.styled(
-        dim_style,
-        "has one, an asterisk where it has several. Move onto a cell to read",
-      ),
-      term.styled(dim_style, "all of its marks in the status line."),
-      "",
-      term.styled(dim_style, "Any key returns to the board."),
-    ],
+    [""],
+    list.map(notes, term.styled(dim_style, _)),
+    ["", term.styled(dim_style, "Any key returns to the board.")],
   ])
 }
 
@@ -396,3 +402,83 @@ fn aside(hints: Int) -> String {
     _ -> ", with " <> int.to_string(hints) <> " hints."
   }
 }
+
+// ---------------------------------------------------------------------------
+// Typing a puzzle in
+// ---------------------------------------------------------------------------
+
+/// The editor's screen: one grid, since a puzzle being typed in has no marks
+/// yet, drawn by the same code as the board so that the two look alike.
+pub fn editor_frame(current: Editor) -> String {
+  let head = header(generator.origin_label(generator.Handwritten), "editing")
+
+  case current.show_help {
+    True ->
+      term.screen(
+        list.flatten([head, keys(editor_key_reference, editor_notes)]),
+      )
+    False -> {
+      let clashes = board.grid_conflicts(current.clues)
+      term.screen(
+        list.flatten([
+          head,
+          [term.styled(dim_style, "  clues")],
+          grid(fn(index) { clue_cell(current, clashes, index) }),
+          editor_status(current, clashes),
+          [term.styled(dim_style, editor_key_hints)],
+        ]),
+      )
+    }
+  }
+}
+
+/// A cell being typed in. Clues are drawn the way they will look once the
+/// game starts, so what is on screen is what will be played.
+fn clue_cell(current: Editor, clashes: Set(Int), index: Int) -> String {
+  let digit = editor.value(current, index)
+  let glyph = case digit {
+    0 -> empty_cell
+    _ -> int.to_string(digit)
+  }
+
+  let colour = case digit == 0, set.contains(clashes, index) {
+    True, _ -> empty_style
+    _, True -> conflict_style
+    _, _ -> given_style
+  }
+
+  let focus = editor.value(current, current.cursor)
+  painted(current.cursor, index, digit != 0 && digit == focus, glyph, colour)
+}
+
+fn editor_status(current: Editor, clashes: Set(Int)) -> List(String) {
+  let facts =
+    [
+      "clues " <> int.to_string(editor.clue_count(current)),
+      "clashes " <> int.to_string(set.size(clashes)),
+      "cell " <> cell_name(current.cursor),
+    ]
+    |> string.join("  \u{2502}  ")
+
+  ["", term.styled(dim_style, facts), current.message]
+}
+
+const editor_key_hints = "arrows/hjkl move  \u{2502}  1-9 type  \u{2502}  0 gap  \u{2502}  p play  \u{2502}  ? help  \u{2502}  q quit"
+
+const editor_key_reference = [
+  #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
+  #("1 - 9", "type a clue in and step on to the next cell"),
+  #("0, space, backspace", "leave the cell empty and step on"),
+  #("u", "undo"),
+  #("x", "clear the grid and start over"),
+  #("p", "play the puzzle"),
+  #("n", "back to the menu"),
+  #("?", "close this help"),
+  #("q", "quit"),
+]
+
+const editor_notes = [
+  "Digits step the cursor on by themselves, so a row is nine keystrokes and",
+  "the whole grid eighty-one, read straight off the page. Clues that clash",
+  "turn red, and p checks the puzzle has exactly one answer before play.",
+]

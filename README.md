@@ -7,7 +7,8 @@ gleam run
 ```
 
 Pick a difficulty, then play. Puzzles are generated fresh each time and always
-have exactly one solution.
+have exactly one solution. Or pick `Custom` and type a puzzle in yourself, out
+of a newspaper.
 
 ```
  S U D O K U    Medium    marking
@@ -52,6 +53,62 @@ the same row, column or box turn red as you type them, and the cells sharing a
 row, column or box with the cursor are shaded so it is easier to see what a
 cell can still be.
 
+## Typing a puzzle in
+
+`Custom` on the menu opens an empty grid to type a puzzle into instead of
+dealing one:
+
+```
+ S U D O K U    Custom    editing
+
+   clues
+     1 2 3   4 5 6   7 8 9
+   ┌───────┬───────┬───────┐
+ A │ 5 3 · │ · 7 · │ · · · │
+ B │ 6 · · │ 1 9 5 │ · · · │
+ C │ · 9 8 │ · · · │ · 6 · │
+   ├───────┼───────┼───────┤
+ D │ 8 · · │ · 6 · │ · · 3 │
+ E │ 4 · · │ 8 · 3 │ · · 1 │
+ F │ 7 · · │ · 2 · │ · · 6 │
+   ├───────┼───────┼───────┤
+ G │ · 6 · │ · · · │ 2 8 · │
+ H │ · · · │ 4 1 9 │ · · 5 │
+ I │ · · · │ · 8 · │ · 7 9 │
+   └───────┴───────┴───────┘
+
+ clues 30  │  clashes 0  │  cell A1
+ arrows/hjkl move  │  1-9 type  │  0 gap  │  p play  │  ? help  │  q quit
+```
+
+The cursor steps on by itself after every key, so a row is nine keystrokes and
+the whole grid eighty-one, read straight off the page. `0` or space leaves a
+gap; the arrow keys go back over anything mistyped.
+
+| Key | |
+| --- | --- |
+| `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
+| `1`–`9` | type a clue in and step on to the next cell |
+| `0`, space, backspace | leave the cell empty and step on |
+| `u` | undo |
+| `x` | clear the grid and start over |
+| `p` | play the puzzle |
+| `n` | back to the menu |
+| `?` | help |
+| `q` | quit |
+
+`p` starts the game, but only once the clues hold together. Two of the same
+digit in a row, column or box turn red as they are typed, and the puzzle has
+to have exactly one answer before it can be played — the game needs to know
+the answer for checking and hints, and insisting on one catches the usual
+slips in copying a puzzle down. A mistyped digit leaves the grid with no
+answer at all, and a missed one leaves it with several; either way the status
+line says which it is and the clues stay put to be fixed.
+
+Once play starts, a typed-in puzzle is like any other: the clues are fixed,
+and undo, marks, checking, hints and the clock all work the same. The header
+says `Custom` where it would otherwise name a difficulty.
+
 ## Pencil marks
 
 Press `m` to switch to marking, then `1`–`9` to pencil candidates into a cell
@@ -82,6 +139,7 @@ Undo covers marks as well as digits.
 | `sudoku/solver` | backtracking search, and counting solutions |
 | `sudoku/generator` | filling a grid at random, then carving clues out of it |
 | `sudoku/game` | game state and what each key does to it |
+| `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/render` | drawing a frame |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |
@@ -89,7 +147,14 @@ Undo covers marks as well as digits.
 Pencil marks live on the board rather than in the game around it, which is
 what lets undo capture them without any extra bookkeeping. Both grids come out
 of one function that takes the cell renderer as an argument, so they cannot
-drift apart in shape.
+drift apart in shape, and the editor draws its grid with the same function
+again.
+
+A puzzle carries where it came from, `Dealt(difficulty)` or `Handwritten`,
+which is all that separates a typed-in puzzle from a generated one once play
+begins. Generating one carves clues out of a solution; typing one in works the
+other way round, solving the clues to find the answer the game will check
+against, and refusing them if there is not exactly one.
 
 The solver expands the empty cell with the fewest candidates first, which
 keeps the search small enough that generating even an Expert puzzle takes
