@@ -7,6 +7,7 @@
 
 import gleam/int
 import gleam/list
+import gleam/option.{Some}
 import gleam/set.{type Set}
 import gleam/string
 import sudoku/board
@@ -67,7 +68,9 @@ pub fn frame(current: Game) -> String {
     True -> "marking"
     False -> ""
   }
-  let head = header(generator.origin_label(current.puzzle.origin), mode)
+  let head =
+    header(generator.origin_label(current.puzzle.origin), mode)
+    |> tallied(current)
 
   case current.show_help {
     True -> term.screen(list.flatten([head, keys(key_reference, mark_notes)]))
@@ -99,6 +102,35 @@ fn header(name: String, mode: String) -> List(String) {
       <> badge,
     "",
   ]
+}
+
+/// Put the count of wrong digits checking has caught on the title line, where
+/// the player can see what is left of their allowance before spending it.
+///
+/// There is nothing to show before checking has been asked for, and nothing
+/// worth showing once the game is over: the panel below the board has the
+/// last word there.
+fn tallied(head: List(String), current: Game) -> List(String) {
+  let hidden =
+    game.is_finished(current) || { !current.checking && current.mistakes == 0 }
+
+  case head, hidden {
+    _, True -> head
+    [], _ -> head
+    [title, ..rest], False -> {
+      let colour = case current.mistakes >= game.mistake_limit {
+        True -> conflict_style
+        False -> mark_style
+      }
+      let tally =
+        "    checking "
+        <> int.to_string(current.mistakes)
+        <> "/"
+        <> int.to_string(game.mistake_limit)
+
+      [title <> term.styled(colour, tally), ..rest]
+    }
+  }
 }
 
 fn footer(current: Game) -> List(String) {
@@ -348,7 +380,7 @@ const key_reference = [
   #("0, space, backspace", "clear the cell, or its marks while marking"),
   #("m", "switch between writing and marking"),
   #("u", "undo"),
-  #("c", "check what is filled in so far"),
+  #("c", "check for good; a fourth wrong digit forfeits"),
   #("H", "reveal one cell"),
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
@@ -386,9 +418,17 @@ fn keys(
 }
 
 fn finished(current: Game) -> List(String) {
-  let headline = case current.revealed {
-    True -> term.styled(dim_style, "Solution revealed.")
-    False ->
+  let headline = case current.ending {
+    Some(game.Revealed) -> term.styled(dim_style, "Solution revealed.")
+    // However the allowance ran out, saying how many were wrong covers both
+    // writing one too many and asking and being told about several.
+    Some(game.Forfeited) ->
+      term.styled(
+        conflict_style,
+        int.to_string(current.mistakes) <> " wrong digits: forfeited.",
+      )
+      <> term.styled(dim_style, "  They are the ones in red.")
+    _ ->
       term.styled(good_style, "Solved in " <> clock(game.elapsed_ms(current)))
       <> term.styled(good_style, aside(current.hints))
   }

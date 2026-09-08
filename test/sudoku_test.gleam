@@ -1,6 +1,7 @@
 import gleam/dict
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/set
 import gleam/string
 import gleeunit
@@ -727,10 +728,184 @@ pub fn checking_counts_wrong_digits_test() {
 
   let checked = step(played, key.Char("c"))
   assert checked.checking
-  assert checked.message == "1 digit is wrong."
+  assert string.contains(checked.message, "1 digit is wrong")
 
-  // Pressing it again turns checking back off.
-  assert !step(checked, key.Char("c")).checking
+  // Pressing it again does not turn checking back off. It cannot be.
+  let again = step(checked, key.Char("c"))
+  assert again.checking
+  assert string.contains(again.message, "stays on")
+}
+
+// ---------------------------------------------------------------------------
+// What checking costs
+// ---------------------------------------------------------------------------
+
+/// Write a wrong digit into each of `cells` in turn.
+fn blunder(current: game.Game, cells: List(Int)) -> game.Game {
+  use played, index <- list.fold(cells, current)
+  let wrong = { game.answer(played, index) % 9 } + 1
+  game.Game(..played, cursor: index) |> step(key.Digit(wrong))
+}
+
+/// The empty cells of the fixture, in reading order.
+fn blanks() -> List(Int) {
+  let start = fixture()
+  list.filter(board.indices(), fn(index) {
+    board.value(start.board, index) == 0
+  })
+}
+
+pub fn checking_allows_three_wrong_digits_test() {
+  let assert [a, b, c, ..] = blanks()
+  let checked = step(fixture(), key.Char("c"))
+
+  let once = blunder(checked, [a])
+  assert once.mistakes == 1
+  assert !game.is_finished(once)
+  assert string.contains(once.message, "2 more")
+
+  let twice = blunder(once, [b])
+  assert twice.mistakes == 2
+  assert string.contains(twice.message, "One more")
+
+  let thrice = blunder(twice, [c])
+  assert thrice.mistakes == game.mistake_limit
+  assert !game.is_finished(thrice)
+  assert string.contains(thrice.message, "next one forfeits")
+}
+
+pub fn a_fourth_wrong_digit_forfeits_the_puzzle_test() {
+  let assert [a, b, c, d, ..] = blanks()
+
+  let lost = blunder(step(fixture(), key.Char("c")), [a, b, c, d])
+
+  assert lost.mistakes == game.mistake_limit + 1
+  assert game.is_finished(lost)
+  assert lost.ending == option.Some(game.Forfeited)
+
+  // A forfeited puzzle takes no more digits, and says how to start again.
+  let poked = game.Game(..lost, cursor: a) |> step(key.Erase)
+  assert board.value(poked.board, a) == board.value(lost.board, a)
+  assert string.contains(poked.message, "new puzzle")
+}
+
+pub fn wrong_digits_are_free_until_checking_is_asked_for_test() {
+  let assert [a, b, c, d, ..] = blanks()
+
+  let unchecked = blunder(fixture(), [a, b, c, d])
+  assert unchecked.mistakes == 0
+  assert !game.is_finished(unchecked)
+  assert !string.contains(unchecked.message, "forfeit")
+}
+
+pub fn switching_checking_on_charges_for_what_it_finds_test() {
+  let assert [a, b, c, ..] = blanks()
+
+  // Free while the game was saying nothing about them; asking puts all three
+  // on the tally at once, or they could be banked up and cashed in for one
+  // keystroke's worth of answers.
+  let checked = step(blunder(fixture(), [a, b, c]), key.Char("c"))
+
+  assert checked.mistakes == 3
+  assert string.contains(checked.message, "3 digits are wrong")
+  assert string.contains(checked.message, "next one forfeits")
+
+  // Spent to the last of it, but still playing.
+  assert !game.is_finished(checked)
+}
+
+pub fn switching_checking_on_to_too_many_forfeits_test() {
+  let assert [a, b, c, d, e, ..] = blanks()
+  let lost = step(blunder(fixture(), [a, b, c, d, e]), key.Char("c"))
+
+  // Five wrong digits is past the allowance, so asking ends it there.
+  assert lost.mistakes == 5
+  assert game.is_finished(lost)
+  assert lost.ending == option.Some(game.Forfeited)
+  assert list.any(visible_lines(lost), string.contains(_, "5 wrong digits"))
+}
+
+pub fn spent_to_the_last_the_next_wrong_digit_ends_it_test() {
+  let assert [a, b, c, d, ..] = blanks()
+  let spent = step(blunder(fixture(), [a, b, c]), key.Char("c"))
+
+  // Putting the three right again costs nothing, though the tally stands.
+  let mended = {
+    use current, index <- list.fold([a, b, c], spent)
+    game.Game(..current, cursor: index)
+    |> step(key.Digit(game.answer(current, index)))
+  }
+  assert !game.is_finished(mended)
+  assert mended.mistakes == 3
+
+  // One more wrong digit written, and it is over.
+  let lost = blunder(mended, [d])
+  assert game.is_finished(lost)
+  assert lost.ending == option.Some(game.Forfeited)
+}
+
+pub fn right_digits_cost_nothing_test() {
+  let checked = step(fixture(), key.Char("c"))
+
+  let played = {
+    use current, index <- list.fold(list.take(blanks(), 5), checked)
+    game.Game(..current, cursor: index)
+    |> step(key.Digit(game.answer(current, index)))
+  }
+
+  assert played.mistakes == 0
+  assert !game.is_finished(played)
+}
+
+pub fn writing_the_same_wrong_digit_again_costs_nothing_test() {
+  let assert [a, ..] = blanks()
+  let once = blunder(step(fixture(), key.Char("c")), [a])
+
+  // The cell already holds it, so nothing has changed and nothing is owed.
+  let again =
+    game.Game(..once, cursor: a) |> step(key.Digit(board.value(once.board, a)))
+  assert again.mistakes == 1
+}
+
+pub fn undo_takes_back_the_digit_but_not_the_mistake_test() {
+  let assert [a, ..] = blanks()
+  let once = blunder(step(fixture(), key.Char("c")), [a])
+  let undone = step(once, key.Char("u"))
+
+  assert board.value(undone.board, a) == 0
+  assert undone.mistakes == 1
+}
+
+pub fn the_tally_shows_on_the_title_line_test() {
+  let assert [a, ..] = blanks()
+  let checked = step(fixture(), key.Char("c"))
+
+  // It appears as soon as checking is on, before anything is spent.
+  assert list.any(visible_lines(checked), string.contains(_, "checking 0/3"))
+
+  let once = blunder(checked, [a])
+  assert list.any(visible_lines(once), string.contains(_, "checking 1/3"))
+
+  // Checking cannot be switched off, so it and the tally stay up.
+  let again = step(once, key.Char("c"))
+  assert again.checking
+  assert list.any(visible_lines(again), string.contains(_, "checking 1/3"))
+
+  // A game that has never checked says nothing about it.
+  assert !list.any(visible_lines(fixture()), string.contains(_, "checking"))
+}
+
+pub fn forfeiting_says_so_test() {
+  let assert [a, b, c, d, ..] = blanks()
+  let lost = blunder(step(fixture(), key.Char("c")), [a, b, c, d])
+  let lines = visible_lines(lost)
+
+  assert list.any(lines, string.contains(_, "forfeited"))
+  assert list.any(lines, string.contains(_, "n new puzzle"))
+  // The panel has the last word; no tally reading four out of three.
+  assert !list.any(lines, string.contains(_, "checking"))
+  // The board is left standing, so the mistakes can be seen.
+  assert list.any(lines, is_grid_row)
 }
 
 pub fn a_hint_fills_the_cell_under_the_cursor_test() {
@@ -750,7 +925,7 @@ pub fn a_hint_on_a_filled_cell_moves_to_the_next_gap_test() {
 pub fn revealing_finishes_the_puzzle_test() {
   let revealed = step(fixture(), key.Char("R"))
 
-  assert revealed.revealed
+  assert revealed.ending == option.Some(game.Revealed)
   assert game.is_finished(revealed)
   assert board.is_solved(revealed.board)
   assert board.to_string(revealed.board.values)
@@ -783,7 +958,7 @@ pub fn filling_the_last_cell_wins_test() {
     |> step(key.Digit(game.answer(almost, last)))
 
   assert game.is_finished(won)
-  assert !won.revealed
+  assert won.ending == option.Some(game.Solved)
   assert board.is_solved(won.board)
 }
 

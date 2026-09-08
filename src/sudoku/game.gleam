@@ -12,6 +12,13 @@ import sudoku/term
 
 const max_undo = 200
 
+/// How many wrong digits checking will call out before the puzzle is lost.
+/// The one after that forfeits it.
+///
+/// Checking turns a guess into a free question, and without a price on it
+/// there is nothing to stop a player asking the grid rather than reading it.
+pub const mistake_limit = 3
+
 pub type Game {
   Game(
     puzzle: Puzzle,
@@ -25,11 +32,22 @@ pub type Game {
     marking: Bool,
     show_help: Bool,
     hints: Int,
-    /// Set when the grid was revealed rather than solved by the player.
-    revealed: Bool,
+    /// Wrong digits checking has caught, counting towards `mistake_limit`.
+    mistakes: Int,
+    /// How the game ended, once it has. Set together with `finished_ms`.
+    ending: Option(Ending),
     started_ms: Int,
     finished_ms: Option(Int),
   )
+}
+
+/// The three ways a game can be over.
+pub type Ending {
+  Solved
+  /// The grid was revealed rather than worked out.
+  Revealed
+  /// One wrong digit too many while checking.
+  Forfeited
 }
 
 /// What the main loop should do after handling a key.
@@ -50,7 +68,8 @@ pub fn new(puzzle: Puzzle) -> Game {
     marking: False,
     show_help: False,
     hints: 0,
-    revealed: False,
+    mistakes: 0,
+    ending: None,
     started_ms: term.now_ms(),
     finished_ms: None,
   )
@@ -108,7 +127,7 @@ pub fn update(game: Game, pressed: Key) -> Step {
 
     key.Char("m") -> Continue(toggle_marking(game))
     key.Char("u") -> Continue(undo(game))
-    key.Char("c") -> Continue(toggle_check(game))
+    key.Char("c") -> Continue(start_checking(game))
     key.Char("H") -> Continue(hint(game))
     key.Char("R") -> Continue(reveal(game))
 
@@ -125,11 +144,55 @@ fn move(game: Game, rows: Int, cols: Int) -> Game {
 fn place(game: Game, digit: Int) -> Game {
   case board.is_given(game.board, game.cursor) {
     True -> Game(..game, message: "That cell is a clue and cannot change.")
+    False -> {
+      let written = game |> remember |> with_board(written(game, digit))
+
+      case caught(game, digit) {
+        False -> settle(written)
+        True -> count_against(written)
+      }
+    }
+  }
+}
+
+/// Whether checking is about to call this digit out as wrong. Writing the
+/// digit a cell already holds changes nothing, so it costs nothing either.
+fn caught(game: Game, digit: Int) -> Bool {
+  game.checking
+  && digit != answer(game, game.cursor)
+  && digit != board.value(game.board, game.cursor)
+}
+
+/// Put a caught digit on the tally, and end the game once the tally is past
+/// what checking allows.
+///
+/// Undo takes the digit back but not the mistake. It was checking that told
+/// the player the digit was wrong, and undo cannot untell them.
+fn count_against(game: Game) -> Game {
+  let mistakes = game.mistakes + 1
+
+  case mistakes > mistake_limit {
+    True -> forfeit(Game(..game, mistakes: mistakes))
     False ->
-      game
-      |> remember
-      |> with_board(written(game, digit))
-      |> settle
+      Game(
+        ..game,
+        mistakes: mistakes,
+        message: "Wrong. " <> allowance(mistake_limit - mistakes),
+      )
+  }
+}
+
+fn forfeit(game: Game) -> Game {
+  Game(..game, ending: Some(Forfeited), finished_ms: Some(term.now_ms()))
+}
+
+/// What is left of the allowance, as the player is told it. Never called with
+/// none left: running out is the end of the game, not a state to report.
+fn allowance(left: Int) -> String {
+  case left {
+    0 -> "The next one forfeits the puzzle."
+    1 -> "One more forfeits the puzzle."
+    _ -> int.to_string(left) <> " more forfeit the puzzle."
   }
 }
 
@@ -212,18 +275,45 @@ fn undo(game: Game) -> Game {
   }
 }
 
-fn toggle_check(game: Game) -> Game {
+/// Checking goes on and stays on.
+///
+/// It is a bargain rather than a switch: a player who could turn it off again
+/// would be asking the grid one question at a time and paying for none of
+/// them. So the wrong digits it finds on the way in go on the tally, along
+/// with every one written after.
+///
+/// Finding more wrong than the allowance forfeits the puzzle there and then,
+/// the same as writing one too many would. Being over the allowance is not a
+/// state to go on playing in: the game would be asking the player to carry a
+/// debt it will never let them pay off.
+fn start_checking(game: Game) -> Game {
   case game.checking {
-    True -> Game(..game, checking: False, message: "Checking off.")
+    True -> Game(..game, message: "Checking stays on now it is on.")
     False -> {
-      let wrong = list.count(board.indices(), is_wrong(game, _))
-      let message = case wrong {
-        0 -> "Nothing wrong so far."
-        1 -> "1 digit is wrong."
-        _ -> int.to_string(wrong) <> " digits are wrong."
+      let found = list.count(board.indices(), is_wrong(game, _))
+      let mistakes = game.mistakes + found
+      let checking = Game(..game, checking: True, mistakes: mistakes)
+
+      case mistakes > mistake_limit {
+        // No message: the finished panel says what happened, and how much.
+        True -> forfeit(checking)
+        False ->
+          Game(
+            ..checking,
+            message: found_message(found)
+              <> " "
+              <> allowance(mistake_limit - mistakes),
+          )
       }
-      Game(..game, checking: True, message: message)
     }
+  }
+}
+
+fn found_message(found: Int) -> String {
+  case found {
+    0 -> "Checking on, for good."
+    1 -> "Checking on: 1 digit is wrong."
+    _ -> "Checking on: " <> int.to_string(found) <> " digits are wrong."
   }
 }
 
@@ -265,7 +355,7 @@ fn reveal(game: Game) -> Game {
   // No message: the finished panel already says what happened.
   Game(
     ..shown,
-    revealed: True,
+    ending: Some(Revealed),
     checking: False,
     finished_ms: Some(term.now_ms()),
   )
@@ -283,7 +373,13 @@ fn remember(game: Game) -> Game {
 fn settle(game: Game) -> Game {
   case board.is_solved(game.board) {
     False -> game
-    True -> Game(..game, finished_ms: Some(term.now_ms()), checking: False)
+    True ->
+      Game(
+        ..game,
+        ending: Some(Solved),
+        finished_ms: Some(term.now_ms()),
+        checking: False,
+      )
   }
 }
 

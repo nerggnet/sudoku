@@ -41,7 +41,7 @@ of a newspaper.
 | `0`, space, backspace | clear the cell, or its marks while marking |
 | `m` | switch between writing and marking |
 | `u` | undo |
-| `c` | check what is filled in so far |
+| `c` | check what is filled in from here on, at a price |
 | `H` | reveal one cell |
 | `R` | reveal the whole solution |
 | `n` | start a new puzzle |
@@ -52,6 +52,41 @@ Clues are fixed and cannot be overwritten. Digits that clash with another in
 the same row, column or box turn red as you type them, and the cells sharing a
 row, column or box with the cursor are shaded so it is easier to see what a
 cell can still be.
+
+## Checking, and what it costs
+
+`c` calls out the digits that disagree with the answer. It turns a guess into
+a free question, so it is not free, and it is not a switch either: checking
+goes on and stays on for the rest of the puzzle.
+
+```
+ S U D O K U    Hard    checking 2/3
+```
+
+Three wrong digits are yours to spend. The fourth forfeits the puzzle, which
+ends where it stands, with the board left as it was so you can see where it
+went. The tally sits on the title line from the moment checking is switched
+on, and turns red when there is nothing left to spend.
+
+Wrong digits written before checking is asked for are free — with it off the
+game is saying nothing about whether a digit is right, so nothing is owed.
+Switching checking on charges for every wrong digit it finds sitting there,
+all at once: without that, guesses could be banked up and cashed in for a
+keystroke's worth of answers, and the price would be no price at all.
+
+Finding more than the allowance forfeits the puzzle on the spot, the same as
+writing one too many would — there is no carrying a debt the game will not let
+you pay off. So checking is worth asking for early, while there is nothing to
+find, rather than saving it up for a grid gone wrong.
+
+Spending the last of the allowance is not the end: at `checking 3/3`, in red,
+you are still playing, and putting the grid right costs nothing, though the
+tally stands. It is the next wrong digit that ends it.
+
+Undo takes back the digit but not the mistake: it was checking that told you
+the digit was wrong, and undo cannot untell you. A wrong digit caught this way
+also keeps the marks around it, which is the other half of the same bargain —
+see below.
 
 ## Typing a puzzle in
 
