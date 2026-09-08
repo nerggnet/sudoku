@@ -222,13 +222,23 @@ fn retract(
   }
 }
 
+/// Write a digit into a cell and leave every mark alone, on it and around
+/// it. Givens are left untouched.
+///
+/// This is for a digit that is not to be believed: `place` tidies marks away
+/// on the strength of the digit being right, which is no favour when it is
+/// not.
+pub fn write(board: Board, index: Int, digit: Int) -> Board {
+  case is_given(board, index) {
+    True -> board
+    False -> Board(..board, values: dict.insert(board.values, index, digit))
+  }
+}
+
 /// Clear a cell's digit. Any marks on it are left alone, so a wrong guess can
 /// be taken back without losing the reasoning that led to it.
 pub fn erase(board: Board, index: Int) -> Board {
-  case is_given(board, index) {
-    True -> board
-    False -> Board(..board, values: dict.insert(board.values, index, 0))
-  }
+  write(board, index, 0)
 }
 
 // ---------------------------------------------------------------------------

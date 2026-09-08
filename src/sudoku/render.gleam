@@ -359,7 +359,8 @@ const key_reference = [
 const mark_notes = [
   "Marks show in the grid beside the board: the digit itself where a cell",
   "has one, an asterisk where it has several. Move onto a cell to read",
-  "all of its marks in the status line.",
+  "all of its marks in the status line. Writing a digit rubs out the marks",
+  "it rules out, but not while checking is on and the digit is wrong.",
 ]
 
 /// A key reference, with a paragraph under it. Used for both the game's help

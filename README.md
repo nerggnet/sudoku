@@ -127,9 +127,12 @@ its marks out in full:
 ```
 
 Writing a digit tidies up after itself: the cell's own marks go, and so does
-that digit's mark in every cell that can see it. Erasing a digit leaves marks
-alone, so taking back a wrong guess does not cost you the reasoning behind it.
-Undo covers marks as well as digits.
+that digit's mark in every cell that can see it. Not while checking is on and
+the digit is wrong, though — the marks around a digit the game is calling out
+in the same breath are the reasoning you need to put it right, so they stay
+where they are. Erasing a digit leaves marks alone too, so taking back a
+wrong guess does not cost you the reasoning behind it. Undo covers marks as
+well as digits.
 
 ## How it works
 

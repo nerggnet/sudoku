@@ -128,8 +128,22 @@ fn place(game: Game, digit: Int) -> Game {
     False ->
       game
       |> remember
-      |> with_board(board.place(game.board, game.cursor, digit))
+      |> with_board(written(game, digit))
       |> settle
+  }
+}
+
+/// Writing a digit tidies up the marks around it, but not one that checking
+/// is calling out as wrong in the same breath. Those marks are the reasoning
+/// the wrong digit interrupted, and rubbing them out would cost the player
+/// the work they need to put it right.
+///
+/// Only while checking: with it off the game is saying nothing about whether
+/// a digit is right, and marks that quietly survived would be saying it.
+fn written(game: Game, digit: Int) -> Board {
+  case game.checking && digit != answer(game, game.cursor) {
+    True -> board.write(game.board, game.cursor, digit)
+    False -> board.place(game.board, game.cursor, digit)
   }
 }
 

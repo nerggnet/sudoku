@@ -899,6 +899,77 @@ pub fn writing_a_digit_during_play_tidies_up_marks_test() {
   assert board.sorted_marks(placed.board, board.at(0, 8)) == []
 }
 
+/// Mark a 4 in A3 (where the answer is a 4) and in A9, which can see it.
+fn marked_around_a3() -> game.Game {
+  let marked =
+    game.Game(..fixture(), cursor: board.at(0, 8))
+    |> step(key.Char("m"))
+    |> step(key.Digit(4))
+    |> step(key.Char("m"))
+
+  game.Game(..marked, cursor: 2)
+  |> step(key.Char("m"))
+  |> step(key.Digit(4))
+  |> step(key.Char("m"))
+}
+
+pub fn a_wrong_digit_while_checking_leaves_marks_alone_test() {
+  // A3 is a 4 in the solution, so a 1 there is wrong and checking says so.
+  let played = marked_around_a3() |> step(key.Char("c")) |> step(key.Digit(1))
+
+  assert board.value(played.board, 2) == 1
+  assert game.is_wrong(played, 2)
+
+  // The reasoning that led here survives, on the cell and around it.
+  assert board.sorted_marks(played.board, 2) == [4]
+  assert board.sorted_marks(played.board, board.at(0, 8)) == [4]
+}
+
+pub fn a_right_digit_while_checking_still_tidies_up_test() {
+  let played = marked_around_a3() |> step(key.Char("c")) |> step(key.Digit(4))
+
+  assert board.sorted_marks(played.board, 2) == []
+  assert board.sorted_marks(played.board, board.at(0, 8)) == []
+}
+
+pub fn a_wrong_digit_tidies_up_as_usual_when_not_checking_test() {
+  // With checking off the game is saying nothing about the digit, so marks
+  // surviving would be saying it for them.
+  let played = marked_around_a3() |> step(key.Digit(1))
+
+  assert !played.checking
+  assert board.sorted_marks(played.board, 2) == []
+  // A9's 4 is only retracted by a 4; a 1 leaves it be either way.
+  assert board.sorted_marks(played.board, board.at(0, 8)) == [4]
+}
+
+pub fn correcting_a_wrong_digit_tidies_up_after_it_test() {
+  let corrected =
+    marked_around_a3()
+    |> step(key.Char("c"))
+    |> step(key.Digit(1))
+    |> step(key.Digit(4))
+
+  assert !game.is_wrong(corrected, 2)
+  assert board.sorted_marks(corrected.board, 2) == []
+  assert board.sorted_marks(corrected.board, board.at(0, 8)) == []
+}
+
+pub fn writing_a_digit_leaves_every_mark_alone_test() {
+  let marked =
+    board.from_grid(grid(puzzle_text))
+    |> board.toggle_mark(2, 4)
+    |> board.toggle_mark(board.at(0, 8), 4)
+
+  let written = board.write(marked, 2, 4)
+  assert board.value(written, 2) == 4
+  assert board.sorted_marks(written, 2) == [4]
+  assert board.sorted_marks(written, board.at(0, 8)) == [4]
+
+  // Givens still refuse to change.
+  assert board.value(board.write(marked, 0, 9), 0) == 5
+}
+
 pub fn hints_and_reveals_tidy_up_marks_too_test() {
   let marked =
     fixture()
