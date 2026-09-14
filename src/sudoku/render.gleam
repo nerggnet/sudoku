@@ -61,9 +61,10 @@ pub fn frame(current: Game) -> String {
 
   let head = header(named, mode) |> tallied(current)
 
-  case current.help {
-    Some(page) -> term.screen(list.flatten([head, help.page(page)]))
-    None -> {
+  case current.paused, current.help {
+    True, _ -> term.screen(list.flatten([head, resting(current)]))
+    _, Some(page) -> term.screen(list.flatten([head, help.page(page)]))
+    _, None -> {
       let clashes = board.conflicts(current.board)
       term.screen(
         list.flatten([
@@ -75,6 +76,28 @@ pub fn frame(current: Game) -> String {
       )
     }
   }
+}
+
+/// A paused game, which is a screen with no board on it.
+///
+/// The board going away is the whole point: a pause that left the grid up
+/// would be a way of thinking about it for nothing. The time shown is the
+/// time at the moment of pausing, and stays that way — nothing is drawn
+/// again until a key arrives, and by then the clock has been given the
+/// waiting back.
+fn resting(current: Game) -> List(String) {
+  [
+    term.styled(palette.title, "Paused"),
+    "",
+    term.styled(
+      palette.dim,
+      "The board is put away and the clock has stopped at "
+        <> clock(game.elapsed_ms(current))
+        <> ".",
+    ),
+    "",
+    term.styled(palette.dim, "Press any key to carry on, or q to quit."),
+  ]
 }
 
 /// The title line: what puzzle this is, and which mode it is being worked on

@@ -42,8 +42,16 @@ pub type Game {
     marking: Bool,
     /// The page of help on show, if any.
     help: Option(Help),
-    /// When the help went up, while it is up. Reading is not playing, so the
-    /// clock waits for it.
+    /// Whether the board is put away and the clock stopped.
+    ///
+    /// Safe to offer because the board goes with it. A pause that left the
+    /// grid on screen would be a way to think about it for nothing, and a
+    /// best time is only worth having if the clock could not be talked out
+    /// of running.
+    paused: Bool,
+    /// When the game stopped counting, while it is stopped — the help going
+    /// up, or a pause. Reading is not playing and neither is being away, so
+    /// the clock waits for both.
     resting_since: Option(Int),
     /// What the game has offered to do if asked a second time.
     offered: Option(Offer),
@@ -208,6 +216,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     checking: False,
     marking: False,
     help: None,
+    paused: False,
     resting_since: None,
     offered: None,
     verdict: None,

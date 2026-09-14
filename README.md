@@ -54,6 +54,7 @@ newspaper.
 | `c` | check what is filled in from here on, at a price (press twice) |
 | `H` | take the next step, and say why |
 | `R` | reveal the whole solution (press twice) |
+| `p` | pause: put the board away and stop the clock |
 | `n` | start a new puzzle |
 | `?` | help, and the techniques a page at a time |
 | `q` | quit |
@@ -321,7 +322,8 @@ where the reasoning has just shut it out:
 ```
 
 The clock waits while the help is up. Reading about a technique is not
-playing, and eight pages is long enough that it would otherwise show.
+playing, and eight pages is long enough that it would otherwise show. `p`
+does the same thing on purpose — see below.
 
 The examples are drawn by hand rather than lifted from a real grid, since a
 real one comes with sixty other cells to look past. The names are the ones
@@ -381,6 +383,38 @@ Undo takes back the digit but not the mistake: it was checking that told you
 the digit was wrong, and undo cannot untell you. A wrong digit caught this way
 also keeps the marks around it, which is the other half of the same bargain —
 see below.
+
+## Pausing
+
+`p` puts the board away and stops the clock. Any key picks it up again.
+
+```
+ S U D O K U    Medium
+
+ Paused
+
+ The board is put away and the clock has stopped at 04:12.
+
+ Press any key to carry on, or q to quit.
+```
+
+The board going away is not politeness, it is the whole reason this can be
+offered at all. A pause that left the grid on screen would be a way of
+thinking about a puzzle for nothing, and a best time is only worth having if
+the clock cannot be talked out of running. You cannot work on a grid you
+cannot see, so there is nothing to gain by pausing and nothing to lose by it
+either.
+
+The game never guesses at this. It only ever hears from you when you press a
+key, so a long silence could be a phone call or it could be somebody staring
+hard at the same box for five minutes, and it has no way to tell the two
+apart. Rather than guess, it waits to be told. The cost is that you have to
+remember to press `p` before the doorbell goes; the gain is that the clock
+never stops for a reason the game invented.
+
+The time shown on the paused screen is the time at the moment you pressed
+`p`, and it stays there. Nothing is drawn again until a key arrives, and by
+then the waiting has already been given back.
 
 ## Putting a puzzle down
 

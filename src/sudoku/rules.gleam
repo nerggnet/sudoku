@@ -17,20 +17,41 @@ import sudoku/logic
 import sudoku/term
 
 pub fn update(current: game.Game, pressed: Key) -> game.Step {
-  case pressed, current.help {
+  case pressed, current.paused, current.help {
     // A terminal in line mode sends a newline after every key. The player
     // did not press it, so it must not count as having pressed something:
     // it would close the help as soon as it opened, and cancel every offer
     // before it could be taken up.
-    key.Unknown, _ -> game.Continue(current)
-    _, Some(page) -> browse(current, page, pressed)
-    _, None -> play(current, pressed)
+    key.Unknown, _, _ -> game.Continue(current)
+    _, True, _ -> resting(current, pressed)
+    _, _, Some(page) -> browse(current, page, pressed)
+    _, _, None -> play(current, pressed)
   }
 }
 
 // --------------------------------------------------------------------------
 // Reading the help
 // --------------------------------------------------------------------------
+
+/// A paused game has the keyboard to itself, and there is only one thing to
+/// say to it: carry on. Quitting still works, since a game put down is kept
+/// either way.
+fn resting(current: game.Game, pressed: Key) -> game.Step {
+  case pressed {
+    key.Quit | key.Char("q") | key.Char("Q") -> game.Exit
+    _ -> game.Continue(wake(current))
+  }
+}
+
+/// Put the board away and stop the clock.
+fn pause(current: game.Game) -> game.Game {
+  game.Game(
+    ..current,
+    paused: True,
+    resting_since: Some(term.now_ms()),
+    message: "",
+  )
+}
 
 /// While the help is up it has the keyboard to itself: the arrows turn the
 /// pages and anything else puts it away. Nothing reaches the board, so there
@@ -73,6 +94,7 @@ fn wake(current: game.Game) -> game.Game {
   game.Game(
     ..current,
     help: None,
+    paused: False,
     resting_since: None,
     offered: None,
     verdict: None,
@@ -161,6 +183,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Erase if current.marking -> game.Continue(unmark(current))
     key.Erase -> game.Continue(erase(current))
 
+    key.Char("p") -> game.Continue(pause(current))
     key.Char("f") -> game.Continue(fill(current))
     key.Char("m") -> game.Continue(toggle_marking(current))
     key.Char("u") -> game.Continue(undo(current))
