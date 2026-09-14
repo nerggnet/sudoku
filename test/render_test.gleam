@@ -396,3 +396,26 @@ pub fn the_cursor_is_highlighted_test() {
 pub fn the_frame_starts_at_the_top_of_the_screen_test() {
   assert string.starts_with(render.frame(helper.fixture()), "\u{1b}[H")
 }
+
+pub fn a_window_with_no_room_is_complained_about_test() {
+  // Both ways of being short, and either one on its own.
+  assert string.contains(render.cramped_at(60, 20), "60 by 20")
+  assert string.contains(render.cramped_at(60, 20), "78 by 24")
+  assert render.cramped_at(60, 40) != ""
+  assert render.cramped_at(100, 20) != ""
+
+  // Exactly enough is enough.
+  assert render.cramped_at(render.columns, render.rows) == ""
+  assert render.cramped_at(200, 60) == ""
+}
+
+pub fn a_terminal_that_will_not_say_is_left_alone_test() {
+  // -1 is the terminal declining to answer, which is not the same as a window
+  // with no room in it.
+  assert render.cramped_at(-1, -1) == ""
+
+  // One answer and one refusal still counts, with the refusal left as a
+  // question mark rather than guessed at.
+  assert string.contains(render.cramped_at(60, -1), "60 by ?")
+  assert string.contains(render.cramped_at(-1, 20), "? by 20")
+}

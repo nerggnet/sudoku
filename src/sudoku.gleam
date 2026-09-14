@@ -278,7 +278,7 @@ fn menu(
     <> term.styled("92", best(origin, bests))
   }
 
-  let room = case cramped() {
+  let room = case render.cramped() {
     "" -> []
     complaint -> ["", term.styled("93", complaint)]
   }
@@ -331,35 +331,6 @@ fn aside(origin: Origin) -> String {
   case origin {
     generator.Dealt(difficulty) -> generator.asks_for(difficulty)
     generator.Handwritten -> "type in a puzzle from a newspaper"
-  }
-}
-
-/// Whether the window is too small for a frame to land in properly, said in
-/// a line. A terminal that will not say how much room it has is taken at its
-/// word and left alone.
-fn cramped() -> String {
-  let across = term.columns()
-  let down = term.rows()
-
-  case across > 0 && across < render.columns, down > 0 && down < render.rows {
-    False, False -> ""
-    _, _ ->
-      "This window is "
-      <> measured(across)
-      <> " by "
-      <> measured(down)
-      <> ", and the game wants "
-      <> int.to_string(render.columns)
-      <> " by "
-      <> int.to_string(render.rows)
-      <> "."
-  }
-}
-
-fn measured(count: Int) -> String {
-  case count > 0 {
-    True -> int.to_string(count)
-    False -> "?"
   }
 }
 

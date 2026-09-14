@@ -407,16 +407,28 @@ painted over the board, or a multiplexer that has lost its place. It works
 wherever it is pressed: the menu, the editor and the board are all drawn the
 same way.
 
-The menu says so when the window is too small for the game to land in
+The game says so when the window is too small for a frame to land in
 properly, since the alternative is a layout wrapped into nonsense with no
-explanation:
+explanation. On the menu it goes under the choices; on the board and in the
+editor it takes the bottom line, the one the keys are usually on:
 
 ```
  This window is 60 by 20, and the game wants 78 by 24.
 ```
 
+The keys are a reminder, and the least missed line on the screen. A board
+wrapped into nonsense is a puzzle about the terminal rather than about
+Sudoku, and worth saying out loud.
+
+The size is asked for afresh every frame, so a window resized in the middle
+of a puzzle is noticed, and the line goes again when the room comes back.
+That happens on the next keystroke rather than the moment you let go of the
+window edge: the game is sitting waiting for a key, and a frame is what it
+draws when it gets one. `Ctrl-L` counts as one.
+
 A terminal that will not say how much room it has is taken at its word and
-left alone.
+left alone. One that answers about its width but not its height is half
+taken at its word — `This window is 60 by ?`.
 
 ## Without colour
 

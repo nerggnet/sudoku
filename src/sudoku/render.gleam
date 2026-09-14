@@ -114,7 +114,50 @@ fn tallied(head: List(String), current: Game) -> List(String) {
 fn footer(current: Game) -> List(String) {
   case game.is_finished(current) {
     True -> finished(current)
-    False -> [term.styled(palette.dim, key_hints(current))]
+    // The window being too small takes the bottom line. The keys are a
+    // reminder; a board wrapped into nonsense is a puzzle about the terminal
+    // rather than about Sudoku, and worth saying out loud.
+    False ->
+      case cramped() {
+        "" -> [term.styled(palette.dim, key_hints(current))]
+        complaint -> [term.styled(palette.alarm, complaint)]
+      }
+  }
+}
+
+/// Whether the window is too small for a frame to land in properly, said in
+/// a line, and empty where there is nothing to complain about.
+///
+/// A terminal that will not say how much room it has is taken at its word and
+/// left alone. Asked afresh every frame, so a window resized mid-puzzle is
+/// noticed — on the next keystroke, since that is when the next frame is
+/// drawn, and `Ctrl-L` counts.
+pub fn cramped() -> String {
+  cramped_at(term.columns(), term.rows())
+}
+
+/// The same, for a window of a given size. Kept apart from the asking so that
+/// it can be thought about, and tested, without a terminal to hand.
+pub fn cramped_at(across: Int, down: Int) -> String {
+  case across > 0 && across < columns, down > 0 && down < rows {
+    False, False -> ""
+    _, _ ->
+      "This window is "
+      <> measured(across)
+      <> " by "
+      <> measured(down)
+      <> ", and the game wants "
+      <> int.to_string(columns)
+      <> " by "
+      <> int.to_string(rows)
+      <> "."
+  }
+}
+
+fn measured(count: Int) -> String {
+  case count > 0 {
+    True -> int.to_string(count)
+    False -> "?"
   }
 }
 
@@ -450,7 +493,12 @@ pub fn editor_frame(current: Editor) -> String {
           [term.styled(palette.dim, "  clues")],
           grids.grid(fn(index) { clue_cell(current, clashes, index) }),
           editor_status(current, clashes),
-          [term.styled(palette.dim, editor_key_hints)],
+          [
+            case cramped() {
+              "" -> term.styled(palette.dim, editor_key_hints)
+              complaint -> term.styled(palette.alarm, complaint)
+            },
+          ],
         ]),
       )
     }
