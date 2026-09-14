@@ -87,6 +87,9 @@ pub type Offer {
   /// Checking is off. Asking again switches it on, for good, and with
   /// whatever that costs where it stands.
   StartChecking
+  /// There is a puzzle here to solve. Asking again fills the answer in and
+  /// ends it.
+  Reveal
 }
 
 /// The key that made an offer is the key that takes it up. Anything else
@@ -98,6 +101,7 @@ pub fn asked_by(offer: Offer) -> List(Key) {
     GiveUp -> [key.Char("n"), key.Char("N")]
     TakeHint -> [key.Char("H")]
     StartChecking -> [key.Char("c")]
+    Reveal -> [key.Char("R")]
   }
 }
 

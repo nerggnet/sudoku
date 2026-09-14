@@ -147,6 +147,12 @@ pub fn press_leaving(bytes: List(Int)) -> #(key.Key, List(Int)) {
   }
 }
 
+/// The answer filled in, which takes two asks once there is a puzzle under
+/// way to lose.
+pub fn revealed(current: game.Game) -> game.Game {
+  current |> step(key.Char("R")) |> step(key.Char("R"))
+}
+
 /// Checking switched on, which takes two asks: one to hear what it costs and
 /// one to go ahead.
 pub fn checked(current: game.Game) -> game.Game {

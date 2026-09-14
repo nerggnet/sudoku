@@ -287,5 +287,5 @@ pub fn reveals_tidy_up_marks_too_test() {
     |> helper.step(key.Digit(4))
     |> helper.step(key.Char("m"))
 
-  assert board.sorted_marks(helper.step(marked, key.Char("R")).board, 2) == []
+  assert board.sorted_marks(helper.revealed(marked).board, 2) == []
 }

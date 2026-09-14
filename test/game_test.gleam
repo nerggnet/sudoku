@@ -316,3 +316,37 @@ pub fn a_finished_time_does_not_move_test() {
   assert after.started_ms == done.started_ms
   assert game.elapsed_ms(after) == game.elapsed_ms(done)
 }
+
+pub fn revealing_a_puzzle_under_way_is_asked_for_twice_test() {
+  // R is r with a thumb on shift, and r is pressed over and over walking
+  // forward through undone moves. The slip ends the puzzle, and a game that
+  // is over cannot be walked back out of.
+  let played = helper.step(helper.fixture(), key.Digit(4))
+  let asked = helper.step(played, key.Char("R"))
+
+  assert !game.is_finished(asked)
+  assert asked.board == played.board
+  assert string.contains(asked.message, "Press R again")
+
+  let shown = helper.step(asked, key.Char("R"))
+  assert game.is_finished(shown)
+  assert shown.ending == option.Some(game.Revealed)
+}
+
+pub fn a_puzzle_nothing_has_been_done_to_is_revealed_at_once_test() {
+  // Nothing to lose by asking, the same as giving one up.
+  let shown = helper.step(helper.fixture(), key.Char("R"))
+
+  assert game.is_finished(shown)
+  assert shown.ending == option.Some(game.Revealed)
+}
+
+pub fn an_offer_to_reveal_lapses_on_the_next_keystroke_test() {
+  let asked =
+    helper.fixture()
+    |> helper.step(key.Digit(4))
+    |> helper.step(key.Char("R"))
+    |> helper.step(key.Down)
+
+  assert !game.is_finished(helper.step(asked, key.Char("R")))
+}

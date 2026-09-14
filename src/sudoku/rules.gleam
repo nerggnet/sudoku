@@ -168,7 +168,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Char("S") -> game.Continue(scanning(current))
     key.Char("c") -> game.Continue(start_checking(current))
     key.Char("H") -> game.Continue(hint.hint(current))
-    key.Char("R") -> game.Continue(reveal(current))
+    key.Char("R") -> game.Continue(revealing(current))
 
     _ -> game.Continue(current)
   }
@@ -610,6 +610,24 @@ fn found_message(found: Int) -> String {
     0 -> "Checking on, for good."
     1 -> "Checking on: 1 digit is wrong."
     _ -> "Checking on: " <> int.to_string(found) <> " digits are wrong."
+  }
+}
+
+/// Fill the answer in, which is the end of the puzzle.
+///
+/// Asked for twice while there is a puzzle here to lose. `R` is `r` with a
+/// thumb on shift, and `r` is pressed over and over walking forward through
+/// undone moves, so the slip is an easy one to make and there is no undoing
+/// it: a game that is over cannot be walked back out of.
+fn revealing(current: game.Game) -> game.Game {
+  case under_way(current), current.offered == Some(game.Reveal) {
+    False, _ | _, True -> reveal(current)
+    True, False ->
+      game.Game(
+        ..current,
+        offered: Some(game.Reveal),
+        message: "Press R again to fill the answer in.\nThat is the end of this puzzle.",
+      )
   }
 }
 

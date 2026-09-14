@@ -53,7 +53,7 @@ newspaper.
 | `r` | do it again |
 | `c` | check what is filled in from here on, at a price (press twice) |
 | `H` | take the next step, and say why |
-| `R` | reveal the whole solution |
+| `R` | reveal the whole solution (press twice) |
 | `n` | start a new puzzle |
 | `?` | help, and the techniques a page at a time |
 | `q` | quit |
@@ -428,6 +428,16 @@ back to. Which is why `n` asks twice while a puzzle is under way:
 `n` is next to `m` on the keyboard, and reaching for marking and missing
 should not cost an hour. A puzzle nothing has been done to, or one already
 over, is given up at once — there is nothing to lose by asking.
+
+`R` asks twice for the same reason, and with better cause: it is `r` with a
+thumb on shift, and `r` is the key you press over and over walking forward
+through undone moves. The slip fills the answer in and ends the puzzle, and
+a game that is over cannot be walked back out of.
+
+```
+ Press R again to fill the answer in.
+ That is the end of this puzzle.
+```
 
 On the way out the game prints the puzzle it was playing, as the same
 81-character line `Custom` takes:
