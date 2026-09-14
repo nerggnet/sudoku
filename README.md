@@ -138,8 +138,19 @@ the next.
 A hint answers the cell you are on. You asked while looking at it, so that is
 the cell it takes first — and only two techniques settle a cell rather than
 ruling candidates out, so whether this one will go yet is a quick question to
-ask. When it will not go yet, the hint moves to a cell that will, rather than
-handing you an answer here it cannot account for.
+ask.
+
+When it will not go yet, the hint says so and stays where you are:
+
+```
+ Nothing settles A2 yet.
+ Press H again to look elsewhere.
+```
+
+You were looking there for a reason, and an answer three rows away is not the
+one you asked for. Ask a second time and it goes looking; do anything else in
+between and the next ask is a fresh question, answered the same way. Saying
+there is nothing to say is not a hint, and is not counted as one.
 
 The hints reason from the marks you have made, not only from the digits on
 the board. Narrowing a cell by hand narrows what the reasoning has to work

@@ -726,8 +726,10 @@ pub fn a_typed_puzzle_plays_like_any_other_test() {
   // A3 is a 4 in the answer, so checking and hints know that much.
   assert game.answer(started, 2) == 4
 
-  let hinted = step(started, key.Char("H"))
-  assert hinted.hints == 1
+  // Twice over: the cell it starts on may not be one that can be worked out
+  // yet, and the first ask is answered by saying so.
+  let hinted = started |> step(key.Char("H")) |> step(key.Char("H"))
+  assert hinted.hints >= 1
   assert nothing_wrong(hinted)
 }
 
@@ -1149,9 +1151,9 @@ fn nothing_wrong(current: game.Game) -> Bool {
 }
 
 pub fn a_hint_takes_the_next_step_and_says_why_test() {
-  let hinted = step(fixture(), key.Char("H"))
+  let hinted = fixture() |> step(key.Char("H")) |> step(key.Char("H"))
 
-  assert hinted.hints == 1
+  assert hinted.hints >= 1
   assert nothing_wrong(hinted)
 
   // It moved to what it is about and named it in words, rather than leaving
@@ -1179,21 +1181,59 @@ pub fn a_hint_answers_the_cell_you_are_on_test() {
   assert string.contains(hinted.message, board.name(elsewhere))
 }
 
-pub fn a_hint_looks_elsewhere_when_this_cell_will_not_go_yet_test() {
+/// A cell of the fixture that nothing settles yet.
+fn stuck_cell() -> Int {
   let start = fixture()
-
   let assert Ok(stuck) = {
     use index <- list.find(board.indices())
     board.value(start.board, index) == 0
     && logic.settles(start.board.values, index) == Error(Nil)
   }
+  stuck
+}
 
-  // Better a move somewhere else than an answer here it cannot account for.
-  let hinted = step(game.Game(..start, cursor: stuck), key.Char("H"))
+pub fn a_hint_says_so_rather_than_wandering_off_test() {
+  let stuck = stuck_cell()
+  let waiting = step(game.Game(..fixture(), cursor: stuck), key.Char("H"))
 
-  assert hinted.cursor != stuck
-  assert nothing_wrong(hinted)
-  assert string.contains(hinted.message, board.name(hinted.cursor))
+  // It stays where the player is looking and says why it has nothing.
+  assert waiting.cursor == stuck
+  assert waiting.board == fixture().board
+  assert string.contains(waiting.message, board.name(stuck))
+  assert string.contains(waiting.message, "Press H again")
+
+  // Saying so is not a hint, and is not counted as one.
+  assert waiting.hints == 0
+}
+
+pub fn asking_twice_at_a_stuck_cell_looks_elsewhere_test() {
+  let stuck = stuck_cell()
+  let moved_on =
+    game.Game(..fixture(), cursor: stuck)
+    |> step(key.Char("H"))
+    |> step(key.Char("H"))
+
+  assert moved_on.cursor != stuck
+  assert moved_on.hints == 1
+  assert nothing_wrong(moved_on)
+  assert string.contains(moved_on.message, board.name(moved_on.cursor))
+}
+
+pub fn anything_in_between_starts_the_asking_over_test() {
+  let stuck = stuck_cell()
+
+  // Moving away and back is a fresh question, not a second asking of the old
+  // one, so it is answered the same way as the first.
+  let again =
+    game.Game(..fixture(), cursor: stuck)
+    |> step(key.Char("H"))
+    |> step(key.Right)
+    |> step(key.Left)
+    |> step(key.Char("H"))
+
+  assert again.cursor == stuck
+  assert again.hints == 0
+  assert string.contains(again.message, "Press H again")
 }
 
 pub fn a_hint_goes_where_the_reasoning_is_test() {
@@ -1279,17 +1319,30 @@ pub fn a_hint_rubs_out_the_marks_it_rules_out_test() {
   }
 }
 
-pub fn a_hint_always_moves_something_test() {
-  // The same puzzle without marks: an elimination would have nowhere to land
-  // and nothing to show, so the hint falls back to naming a digit rather than
-  // offering the same advice for ever.
+pub fn asking_over_and_over_keeps_moving_test() {
+  // Without marks an elimination has nowhere to land and nothing to show, so
+  // the hints fall back to naming digits rather than offering the same advice
+  // for ever. Some asks only say a cell will not go yet; the rest must move.
   let start = playing(needs_naked_pair)
-  let once = step(start, key.Char("H"))
-  let twice = step(once, key.Char("H"))
 
-  assert board.empty_count(once.board) < board.empty_count(start.board)
-  assert board.empty_count(twice.board) < board.empty_count(once.board)
-  assert nothing_wrong(twice)
+  let #(last, moves) = {
+    use #(current, moves), _ <- list.fold(board.span(1, 8), #(start, 0))
+    let hinted = step(current, key.Char("H"))
+    let moved =
+      board.empty_count(hinted.board) < board.empty_count(current.board)
+
+    #(
+      hinted,
+      moves
+        + case moved {
+        True -> 1
+        False -> 0
+      },
+    )
+  }
+
+  assert moves >= 4
+  assert nothing_wrong(last)
 }
 
 pub fn a_hint_checks_itself_against_the_answer_test() {
@@ -1673,16 +1726,45 @@ pub fn reveals_tidy_up_marks_too_test() {
 }
 
 pub fn a_hint_tidies_up_the_marks_where_it_settles_test() {
-  // Wherever the hint is going to settle a digit, mark that cell first.
-  let settles = step(fixture(), key.Char("H")).cursor
+  // A cell the reasoning can settle, marked up before the hint settles it.
+  let assert Ok(settles) = {
+    use index <- list.find(board.indices())
+    board.value(fixture().board, index) == 0
+    && logic.settles(fixture().board.values, index) != Error(Nil)
+  }
+  // Pencilled with the digit that belongs there. A mark of the wrong digit
+  // would make the cell look like a naked single for a digit that is not the
+  // answer, and a hint checks before it writes.
+  let digit = game.answer(fixture(), settles)
   let marked =
     game.Game(..fixture(), cursor: settles)
     |> step(key.Char("m"))
-    |> step(key.Digit(1))
+    |> step(key.Digit(digit))
     |> step(key.Char("m"))
 
-  assert board.sorted_marks(marked.board, settles) == [1]
+  assert board.sorted_marks(marked.board, settles) == [digit]
   assert board.sorted_marks(step(marked, key.Char("H")).board, settles) == []
+}
+
+pub fn a_hint_will_not_write_what_your_marks_say_wrongly_test() {
+  // One wrong candidate pencilled in makes the cell look settled, and settled
+  // wrongly. The hint declines rather than writing it.
+  let assert Ok(settles) = {
+    use index <- list.find(board.indices())
+    board.value(fixture().board, index) == 0
+    && logic.settles(fixture().board.values, index) != Error(Nil)
+  }
+
+  let wrong = { game.answer(fixture(), settles) % 9 } + 1
+  let misled =
+    game.Game(..fixture(), cursor: settles)
+    |> step(key.Char("m"))
+    |> step(key.Digit(wrong))
+    |> step(key.Char("m"))
+    |> step(key.Char("H"))
+
+  assert board.value(misled.board, settles) == 0
+  assert string.contains(misled.message, "Press H again")
 }
 
 // ---------------------------------------------------------------------------

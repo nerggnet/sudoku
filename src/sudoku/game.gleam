@@ -37,6 +37,9 @@ pub type Game {
     /// When the help went up, while it is up. Reading is not playing, so the
     /// clock waits for it.
     resting_since: Option(Int),
+    /// The cell the player has already been told nothing settles yet. Asking
+    /// again there is what sends a hint looking elsewhere.
+    stuck: Option(Int),
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -86,6 +89,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     marking: False,
     help: None,
     resting_since: None,
+    stuck: None,
     hints: 0,
     mistakes: 0,
     ending: None,
@@ -155,6 +159,7 @@ fn wake(game: Game) -> Game {
     ..game,
     help: None,
     resting_since: None,
+    stuck: None,
     started_ms: game.started_ms + rested,
   )
 }
@@ -175,6 +180,13 @@ fn turn(game: Game, page: Help, by: Int) -> Game {
 }
 
 fn play(game: Game, pressed: Key) -> Step {
+  // Asking for a hint twice over at one cell is what moves it along, so
+  // anything else done in between forgets that the first one was asked.
+  let game = case pressed {
+    key.Char("H") -> game
+    _ -> Game(..game, stuck: None)
+  }
+
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
     key.Char("n") | key.Char("N") -> Restart
@@ -453,12 +465,43 @@ fn hint(game: Game) -> Game {
   case board.empty_count(game.board) {
     0 -> Game(..game, message: "The grid is already full.")
     _ ->
-      case here(game), sound_step(game) {
+      case here(game) {
         // The cell being looked at is the cell being asked about.
-        Ok(step), _ -> take(game, step)
-        _, Ok(step) -> take(game, step)
-        _, _ -> tell(game)
+        Ok(step) -> take(Game(..game, stuck: None), step)
+
+        Error(_) ->
+          case waiting(game) {
+            // Nothing to say about this one yet, and nothing said about it
+            // yet either. Say so, and stay: the player is looking here for a
+            // reason, and an answer three rows away is not one they asked
+            // for.
+            True -> hold(game)
+            False -> elsewhere(Game(..game, stuck: None))
+          }
       }
+  }
+}
+
+/// Whether this cell is worth waiting at: an empty one the player has not
+/// already been told about.
+fn waiting(game: Game) -> Bool {
+  board.value(game.board, game.cursor) == 0 && game.stuck != Some(game.cursor)
+}
+
+fn hold(game: Game) -> Game {
+  Game(
+    ..game,
+    stuck: Some(game.cursor),
+    message: "Nothing settles "
+      <> board.name(game.cursor)
+      <> " yet.\nPress H again to look elsewhere.",
+  )
+}
+
+fn elsewhere(game: Game) -> Game {
+  case sound_step(game) {
+    Ok(step) -> take(game, step)
+    Error(_) -> tell(game)
   }
 }
 
