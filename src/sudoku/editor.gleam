@@ -77,7 +77,13 @@ pub fn update(current: Editor, pressed: Key) -> Step {
     key.Right | key.Char("l") | key.Char("d") -> Continue(move(current, 0, 1))
 
     key.Digit(digit) | key.Shifted(digit) -> Continue(type_in(current, digit))
-    key.Erase -> Continue(type_in(current, 0))
+
+    // A dot or an underscore is a blank, the same as a zero: those are the
+    // three a puzzle can be written with, and the line this game prints on
+    // its way out is written with dots. Without them a pasted puzzle types
+    // its digits and skips its blanks, and everything after the first gap
+    // lands a cell early.
+    key.Erase | key.Char(".") | key.Char("_") -> Continue(type_in(current, 0))
 
     key.Char("u") -> Continue(undo(current))
     key.Char("x") | key.Char("X") -> Continue(clear(current))

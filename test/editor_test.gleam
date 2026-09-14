@@ -268,3 +268,40 @@ pub fn shift_and_a_digit_types_a_clue_in_test() {
   assert editor.value(typed, 0) == 5
   assert editor.value(typed, 1) == 3
 }
+
+pub fn a_dot_is_a_blank_and_steps_on_test() {
+  // The three characters a puzzle can be written with, all of them blanks.
+  use blank <- list.each([key.Char("."), key.Char("_"), key.Erase])
+  let typed = helper.edit(editor.new(), blank)
+
+  assert editor.value(typed, 0) == 0
+  assert typed.cursor == 1
+}
+
+pub fn a_whole_puzzle_can_be_pasted_in_test() {
+  // The 81-character line the game prints on its way out, typed straight
+  // back in one character at a time, dots and all.
+  let pasted = {
+    use current, character <- list.fold(
+      string.to_graphemes(board.to_string(helper.grid(helper.puzzle_text))),
+      editor.new(),
+    )
+    helper.edit(current, helper.pressed(character))
+  }
+
+  assert editor.value(pasted, 0) == 5
+  assert pasted.clues == helper.grid(helper.puzzle_text)
+
+  // And it plays as the puzzle it came from.
+  let assert editor.Ready(puzzle) = editor.update(pasted, key.Char("p"))
+  assert puzzle.board.values == helper.grid(helper.puzzle_text)
+}
+
+pub fn an_unknown_character_leaves_the_cursor_where_it_is_test() {
+  // Only blanks and digits step on, so a stray letter in a pasted line does
+  // not shunt everything after it along a cell.
+  let typed = helper.edit(editor.new(), key.Char("z"))
+
+  assert typed.cursor == 0
+  assert editor.clue_count(typed) == 0
+}

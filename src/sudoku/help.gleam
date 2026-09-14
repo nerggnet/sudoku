@@ -410,7 +410,7 @@ pub fn editor_keys() -> List(String) {
 const editor_key_reference = [
   #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
   #("1 - 9", "type a clue in and step on to the next cell"),
-  #("0, space, backspace", "leave the cell empty and step on"),
+  #("0, space, . or _", "leave the cell empty and step on"),
   #("u", "undo"),
   #("x", "clear the grid and start over"),
   #("p", "play the puzzle"),
@@ -423,4 +423,7 @@ const editor_notes = [
   "Digits step the cursor on by themselves, so a row is nine keystrokes and",
   "the whole grid eighty-one, read straight off the page. Clues that clash",
   "turn red, and p checks the puzzle has exactly one answer before play.",
+  "",
+  "Since a dot counts as a blank, a whole puzzle can be pasted in as the",
+  "81-character line this game prints on its way out.",
 ]

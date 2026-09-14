@@ -609,14 +609,22 @@ dealing one:
 ```
 
 The cursor steps on by itself after every key, so a row is nine keystrokes and
-the whole grid eighty-one, read straight off the page. `0` or space leaves a
-gap; the arrow keys go back over anything mistyped.
+the whole grid eighty-one, read straight off the page. `0`, space, `.` or `_`
+leaves a gap; the arrow keys go back over anything mistyped.
+
+Because a dot counts as a blank, a whole puzzle can be pasted in as the same
+81-character line the game prints on its way out — the one somebody hands
+you. Anything that is neither a digit nor a blank is ignored and does not
+step the cursor on, so a line that arrives with a stray character in it does
+not shunt everything after it along a cell. (Spaces do count as blanks, so a
+grid pasted in with gaps between the bands is the one layout that will not
+come out right; paste the unspaced line.)
 
 | Key | |
 | --- | --- |
 | `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
 | `1`–`9` | type a clue in and step on to the next cell |
-| `0`, space, backspace | leave the cell empty and step on |
+| `0`, space, backspace, `.`, `_` | leave the cell empty and step on |
 | `u` | undo |
 | `x` | clear the grid and start over |
 | `p` | play the puzzle |

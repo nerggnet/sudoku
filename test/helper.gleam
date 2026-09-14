@@ -104,6 +104,16 @@ pub fn edit(current: editor.Editor, pressed: key.Key) -> editor.Editor {
   next
 }
 
+/// The key a character arrives as, so that a test can type a puzzle in the
+/// way a paste does: one keystroke per character, layout and all.
+pub fn pressed(character: String) -> key.Key {
+  case int.parse(character) {
+    Ok(0) -> key.Erase
+    Ok(digit) -> key.Digit(digit)
+    Error(_) -> key.Char(character)
+  }
+}
+
 /// Type a grid in one keystroke per cell, the way a puzzle is copied off a
 /// page. Layout is ignored, just as `board.parse` ignores it.
 pub fn typed(text: String) -> editor.Editor {
