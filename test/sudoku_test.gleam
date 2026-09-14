@@ -9,6 +9,7 @@ import sudoku/board
 import sudoku/editor
 import sudoku/game
 import sudoku/generator
+import sudoku/help
 import sudoku/key
 import sudoku/logic
 import sudoku/render
@@ -2407,16 +2408,16 @@ pub fn the_help_says_how_to_start_the_game_test() {
   let lines = visible_lines(showing)
 
   // Every way in that the command line takes, and what a puzzle looks like.
-  use #(invocation, _) <- list.each(render.invocations)
+  use #(invocation, _) <- list.each(help.invocations)
   assert list.any(lines, string.contains(_, invocation))
   assert list.any(lines, string.contains(_, "81 characters"))
 }
 
 pub fn the_help_and_the_command_line_say_the_same_thing_test() {
   // One list behind both, so that the page and the complaint cannot drift.
-  let complaint = render.usage()
+  let complaint = help.usage()
 
-  use #(invocation, meaning) <- list.each(render.invocations)
+  use #(invocation, meaning) <- list.each(help.invocations)
   assert string.contains(complaint, invocation)
   assert string.contains(complaint, meaning)
 }

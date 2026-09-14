@@ -11,6 +11,7 @@ import sudoku/board
 import sudoku/editor
 import sudoku/game
 import sudoku/generator.{type Difficulty, type Origin}
+import sudoku/help
 import sudoku/key
 import sudoku/render
 import sudoku/store
@@ -43,7 +44,7 @@ fn asked_for(arguments: List(String)) -> Result(Option(Choice), String) {
   case arguments {
     [] -> Ok(None)
     [only] -> asked(only) |> result.map(Some)
-    _ -> Error(render.usage())
+    _ -> Error(help.usage())
   }
 }
 
@@ -67,7 +68,7 @@ fn asked(argument: String) -> Result(Choice, String) {
 /// way out and the editor takes.
 fn typed_in(argument: String) -> Result(Choice, String) {
   case board.parse(argument) {
-    Error(_) -> Error(render.usage())
+    Error(_) -> Error(help.usage())
     Ok(clues) ->
       case generator.from_clues(clues) {
         Ok(puzzle) -> Ok(Play(puzzle))

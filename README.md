@@ -498,6 +498,9 @@ throws the old one away.
 | `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/store` | writing a game down, reading it back, and keeping times |
 | `sudoku/render` | drawing a frame |
+| `sudoku/help` | the keys, the techniques, and the pages that explain them |
+| `sudoku/grids` | drawing a nine by nine, for the board and the help alike |
+| `sudoku/palette` | the colours it is all drawn in |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |
 
