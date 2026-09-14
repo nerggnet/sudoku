@@ -3,7 +3,11 @@
 A Sudoku game for the terminal, written in Gleam.
 
 ```sh
-gleam run
+gleam run                     # choose a puzzle from the menu
+gleam run -- hard             # deal one at that difficulty
+gleam run -- custom           # type a puzzle in
+gleam run -- resume           # pick up the game you left
+gleam run -- 53..7....6..1..  # play that puzzle, dots for the blanks
 ```
 
 Pick a difficulty, then play. Puzzles are generated fresh each time, always
@@ -49,6 +53,7 @@ newspaper.
 | `n` | start a new puzzle |
 | `?` | help, and the techniques a page at a time |
 | `q` | quit |
+| `Ctrl-L` | draw the screen again |
 
 Clues are fixed and cannot be overwritten. Digits that clash with another in
 the same row, column or box turn red as you type them, and the cells sharing a
@@ -328,7 +333,28 @@ This puzzle:
 ```
 
 That is the line to send someone when you want them to try the grid that beat
-you.
+you — and `gleam run -- <the line>` is how they play it, rather than typing
+eighty-one characters into `Custom` by hand. A line that is not a puzzle with
+exactly one answer is refused with the same words the editor uses.
+
+## When the terminal gets in the way
+
+`Ctrl-L` wipes the screen and draws it again, which is the only thing to be
+done about a mess made by something other than the game — a notification
+painted over the board, or a multiplexer that has lost its place. It works
+wherever it is pressed: the menu, the editor and the board are all drawn the
+same way.
+
+The menu says so when the window is too small for the game to land in
+properly, since the alternative is a layout wrapped into nonsense with no
+explanation:
+
+```
+ This window is 60 by 20, and the game wants 78 by 24.
+```
+
+A terminal that will not say how much room it has is taken at its word and
+left alone.
 
 ## Typing a puzzle in
 

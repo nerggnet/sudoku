@@ -67,12 +67,13 @@ pub type Offer {
 /// working a digit out.
 pub type Help {
   Keys
+  MoreKeys
   About(logic.Technique)
 }
 
 /// Every page, in the order they are paged through.
 pub fn pages() -> List(Help) {
-  [Keys, ..list.map(logic.techniques, About)]
+  [Keys, MoreKeys, ..list.map(logic.techniques, About)]
 }
 
 /// The three ways a game can be over.

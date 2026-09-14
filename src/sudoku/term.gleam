@@ -19,6 +19,17 @@ pub fn read_byte() -> Int
 @external(erlang, "sudoku_ffi", "now_ms")
 pub fn now_ms() -> Int
 
+/// What was asked for on the command line.
+@external(erlang, "sudoku_ffi", "arguments")
+pub fn arguments() -> List(String)
+
+/// How wide and how tall the terminal is, or -1 where it will not say.
+@external(erlang, "sudoku_ffi", "columns")
+pub fn columns() -> Int
+
+@external(erlang, "sudoku_ffi", "rows")
+pub fn rows() -> Int
+
 pub const esc = "\u{1b}"
 
 pub const reset = "\u{1b}[0m"
@@ -38,6 +49,11 @@ pub const home = "\u{1b}[H"
 pub const clear_line = "\u{1b}[K"
 
 pub const clear_below = "\u{1b}[J"
+
+/// Wipe the screen entirely. Drawing a frame does not need this — every line
+/// clears what it lands on — but redrawing by request does, since the mess
+/// being cleared up after was not put there by us.
+pub const blank = "\u{1b}[2J"
 
 pub fn enter() -> Nil {
   // Alternate screen buffer, cursor hidden.

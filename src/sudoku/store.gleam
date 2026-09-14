@@ -168,12 +168,7 @@ fn named(origin: Origin) -> String {
 fn origin_named(name: String) -> Result(Origin, Nil) {
   case name == named(generator.Handwritten) {
     True -> Ok(generator.Handwritten)
-    False ->
-      generator.difficulties
-      |> list.find(fn(difficulty) {
-        string.lowercase(generator.label(difficulty)) == name
-      })
-      |> result.map(generator.Dealt)
+    False -> generator.named(name) |> result.map(generator.Dealt)
   }
 }
 

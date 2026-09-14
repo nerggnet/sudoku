@@ -8,6 +8,7 @@
 
 import gleam/dict
 import gleam/list
+import gleam/string
 import sudoku/board.{type Board, type Grid, type Peers}
 import sudoku/logic
 import sudoku/random
@@ -43,6 +44,12 @@ pub fn label(difficulty: Difficulty) -> String {
     Hard -> "Hard"
     Expert -> "Expert"
   }
+}
+
+/// The difficulty going by this name, however it is capitalised.
+pub fn named(name: String) -> Result(Difficulty, Nil) {
+  use difficulty <- list.find(difficulties)
+  string.lowercase(label(difficulty)) == string.lowercase(name)
 }
 
 /// How a puzzle is named on screen.

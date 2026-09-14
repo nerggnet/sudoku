@@ -598,6 +598,22 @@ pub fn generated_puzzles_can_be_reasoned_out_test() {
   assert 81 - board.empty_count(puzzle.board) >= 17
 }
 
+pub fn a_difficulty_can_be_named_test() {
+  // What the command line takes, in any capitalisation.
+  use difficulty <- list.each(generator.difficulties)
+  let name = generator.label(difficulty)
+
+  assert generator.named(name) == Ok(difficulty)
+  assert generator.named(string.lowercase(name)) == Ok(difficulty)
+  assert generator.named(string.uppercase(name)) == Ok(difficulty)
+}
+
+pub fn nothing_else_is_a_difficulty_test() {
+  assert generator.named("custom") == Error(Nil)
+  assert generator.named("") == Error(Nil)
+  assert generator.named("hardest") == Error(Nil)
+}
+
 pub fn difficulty_ceilings_ascend_test() {
   let ceilings = {
     use difficulty <- list.map(generator.difficulties)
@@ -854,6 +870,13 @@ pub fn letter_case_is_kept_test() {
   assert press([0x72]) == key.Char("r")
   assert press([0x52]) == key.Char("R")
   assert press([0x3f]) == key.Char("?")
+}
+
+pub fn ctrl_l_asks_for_a_redraw_test() {
+  assert press([0x0c]) == key.Redraw
+
+  // It is not mistaken for a printable character, which is what it was.
+  assert press([0x0c]) != key.Char("\u{c}")
 }
 
 pub fn a_lone_escape_does_not_eat_the_next_key_test() {
@@ -1434,8 +1457,8 @@ pub fn the_help_pages_through_the_techniques_test() {
   }
   assert round.help == opened.help
 
-  // There is a page for every technique, and the keys besides.
-  assert list.length(game.pages()) == list.length(logic.techniques) + 1
+  // There is a page for every technique, and two of keys besides.
+  assert list.length(game.pages()) == list.length(logic.techniques) + 2
 }
 
 pub fn paging_the_help_does_not_reach_the_board_test() {
@@ -2142,12 +2165,19 @@ pub fn the_status_line_counts_clashes_test() {
 }
 
 pub fn the_help_screen_lists_the_keys_test() {
-  let lines = visible_lines(step(fixture(), key.Char("?")))
-  assert list.any(lines, string.contains(_, "write a digit"))
-  assert list.any(lines, string.contains(_, "reveal the whole solution"))
+  // The board's keys on the first page, and what can be asked for on the
+  // second: too many for one page, once there were enough of them.
+  let first = visible_lines(step(fixture(), key.Char("?")))
+  assert list.any(first, string.contains(_, "write a digit"))
+  assert list.any(first, string.contains(_, "pencil the candidates"))
+
+  let second = visible_lines(step(step(fixture(), key.Char("?")), key.Right))
+  assert list.any(second, string.contains(_, "reveal the whole solution"))
+  assert list.any(second, string.contains(_, "draw the screen again"))
 
   // Help takes the screen over rather than sharing it with the board.
-  assert !list.any(lines, is_grid_row)
+  assert !list.any(first, is_grid_row)
+  assert !list.any(second, is_grid_row)
 }
 
 /// The status line is two rows whatever it has to say, so the board above it

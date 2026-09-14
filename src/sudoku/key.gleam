@@ -14,6 +14,9 @@ pub type Key {
   Erase
   /// A printable key. Case is kept, so `H` and `h` are different keys.
   Char(String)
+  /// Ctrl-L: draw the screen again. Whatever has made a mess of it came from
+  /// outside the game, so the game cannot do better than start over.
+  Redraw
   /// Input has run out, or the user pressed Ctrl-C.
   Quit
   Unknown
@@ -84,6 +87,8 @@ fn from_byte(byte: Int) -> Key {
   case byte {
     // Ctrl-C and Ctrl-D.
     0x03 | 0x04 -> Quit
+    // Ctrl-L.
+    0x0c -> Redraw
     // Backspace, delete, space and `0` all clear a cell.
     0x08 | 0x7f | 0x20 | 0x30 -> Erase
     // Carriage return and newline mean nothing here, but arrive in line mode.

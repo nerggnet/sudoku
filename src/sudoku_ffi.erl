@@ -4,6 +4,7 @@
 
 -export([enable_raw/0, read_byte/0, now_ms/0, shuffle/1]).
 -export([save_path/0, write_save/1, read_save/0, forget_save/0]).
+-export([arguments/0, columns/0, rows/0]).
 
 %% Put the terminal into raw mode: one byte at a time, no echo, no line
 %% editing. Requires OTP 26 or later; returns false when unavailable (for
@@ -67,3 +68,19 @@ read_save() ->
 forget_save() ->
     _ = file:delete(save_file()),
     nil.
+
+%% What was asked for on the command line, after the `--`.
+arguments() ->
+    [unicode:characters_to_binary(Argument)
+     || Argument <- init:get_plain_arguments()].
+
+%% How much room the terminal has, or -1 where it will not say.
+columns() -> measure(fun io:columns/0).
+
+rows() -> measure(fun io:rows/0).
+
+measure(Ask) ->
+    case Ask() of
+        {ok, Count} -> Count;
+        _ -> -1
+    end.

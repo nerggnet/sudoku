@@ -23,6 +23,11 @@ const empty_cell = "\u{00b7}"
 /// those are is spelled out in the status line when the cursor reaches it.
 const crowded_cell = "*"
 
+/// How much room a frame needs: the widest line it draws, and the most rows.
+pub const columns = 78
+
+pub const rows = 24
+
 /// How many columns one grid takes up. Cells are two columns wide, so a band
 /// of three plus its trailing space is seven, four box rules bring the row to
 /// 25, and the row label and its space make 27.
@@ -399,19 +404,31 @@ fn other_mode(current: Game) -> String {
   }
 }
 
-const key_reference = [
+/// Getting about the board, and putting things on it.
+const board_keys = [
   #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
   #("1 - 9", "write a digit, or pencil one in while marking"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
   #("f", "pencil the candidates into every bare cell"),
   #("m", "switch between writing and marking"),
   #("u", "undo"),
+]
+
+/// Asking the game for something, and leaving.
+const asking_keys = [
   #("c", "check for good; a fourth wrong digit forfeits"),
   #("H", "take the next step, and say why"),
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
+  #("Ctrl-L", "draw the screen again"),
   #("?", "close this help"),
   #("q", "quit, keeping a game in progress"),
+]
+
+const ask_notes = [
+  "A hint takes the cell you are on whenever that cell can be worked out, and",
+  "names the technique that settled it. The pages after this one are those",
+  "techniques, one to a page, with a small board apiece showing them at work.",
 ]
 
 const mark_notes = [
@@ -424,6 +441,7 @@ const mark_notes = [
 /// A key reference, with a paragraph under it. Used for both the game's help
 /// and the editor's.
 fn keys(
+  title: String,
   reference: List(#(String, String)),
   notes: List(String),
 ) -> List(String) {
@@ -435,7 +453,7 @@ fn keys(
   }
 
   list.flatten([
-    [term.styled("1", "Keys"), ""],
+    [term.styled("1", title), ""],
     entries,
     [""],
     list.map(notes, term.styled(dim_style, _)),
@@ -454,7 +472,8 @@ fn keys(
 /// a page is the one thing it is about.
 fn help(page: game.Help) -> List(String) {
   let body = case page {
-    game.Keys -> keys(key_reference, mark_notes)
+    game.Keys -> keys("Keys: the board", board_keys, mark_notes)
+    game.MoreKeys -> keys("Keys: asking and finishing", asking_keys, ask_notes)
     game.About(technique) -> about(technique)
   }
 
@@ -755,7 +774,7 @@ pub fn editor_frame(current: Editor) -> String {
       term.screen(
         list.flatten([
           head,
-          keys(editor_key_reference, editor_notes),
+          keys("Keys", editor_key_reference, editor_notes),
           ["", term.styled(dim_style, "Any key returns to the board.")],
         ]),
       )
