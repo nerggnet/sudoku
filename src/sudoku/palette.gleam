@@ -11,6 +11,11 @@ pub const empty_cell = "\u{00b7}"
 
 pub const crowded_cell = "*"
 
+/// What stands in for the wash behind a hint's cells when there is no colour
+/// to wash with. It goes where the leading space of a cell would, so the grid
+/// keeps its width.
+pub const pointer = "\u{203a}"
+
 // Foreground colours.
 pub const given = "1;97"
 

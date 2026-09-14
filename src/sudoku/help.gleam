@@ -42,12 +42,16 @@ pub const invocations = [
   #("gleam run -- custom", "type a puzzle in"),
   #("gleam run -- resume", "pick up the game you left"),
   #("gleam run -- <puzzle>", "play that puzzle"),
+  #("gleam run -- --plain", "draw without colour"),
 ]
 
 const starting_notes = [
   "A puzzle is 81 characters, a digit for each clue and a dot for each blank.",
   "The game prints the one it was playing as it leaves, which is the line to",
   "hand to somebody else — and the line they hand to this.",
+  "",
+  "--plain drops the colours and keeps the shapes, and can be given alongside",
+  "a puzzle. Setting NO_COLOR in the environment does the same thing.",
 ]
 
 /// The same, for a terminal that has not been taken over.

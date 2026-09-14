@@ -21,7 +21,14 @@ pub fn main() -> Nil {
   case asked_for(term.arguments()) {
     // Said before the screen is taken over, where it can be read afterwards.
     Error(complaint) -> io.println(complaint)
-    Ok(opening) -> {
+    Ok(Opening(opening, plain)) -> {
+      // Only ever switched on here: without the flag the environment has the
+      // say, and NO_COLOR is not something to talk anybody out of.
+      case plain {
+        True -> term.plainly(True)
+        False -> Nil
+      }
+
       let raw = term.enable_raw()
 
       term.enter()
@@ -37,13 +44,36 @@ pub fn main() -> Nil {
   }
 }
 
+/// What the command line asked for: a puzzle to open with, where it named
+/// one, and how the game should be drawn.
+type Opening {
+  Opening(choice: Option(Choice), plain: Bool)
+}
+
+/// The one flag there is. Everything else on the command line names a puzzle.
+const plain_flag = "--plain"
+
 /// What the command line asks for: nothing, and the menu decides; something,
 /// and it is gone to straight away; or nonsense, which is said plainly and
 /// stops there.
-fn asked_for(arguments: List(String)) -> Result(Option(Choice), String) {
-  case arguments {
-    [] -> Ok(None)
-    [only] -> asked(only) |> result.map(Some)
+///
+/// Flags are taken out first. They say how the game should look rather than
+/// what it should deal, so they can come before or after the puzzle, and what
+/// is left over is read as though they had never been there.
+fn asked_for(arguments: List(String)) -> Result(Opening, String) {
+  let #(flags, rest) = list.partition(arguments, string.starts_with(_, "-"))
+
+  use _ <- result.try(case list.all(flags, fn(flag) { flag == plain_flag }) {
+    True -> Ok(Nil)
+    False -> Error(help.usage())
+  })
+
+  let plain = list.contains(flags, plain_flag)
+
+  case rest {
+    [] -> Ok(Opening(None, plain))
+    [only] ->
+      asked(only) |> result.map(fn(choice) { Opening(Some(choice), plain) })
     _ -> Error(help.usage())
   }
 }

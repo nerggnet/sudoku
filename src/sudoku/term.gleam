@@ -1,6 +1,7 @@
 //// Terminal plumbing: raw input and the handful of ANSI escapes the game
 //// needs.
 
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/string
@@ -30,15 +31,61 @@ pub fn columns() -> Int
 @external(erlang, "sudoku_ffi", "rows")
 pub fn rows() -> Int
 
+/// Whether the game is being drawn without colour, either because `NO_COLOR`
+/// is set or because `--plain` asked for it.
+@external(erlang, "sudoku_ffi", "plain")
+pub fn plain() -> Bool
+
+/// Say so, once, before anything is drawn.
+@external(erlang, "sudoku_ffi", "set_plain")
+pub fn plainly(plain: Bool) -> Nil
+
 pub const esc = "\u{1b}"
 
 pub const reset = "\u{1b}[0m"
 
 /// Wrap text in an SGR sequence, e.g. `styled("1;31", "danger")`.
+///
+/// Without colour the hues are dropped and the rest is kept: bold, dim,
+/// underline, reverse and strikethrough are shapes rather than colours, and
+/// a terminal that will not show green will still show those.
 pub fn styled(codes: String, text: String) -> String {
+  let codes = case plain() {
+    True -> uncoloured(codes)
+    False -> codes
+  }
+
   case codes {
     "" -> text
     _ -> esc <> "[" <> codes <> "m" <> text <> reset
+  }
+}
+
+/// The same list of SGR codes with every colour taken out of it.
+///
+/// Colours are the 30s and 40s and their bright halves, and the two that take
+/// arguments — `38;5;n` and `48;5;n` for the 256-colour palette, `38;2;r;g;b`
+/// for a colour named outright — which have to be swallowed whole or their
+/// arguments are left behind to be read as codes of their own.
+pub fn uncoloured(codes: String) -> String {
+  case codes {
+    "" -> ""
+    _ -> codes |> string.split(";") |> shapes |> string.join(";")
+  }
+}
+
+fn shapes(codes: List(String)) -> List(String) {
+  case codes {
+    [] -> []
+    ["38", "5", _, ..rest] | ["48", "5", _, ..rest] -> shapes(rest)
+    ["38", "2", _, _, _, ..rest] | ["48", "2", _, _, _, ..rest] -> shapes(rest)
+    [code, ..rest] ->
+      case int.parse(code) {
+        Ok(value) if value >= 30 && value <= 49 -> shapes(rest)
+        Ok(value) if value >= 90 && value <= 97 -> shapes(rest)
+        Ok(value) if value >= 100 && value <= 107 -> shapes(rest)
+        _ -> [code, ..shapes(rest)]
+      }
   }
 }
 

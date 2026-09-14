@@ -8,6 +8,7 @@ gleam run -- hard             # deal one at that difficulty
 gleam run -- custom           # type a puzzle in
 gleam run -- resume           # pick up the game you left
 gleam run -- 53..7....6..1..  # play that puzzle, dots for the blanks
+gleam run -- --plain          # draw without colour
 ```
 
 Pick a difficulty, then play. Puzzles are generated fresh each time, always
@@ -416,6 +417,49 @@ explanation:
 
 A terminal that will not say how much room it has is taken at its word and
 left alone.
+
+## Without colour
+
+`--plain` draws the game in no colour at all, and so does setting `NO_COLOR`
+in the environment, which is the usual way of asking for that. The flag can
+come before or after a puzzle, since it says how the game should look rather
+than what it should deal.
+
+What goes is hue; what stays is shape. Bold, dim, underline, reverse video
+and strikethrough are not colours, and a terminal that will not show green
+will still show those — so the board keeps every distinction it was making:
+
+| | in colour | plain |
+|---|---|---|
+| a clue | bold white | bold |
+| a digit you wrote | cyan | plain |
+| a digit that clashes | red, struck through | struck through |
+| a wrong digit, while checking | red, underlined | underlined |
+| the cursor | reverse video | reverse video |
+
+That was the reason for striking a clashing digit through rather than only
+reddening it, and for underlining a wrong one: each of the three states a
+digit can be in has a shape of its own, so none of them depends on the colour
+being seen.
+
+The one thing with no shape to fall back on is the wash behind the cells a
+hint is arguing from. There is nothing to shade with, so the column in front
+of each cell — a space, normally, which is what makes a wash read as a solid
+block — points instead:
+
+```
+ A │ 8 · 5 │ · 1 · │ 4 6 · │
+ B │ · 4 6 │ 8 5 · │ 3 7 1 │
+ C │›· 7›3 │›·›·›4 │›8›5›· │
+```
+
+`Hidden single: C2 is the only cell in row C that can take a 7.` — and there
+is row C, with C2 left alone because the cursor is already sitting on it. The
+pointer goes where the space was, so the grid is exactly as wide either way.
+
+The washes behind the cursor's row and column, and behind cells holding the
+same digit as the one under it, simply go. They are there to help the eye
+wander rather than to say anything, and an eye can wander without them.
 
 ## Best times
 

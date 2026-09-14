@@ -211,12 +211,27 @@ fn painted(
   glyph: String,
   colour: String,
 ) -> String {
+  let wash = background(cursor, lit, index, matching)
   let styles =
-    [background(cursor, lit, index, matching), colour]
+    [wash, colour]
     |> list.filter(fn(style) { style != "" })
     |> string.join(";")
 
-  term.styled(styles, " " <> glyph)
+  term.styled(styles, lead(wash) <> glyph)
+}
+
+/// The column in front of a cell. It is a space, so that a wash reads as a
+/// solid block — except where a hint is pointing at the cell and there is no
+/// colour to point with, and the column has to do the pointing itself.
+///
+/// Only the hint gets one. The cursor is reverse video, which needs no
+/// colour; the washes behind its row, its column and the digit it is sitting
+/// on are there to help the eye wander, and an eye can wander without them.
+fn lead(wash: String) -> String {
+  case wash == palette.hint_wash && term.plain() {
+    True -> palette.pointer
+    False -> " "
+  }
 }
 
 fn board_colour(
