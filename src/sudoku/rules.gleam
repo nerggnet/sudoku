@@ -107,7 +107,13 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
   // What the last hint marked out on the board stands for one keystroke too,
   // whatever that keystroke turns out to be.
   let showing = current.showing
-  let current = game.Game(..current, offered: offered, showing: None)
+  let current =
+    game.Game(
+      ..current,
+      offered: offered,
+      showing: None,
+      scan: still_asking(current.scan, pressed),
+    )
 
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> game.Exit
@@ -137,6 +143,12 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Right | key.Char("l") | key.Char("d") ->
       game.Continue(move(current, 0, 1))
 
+    // A digit straight after S says which digit to look for, rather than
+    // writing anything. Only that one: a scan is a way of looking at the
+    // board, not a mode to be in.
+    key.Digit(digit) if current.scan == game.Picking ->
+      game.Continue(scan_for(current, digit))
+
     key.Digit(digit) if current.marking -> game.Continue(mark(current, digit))
     key.Digit(digit) -> game.Continue(place(current, digit))
 
@@ -153,6 +165,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Char("m") -> game.Continue(toggle_marking(current))
     key.Char("u") -> game.Continue(undo(current))
     key.Char("r") -> game.Continue(redo(current))
+    key.Char("S") -> game.Continue(scanning(current))
     key.Char("c") -> game.Continue(start_checking(current))
     key.Char("H") -> game.Continue(hint.hint(current))
     key.Char("R") -> game.Continue(reveal(current))
@@ -431,6 +444,56 @@ fn afresh(current: game.Game) -> game.Game {
       <> " empty cells afresh.\n"
       <> "What you had pencilled in yourself is gone.",
   )
+}
+
+// --------------------------------------------------------------------------
+// Looking for somewhere a digit can go
+// --------------------------------------------------------------------------
+
+/// Ask which digit to look for, or put away the scan already up.
+fn scanning(current: game.Game) -> game.Game {
+  case current.scan {
+    game.NotScanning ->
+      game.Game(
+        ..current,
+        scan: game.Picking,
+        message: "Look for which digit?\nPress 1 to 9, or anything else to forget it.",
+      )
+    _ -> game.Game(..current, scan: game.NotScanning, message: "")
+  }
+}
+
+fn scan_for(current: game.Game, digit: Int) -> game.Game {
+  let room = list.length(board.could_take(current.board, digit))
+
+  game.Game(
+    ..current,
+    scan: game.ScanningFor(digit),
+    message: "Looking for somewhere a "
+      <> int.to_string(digit)
+      <> " can go.\n"
+      <> room_for(room, digit)
+      <> " Press S again to stop looking.",
+  )
+}
+
+fn room_for(cells: Int, digit: Int) -> String {
+  case cells {
+    0 -> "Nowhere: every " <> int.to_string(digit) <> " is already placed."
+    1 -> "One cell can take it."
+    _ -> int.to_string(cells) <> " cells can take it."
+  }
+}
+
+/// A scan asked for and not answered lapses on the next keystroke, the same
+/// way an offer does. Anything but a digit means the player has gone back to
+/// playing, and that keystroke should do what it always does.
+fn still_asking(scan: game.Scan, pressed: Key) -> game.Scan {
+  case scan, pressed {
+    game.Picking, key.Digit(_) | game.Picking, key.Char("S") -> scan
+    game.Picking, _ -> game.NotScanning
+    _, _ -> scan
+  }
 }
 
 // --------------------------------------------------------------------------

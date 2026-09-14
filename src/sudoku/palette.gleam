@@ -16,6 +16,10 @@ pub const crowded_cell = "*"
 /// keeps its width.
 pub const pointer = "\u{203a}"
 
+/// The same, for a cell a scan says the digit could still go in. A different
+/// mark from the hint's, since the two can be up at once.
+pub const could_go = "+"
+
 // Foreground colours.
 pub const given = "1;97"
 
@@ -66,6 +70,11 @@ pub const peer_wash = "48;5;236"
 pub const match_wash = "48;5;238"
 
 pub const hint_wash = "48;5;22"
+
+/// Behind the cells a scan says its digit could still go in. Blue against the
+/// hint's green: a hint is telling you something, a scan is only showing you
+/// where to look.
+pub const scan_wash = "48;5;17"
 
 /// The cursor itself, which is reverse video rather than a colour, so that it
 /// is the cursor whatever the rest is painted in.

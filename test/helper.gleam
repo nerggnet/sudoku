@@ -16,6 +16,7 @@ import sudoku/logic
 import sudoku/render
 import sudoku/rules
 import sudoku/solver
+import sudoku/term
 
 // A puzzle with a single solution, and that solution.
 pub const puzzle_text = "
@@ -316,6 +317,36 @@ fn strip(characters: List(String), kept: List(String), scan: Scan) -> String {
 
 pub fn visible_lines(current: game.Game) -> List(String) {
   lines_of(render.frame(current))
+}
+
+/// The first few empty cells, for a test that wants somewhere to write.
+pub fn some_blanks(count: Int) -> List(Int) {
+  list.take(blanks(), count)
+}
+
+/// How many times one string turns up inside another.
+pub fn occurrences(text: String, part: String) -> Int {
+  list.length(string.split(text, part)) - 1
+}
+
+/// How the game counts cells out loud, for a test that would rather not
+/// repeat the wording.
+pub fn count_said(cells: Int) -> String {
+  case cells {
+    1 -> "One cell"
+    _ -> int.to_string(cells) <> " cells"
+  }
+}
+
+/// Draw something with the colour switched off, and switch it back.
+///
+/// Nothing is asserted inside on purpose: an assertion that failed would take
+/// the restoring with it and leave every test after it drawing in plain.
+pub fn without_colour(draw: fn() -> a) -> a {
+  term.plainly(True)
+  let drawn = draw()
+  term.plainly(False)
+  drawn
 }
 
 /// The lines of any frame, not only a game's: the menu takes ingredients

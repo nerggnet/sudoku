@@ -16,18 +16,6 @@ import sudoku/palette
 import sudoku/render
 import sudoku/term
 
-/// Draw something with the colour switched off, and switch it back.
-///
-/// Nothing is asserted in here on purpose: an assertion that failed would
-/// take the restoring with it and leave every test after this one drawing in
-/// plain, which is a confusing way to find out about one broken thing.
-fn without_colour(draw: fn() -> a) -> a {
-  term.plainly(True)
-  let drawn = draw()
-  term.plainly(False)
-  drawn
-}
-
 pub fn colours_go_and_shapes_stay_test() {
   // A clashing digit is bold, struck through and red; the red is the part
   // that goes.
@@ -55,7 +43,7 @@ pub fn a_colour_with_arguments_is_swallowed_whole_test() {
 
 pub fn styled_writes_no_escape_where_nothing_is_left_test() {
   let #(bare, struck) =
-    without_colour(fn() {
+    helper.without_colour(fn() {
       #(term.styled(palette.entered, "5"), term.styled(palette.conflict, "5"))
     })
 
@@ -64,7 +52,7 @@ pub fn styled_writes_no_escape_where_nothing_is_left_test() {
 }
 
 pub fn a_plain_board_is_drawn_without_colour_test() {
-  let frame = without_colour(fn() { render.frame(helper.fixture()) })
+  let frame = helper.without_colour(fn() { render.frame(helper.fixture()) })
 
   assert !string.contains(frame, helper.hint_wash)
   assert !string.contains(frame, "[96m")
@@ -78,7 +66,7 @@ pub fn a_hint_points_at_its_cells_without_colour_test() {
   let assert Ok(row) = list.first(board.units())
   let hinted = pointing_at(row)
 
-  let plain = without_colour(fn() { render.frame(hinted) })
+  let plain = helper.without_colour(fn() { render.frame(hinted) })
 
   // The wash is gone, so the pointer has to stand in for it: once for every
   // cell of the row the hint is arguing from, in both grids, bar the one the
@@ -105,7 +93,7 @@ pub fn a_plain_board_is_the_same_width_test() {
     |> list.map(fn(line) { string.length(string.trim_end(line)) })
   }
 
-  assert without_colour(fn() { widths(render.frame(hinted)) })
+  assert helper.without_colour(fn() { widths(render.frame(hinted)) })
     == widths(render.frame(hinted))
 }
 

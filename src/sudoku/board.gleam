@@ -173,6 +173,20 @@ pub fn peers_table() -> Peers {
 
 /// The digits that could legally go in an empty cell, ignoring any deeper
 /// reasoning about the rest of the grid.
+/// The empty cells a digit could still go in: the ones whose row, column and
+/// box do not hold one already.
+///
+/// Read off the grid and nothing else. What a player has pencilled in is
+/// their reasoning, and reasoning can be wrong; where a digit can go is a
+/// fact, and this should stay one.
+pub fn could_take(current: Board, digit: Int) -> List(Int) {
+  let peers = peers_table()
+
+  use index <- list.filter(indices())
+  value(current, index) == 0
+  && list.contains(candidates(current.values, peers, index), digit)
+}
+
 pub fn candidates(grid: Grid, peers: Peers, index: Int) -> List(Int) {
   let taken = case dict.get(peers, index) {
     Ok(cells) ->

@@ -52,6 +52,8 @@ pub type Game {
     /// The step the last hint gave, until the next keystroke: what the board
     /// marks out, and which page of the help `?` opens at.
     showing: Option(logic.Step),
+    /// The digit being looked for, if any.
+    scan: Scan,
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -97,6 +99,21 @@ pub fn asked_by(offer: Offer) -> List(Key) {
     TakeHint -> [key.Char("H")]
     StartChecking -> [key.Char("c")]
   }
+}
+
+/// Looking for somewhere a digit can still go.
+///
+/// This is a way of reading the board rather than a thing the game knows and
+/// the player does not: where a digit can go is there to be worked out from
+/// the row, the column and the box, by anyone willing to look. So it costs
+/// nothing, the same as pencilling the candidates in costs nothing.
+pub type Scan {
+  NotScanning
+  /// Asked for, and waiting to hear which digit.
+  Picking
+  /// Every empty cell this digit could still go in is marked out, and stays
+  /// marked out while the player moves about looking at them.
+  ScanningFor(digit: Int)
 }
 
 /// The help, a page at a time: the keys, and then a page on each way of
@@ -179,6 +196,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     offered: None,
     verdict: None,
     showing: None,
+    scan: NotScanning,
     hints: 0,
     mistakes: 0,
     aided: False,

@@ -47,6 +47,7 @@ newspaper.
 | shift `1`–`9` | pencil a digit in either way round |
 | `0`, space, backspace | clear the cell, or its marks while marking |
 | `f` | pencil the candidates into every bare cell |
+| `S` then `1`-`9` | mark out where that digit can still go |
 | `m` | switch between writing and marking |
 | `u` | undo |
 | `r` | do it again |
@@ -98,6 +99,52 @@ Nothing dealt ever needs a guess. Carving only takes a cell out if what is
 left can still be reasoned to the end, so a puzzle that could not be is never
 carved that far. That also does the work of checking the answer is unique:
 reasoning never guesses, so a grid it can finish has exactly one answer.
+
+## Looking for somewhere a digit can go
+
+Pick a digit and sweep the grid asking "where can a 7 still go in this box?"
+That is how hidden singles and locked candidates are actually found by eye,
+and it is the one move the board gave no help with: standing on a 7 shades
+every other 7, which is where they already are, not where one could go next.
+
+`S` and then a digit shades every empty cell that digit could still go in,
+and keeps them shaded while you move around looking at them. `S` again stops.
+
+```
+ S U D O K U    Custom    looking for 7
+
+ A │ 3 · · │ + + 9 │ + 1 + │
+ B │ · · 7 │ · · · │ 3 · 4 │
+ C │ · · 5 │ 3 8 + │ + + + │
+
+ Looking for somewhere a 7 can go.
+ 22 cells can take it. Press S again to stop looking.
+```
+
+Rows B, D and I have their 7 already, so nothing in them is shaded; nor is
+anything in the three columns and the two boxes that have one. The sevens
+already on the board keep their own shading, so both halves of the answer are
+on screen at once — where the digit has got to, and where it could still go.
+
+While a scan is up, the shading behind the cursor's own row, column and box
+goes away. Nine shaded cells and three shaded units at the same time is a
+mess, and the scan is the thing that was asked for.
+
+It reads the grid and nothing else. What you have pencilled in is your
+reasoning, and reasoning can be wrong; where a digit can go is a fact, and a
+mark made wrongly should not be able to turn it into an opinion.
+
+And it costs nothing — no hint, no aided game, no time lost. What a cell can
+take is there to be read off its row, its column and its box by anybody
+willing to look, which is the same argument that makes `f` free. `f` gives
+away rather more, in fact: once the candidates are pencilled in, every hidden
+single in the grid can be found by counting.
+
+Only the digit pressed straight after `S` chooses what to look for. Anything
+else and the scan is forgotten, and that keystroke does what it always does —
+a scan is a way of looking at the board, not a mode to be in. Digits written
+while one is up are written as normal, and the shading follows the grid as it
+changes.
 
 ## Filling the candidates in
 
@@ -485,6 +532,10 @@ block — points instead:
 `Hidden single: C2 is the only cell in row C that can take a 7.` — and there
 is row C, with C2 left alone because the cursor is already sitting on it. The
 pointer goes where the space was, so the grid is exactly as wide either way.
+
+A scan gets its own mark in the same column, `+`, since the two can be up at
+once and a cell a hint is arguing from is not the same as a cell a digit
+could go in.
 
 The washes behind the cursor's row and column, and behind cells holding the
 same digit as the one under it, simply go. They are there to help the eye

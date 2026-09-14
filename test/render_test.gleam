@@ -294,7 +294,25 @@ pub fn every_frame_fits_a_short_terminal_test() {
   ]
 
   use current <- list.each(frames)
-  assert list.length(helper.visible_lines(current)) <= 24
+  assert list.length(helper.visible_lines(current)) <= render.rows
+}
+
+pub fn the_title_line_fits_with_everything_on_it_test() {
+  // Marking, looking for a digit, and a tally of wrong ones, all at once and
+  // beside the longest name a puzzle has.
+  let loaded =
+    helper.blunder(helper.fixture(), helper.some_blanks(3))
+    |> helper.checked
+    |> helper.step(key.Char("m"))
+    |> helper.step(key.Char("S"))
+    |> helper.step(key.Digit(7))
+
+  let assert [title, ..] = helper.visible_lines(loaded)
+
+  assert string.contains(title, "marking")
+  assert string.contains(title, "looking for 7")
+  assert string.contains(title, "checking 3/3")
+  assert string.length(title) <= render.columns
 }
 
 pub fn finishing_shows_a_result_test() {

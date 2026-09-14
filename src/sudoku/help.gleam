@@ -28,6 +28,7 @@ const board_keys = [
   #("shift 1 - 9", "pencil a digit in either way round"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
   #("f", "pencil the candidates into every bare cell"),
+  #("S then 1 - 9", "mark out where that digit can go; S again stops"),
   #("m", "switch between writing and marking"),
   #("u", "undo"),
   #("r", "do it again"),
@@ -90,6 +91,9 @@ const mark_notes = [
   "has one, an asterisk where it has several. Move onto a cell to read",
   "all of its marks in the status line. Writing a digit rubs out the marks",
   "it rules out, but not while checking is on and the digit is wrong.",
+  "",
+  "S and a digit shades every cell that digit could still go in. It reads",
+  "the grid, not your marks, so a mark made wrongly cannot mislead it.",
 ]
 
 /// A key reference, with a paragraph under it. Used for both the game's help

@@ -39,10 +39,19 @@ const grid_gap = "    "
 /// The help takes over the screen rather than sitting under the board: the
 /// two together are taller than a 24-row terminal.
 pub fn frame(current: Game) -> String {
-  let mode = case current.marking {
-    True -> "marking"
-    False -> ""
-  }
+  let mode =
+    [
+      case current.marking {
+        True -> "marking"
+        False -> ""
+      },
+      case current.scan {
+        game.ScanningFor(digit) -> "looking for " <> int.to_string(digit)
+        _ -> ""
+      },
+    ]
+    |> list.filter(fn(said) { said != "" })
+    |> string.join("    ")
   // A game helped along says so beside its difficulty, since that is what
   // the difficulty no longer quite means.
   let named = case game.unaided(current) {
@@ -171,10 +180,10 @@ fn measured(count: Int) -> String {
 /// marks. Keeping the two apart lets the board stay as compact and readable
 /// as it was before there were any marks to show.
 fn grids(current: Game, clashes: Set(Int)) -> List(String) {
-  let lit = pointed_at(current)
+  let washes = washes(current)
   let board_grid =
-    grids.grid(fn(index) { board_cell(current, clashes, lit, index) })
-  let marks_grid = grids.grid(fn(index) { mark_cell(current, lit, index) })
+    grids.grid(fn(index) { board_cell(current, clashes, washes, index) })
+  let marks_grid = grids.grid(fn(index) { mark_cell(current, washes, index) })
 
   [
     caption("board", "marks"),
@@ -212,7 +221,7 @@ fn pointed_at(current: Game) -> Set(Int) {
 fn board_cell(
   current: Game,
   clashes: Set(Int),
-  lit: Set(Int),
+  washes: Washes,
   index: Int,
 ) -> String {
   let digit = board.value(current.board, index)
@@ -221,42 +230,41 @@ fn board_cell(
     _ -> int.to_string(digit)
   }
 
-  let focus = board.value(current.board, current.cursor)
+  // Normally the digit under the cursor is the one picked out wherever else
+  // it appears. While a scan is up it is the scanned digit instead: the whole
+  // question is where that one has got to and where it could still go, and
+  // both halves of the answer belong on screen at once.
+  let focus = case current.scan {
+    game.ScanningFor(scanned) -> scanned
+    _ -> board.value(current.board, current.cursor)
+  }
   let colour = board_colour(current, clashes, index, digit)
 
-  painted(
-    current.cursor,
-    lit,
-    index,
-    digit != 0 && digit == focus,
-    glyph,
-    colour,
-  )
+  painted(washes, index, digit != 0 && digit == focus, glyph, colour)
 }
 
 /// A cell of the grid of marks: the digit itself where a cell has been given
 /// exactly one reading, an asterisk where it has been given several.
-fn mark_cell(current: Game, lit: Set(Int), index: Int) -> String {
+fn mark_cell(current: Game, washes: Washes, index: Int) -> String {
   let #(glyph, colour) = case board.sorted_marks(current.board, index) {
     [] -> #(palette.empty_cell, palette.empty)
     [only] -> #(int.to_string(only), palette.mark)
     _ -> #(palette.crowded_cell, palette.mark)
   }
 
-  painted(current.cursor, lit, index, False, glyph, colour)
+  painted(washes, index, False, glyph, colour)
 }
 
 /// Two columns: a leading space so that a highlight reads as a solid block,
 /// then the character itself.
 fn painted(
-  cursor: Int,
-  lit: Set(Int),
+  washes: Washes,
   index: Int,
   matching: Bool,
   glyph: String,
   colour: String,
 ) -> String {
-  let wash = background(cursor, lit, index, matching)
+  let wash = background(washes, index, matching)
   let styles =
     [wash, colour]
     |> list.filter(fn(style) { style != "" })
@@ -273,9 +281,10 @@ fn painted(
 /// colour; the washes behind its row, its column and the digit it is sitting
 /// on are there to help the eye wander, and an eye can wander without them.
 fn lead(wash: String) -> String {
-  case wash == palette.hint_wash && term.plain() {
-    True -> palette.pointer
-    False -> " "
+  case term.plain(), wash {
+    True, _ if wash == palette.hint_wash -> palette.pointer
+    True, _ if wash == palette.scan_wash -> palette.could_go
+    _, _ -> " "
   }
 }
 
@@ -301,25 +310,48 @@ fn board_colour(
 
 /// The cursor and the cells it can see are shaded the same way in both grids,
 /// which is what ties one to the other.
-fn background(
-  cursor: Int,
-  lit: Set(Int),
-  index: Int,
-  matching: Bool,
-) -> String {
+/// What the board is shading, beyond the digits themselves: where the cursor
+/// is, which cells a hint is arguing from, which a scan says its digit could
+/// still go in, and whether the cursor's own row, column and box are picked
+/// out at all.
+type Washes {
+  Washes(cursor: Int, lit: Set(Int), scanned: Set(Int), peers: Bool)
+}
+
+fn washes(current: Game) -> Washes {
+  let scanned = case current.scan {
+    game.ScanningFor(digit) ->
+      set.from_list(board.could_take(current.board, digit))
+    _ -> set.new()
+  }
+
+  Washes(
+    cursor: current.cursor,
+    lit: pointed_at(current),
+    scanned: scanned,
+    // A scan already shades nine cells or so. Shading the cursor's row, its
+    // column and its box on top buries them, and the scan is what the player
+    // asked to look at.
+    peers: set.is_empty(scanned),
+  )
+}
+
+fn background(washes: Washes, index: Int, matching: Bool) -> String {
   case
-    index == cursor,
-    set.contains(lit, index),
+    index == washes.cursor,
+    set.contains(washes.lit, index),
+    set.contains(washes.scanned, index),
     matching,
-    shares_unit(index, cursor)
+    washes.peers && shares_unit(index, washes.cursor)
   {
     // The cursor stays visible through a hint: it is where the player is,
     // and a hint is only passing.
-    True, _, _, _ -> palette.cursor
-    _, True, _, _ -> palette.hint_wash
-    _, _, True, _ -> palette.match_wash
-    _, _, _, True -> palette.peer_wash
-    _, _, _, _ -> ""
+    True, _, _, _, _ -> palette.cursor
+    _, True, _, _, _ -> palette.hint_wash
+    _, _, True, _, _ -> palette.scan_wash
+    _, _, _, True, _ -> palette.match_wash
+    _, _, _, _, True -> palette.peer_wash
+    _, _, _, _, _ -> ""
   }
 }
 
@@ -646,10 +678,10 @@ fn clue_cell(current: Editor, clashes: Set(Int), index: Int) -> String {
 
   let focus = editor.value(current, current.cursor)
 
-  // Nothing lit: a puzzle being typed in has no hints to point with.
+  // Nothing lit and nothing scanned: a puzzle being typed in has no hints to
+  // point with and no answer yet to look for a digit in.
   painted(
-    current.cursor,
-    set.new(),
+    Washes(current.cursor, set.new(), set.new(), True),
     index,
     digit != 0 && digit == focus,
     glyph,
