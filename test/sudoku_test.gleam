@@ -859,6 +859,29 @@ pub fn arrow_keys_decode_test() {
   assert press([0x1b, 0x4f, 0x41]) == key.Up
 }
 
+/// Decode a keystroke, and say what was left unread behind it.
+fn press_leaving(bytes: List(Int)) -> #(key.Key, List(Int)) {
+  use remaining <- key.decode(bytes)
+  case remaining {
+    [] -> #(-1, [])
+    [byte, ..rest] -> #(byte, rest)
+  }
+}
+
+pub fn a_numbered_sequence_is_read_to_its_end_test() {
+  // Home, End and the page keys mean nothing here, but a sequence has to be
+  // read to the end whatever it means, or its tail arrives as a keystroke
+  // the player never made.
+  assert press_leaving([0x1b, 0x5b, 0x31, 0x7e]) == #(key.Unknown, [])
+  assert press_leaving([0x1b, 0x5b, 0x36, 0x7e]) == #(key.Unknown, [])
+
+  // Two digits, as the function keys use.
+  assert press_leaving([0x1b, 0x5b, 0x31, 0x35, 0x7e]) == #(key.Unknown, [])
+
+  // What follows a sequence is the next key, and nothing else.
+  assert press_leaving([0x1b, 0x5b, 0x31, 0x7e, 0x35]) == #(key.Unknown, [0x35])
+}
+
 pub fn the_delete_key_decodes_test() {
   assert press([0x1b, 0x5b, 0x33, 0x7e]) == key.Erase
 }
@@ -1535,6 +1558,16 @@ pub fn quit_and_restart_leave_the_loop_test() {
   assert game.update(fixture(), key.Char("q")) == game.Exit
   assert game.update(fixture(), key.Quit) == game.Exit
   assert game.update(fixture(), key.Char("n")) == game.Restart
+}
+
+pub fn the_clock_grows_an_hour_hand_test() {
+  assert render.clock(0) == "00:00"
+  assert render.clock(59_000) == "00:59"
+  assert render.clock(3_599_000) == "59:59"
+
+  // Rather than counting minutes past sixty and reading 104:23.
+  assert render.clock(3_600_000) == "1:00:00"
+  assert render.clock(6_263_000) == "1:44:23"
 }
 
 pub fn the_clock_runs_from_the_start_test() {

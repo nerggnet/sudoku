@@ -78,13 +78,36 @@ fn sequence(
     0x42 -> #(Down, source)
     0x43 -> #(Right, source)
     0x44 -> #(Left, source)
-    // Delete arrives as `ESC [ 3 ~`; swallow the trailing tilde.
-    0x33 -> {
-      let #(_, source) = next(source)
-      #(Erase, source)
-    }
     -1 -> #(Quit, source)
+    _ if byte >= 0x30 && byte <= 0x39 -> numbered(byte - 0x30, source, next)
     _ -> #(Unknown, source)
+  }
+}
+
+/// A numbered sequence: `ESC [ 3 ~` for Delete, and `ESC [ 1 ~`, `ESC [ 5 ~`
+/// and the rest for Home, the page keys and their friends.
+///
+/// Only Delete means anything here, but the whole of a sequence has to be
+/// read whatever it turns out to be. Reading the number and leaving the `~`
+/// behind hands it to the next read, where it arrives as a keystroke the
+/// player never made.
+fn numbered(
+  number: Int,
+  source: source,
+  next: fn(source) -> #(Int, source),
+) -> #(Key, source) {
+  let #(byte, source) = next(source)
+
+  case byte {
+    -1 -> #(Quit, source)
+    _ if byte >= 0x30 && byte <= 0x39 ->
+      numbered(number * 10 + byte - 0x30, source, next)
+    // Whatever ends it, `~` or otherwise.
+    _ ->
+      case number {
+        3 -> #(Erase, source)
+        _ -> #(Unknown, source)
+      }
   }
 }
 

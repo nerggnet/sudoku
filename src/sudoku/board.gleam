@@ -159,6 +159,12 @@ pub fn peers_of(index: Int) -> List(Int) {
 
 /// Build the peer lookup table. This is mildly expensive, so solvers take it
 /// as an argument and reuse a single table across a whole search.
+///
+/// Writing a digit works out the one cell's peers instead, which looks like
+/// an oversight and is not: one cell's peers cost a microsecond and a half
+/// and the whole table costs a hundred times that. A table is worth building
+/// where it will be read eighty times over, and not where it will be read
+/// once.
 pub fn peers_table() -> Peers {
   indices()
   |> list.map(fn(index) { #(index, set.from_list(peers_of(index))) })

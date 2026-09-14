@@ -371,9 +371,23 @@ fn cursor_marks(current: Game) -> String {
 }
 
 /// Milliseconds as `mm:ss`.
+/// `mm:ss`, and `h:mm:ss` once there is an hour to say.
+///
+/// Minutes padded to two digits would go on counting past sixty and read
+/// `104:33`, which is a puzzle in itself.
 pub fn clock(milliseconds: Int) -> String {
   let seconds = milliseconds / 1000
-  pad(seconds / 60) <> ":" <> pad(seconds % 60)
+  let minutes = seconds / 60
+
+  case minutes / 60 {
+    0 -> pad(minutes) <> ":" <> pad(seconds % 60)
+    hours ->
+      int.to_string(hours)
+      <> ":"
+      <> pad(minutes % 60)
+      <> ":"
+      <> pad(seconds % 60)
+  }
 }
 
 fn pad(value: Int) -> String {
