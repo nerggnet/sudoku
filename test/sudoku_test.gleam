@@ -1933,6 +1933,85 @@ pub fn a_saved_game_that_does_not_hold_together_is_refused_test() {
 }
 
 // ---------------------------------------------------------------------------
+// The record books
+// ---------------------------------------------------------------------------
+
+/// The fixture, solved by writing in every answer.
+fn solved(current: game.Game) -> game.Game {
+  use current, index <- list.fold(board.indices(), current)
+  case board.value(current.board, index) {
+    0 ->
+      game.Game(..current, cursor: index)
+      |> step(key.Digit(game.answer(current, index)))
+    _ -> current
+  }
+}
+
+pub fn an_unaided_solve_is_timed_test() {
+  let won = solved(fixture())
+
+  assert game.is_finished(won)
+  assert game.unaided(won)
+
+  // Nothing on the books yet, so anything is the best there is.
+  assert store.judge(won, dict.new()) == game.BestYet
+
+  // And against a standing best, whichever is quicker.
+  let quick = game.Game(..won, started_ms: won.started_ms - 60_000)
+  assert store.judge(quick, dict.from_list([#(generator.Medium, 30_000)]))
+    == game.Behind(30_000)
+  assert store.judge(won, dict.from_list([#(generator.Medium, 30_000)]))
+    == game.BestYet
+}
+
+pub fn a_solve_with_help_is_not_timed_test() {
+  // Checking is asked for, and never switched off again, so it is still the
+  // record that the game was asked when the puzzle is done.
+  let checked = solved(step(fixture(), key.Char("c")))
+  assert !game.unaided(checked)
+  assert store.judge(checked, dict.new()) == game.Aided
+
+  // A hint is help too, however small.
+  let hinted = solved(step(step(fixture(), key.Char("H")), key.Char("H")))
+  assert hinted.hints >= 1
+  assert store.judge(hinted, dict.new()) == game.Aided
+}
+
+pub fn filling_the_candidates_in_is_not_help_test() {
+  // It works out nothing the player could not have worked out with a pencil.
+  let filled = solved(step(fixture(), key.Char("f")))
+
+  assert game.unaided(filled)
+  assert store.judge(filled, dict.new()) == game.BestYet
+}
+
+pub fn a_game_not_won_is_not_timed_test() {
+  let revealed = step(fixture(), key.Char("R"))
+  assert store.judge(revealed, dict.new()) == game.Untimed
+
+  // And a puzzle typed in has no difficulty to file a time under.
+  let assert editor.Ready(puzzle) =
+    editor.update(typed(puzzle_text), key.Char("p"))
+  assert store.judge(solved(game.new(puzzle)), dict.new()) == game.Untimed
+}
+
+pub fn the_finished_panel_says_what_the_books_made_of_it_test() {
+  let won = solved(fixture())
+
+  let said = fn(verdict) {
+    visible_lines(game.Game(..won, verdict: option.Some(verdict)))
+  }
+
+  assert list.any(said(game.BestYet), string.contains(_, "Your best yet"))
+  assert list.any(said(game.Behind(125_000)), string.contains(_, "02:05"))
+  assert list.any(said(game.Aided), string.contains(_, "Not recorded"))
+
+  // An untimed game says nothing about records at all.
+  assert !list.any(said(game.Untimed), string.contains(_, "recorded"))
+  assert !list.any(said(game.Untimed), string.contains(_, "best"))
+}
+
+// ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
 

@@ -745,11 +745,25 @@ fn finished(current: Game) -> List(String) {
     _ ->
       term.styled(good_style, "Solved in " <> clock(game.elapsed_ms(current)))
       <> term.styled(good_style, aside(current.hints))
+      <> recorded(current)
   }
 
   // No blank line above: the message's second row is nearly always the gap,
   // and a 24-row terminal has none to spare once the panel is up.
   [headline, term.styled(dim_style, "n new puzzle  \u{2502}  q quit")]
+}
+
+/// What the record books made of it, said on the same line: the panel has
+/// only the two, and the one below it is spoken for.
+fn recorded(current: Game) -> String {
+  case current.verdict {
+    Some(game.BestYet) -> term.styled(good_style, " Your best yet.")
+    Some(game.Behind(best)) ->
+      term.styled(dim_style, " Your best is " <> clock(best) <> ".")
+    Some(game.Aided) ->
+      term.styled(dim_style, " Not recorded: unaided solves only.")
+    _ -> ""
+  }
 }
 
 fn aside(hints: Int) -> String {

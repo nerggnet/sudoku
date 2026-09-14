@@ -356,6 +356,34 @@ explanation:
 A terminal that will not say how much room it has is taken at its word and
 left alone.
 
+## Best times
+
+A puzzle solved unaided is timed, and the menu shows what there is to beat:
+
+```
+    1  Easy      naked singles           best 09:12
+    2  Medium    hidden singles
+    3  Hard      locked candidates       best 21:21
+```
+
+Unaided means the game was never asked for anything: no hints, and checking
+never switched on. Both of those work from the answer, and a time set with the
+answer to hand is not a time. Filling the candidates in with `f` is another
+matter and does not count against you, since it works out nothing you could
+not have worked out yourself with a pencil.
+
+A solve with help says so rather than quietly going unrecorded:
+
+```
+ Solved in 12:04, with one hint. Not recorded: unaided solves only.
+ n new puzzle  │  q quit
+```
+
+A puzzle typed in is not timed either: `Custom` has no difficulty to file a
+time under. Which is the point of the levels meaning something — two Hard
+times are worth comparing now that every Hard asks for locked candidates and
+nothing worse.
+
 ## Typing a puzzle in
 
 `Custom` on the menu opens an empty grid to type a puzzle into instead of
@@ -447,7 +475,7 @@ well as digits.
 | `sudoku/logic` | solving the way a person does, and rating a puzzle by it |
 | `sudoku/game` | game state and what each key does to it |
 | `sudoku/editor` | typing a puzzle in by hand |
-| `sudoku/store` | writing a game down and reading it back |
+| `sudoku/store` | writing a game down, reading it back, and keeping times |
 | `sudoku/render` | drawing a frame |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |

@@ -12,6 +12,7 @@
 import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
+import gleam/option.{Some}
 import gleam/result
 import gleam/set
 import gleam/string
@@ -133,7 +134,7 @@ pub fn keep(current: Game) -> Nil {
   case game.is_finished(current) {
     True -> forget()
     False -> {
-      let _ = write_save(encode(current))
+      let _ = write_file(game_file, encode(current))
       Nil
     }
   }
@@ -141,21 +142,126 @@ pub fn keep(current: Game) -> Nil {
 
 /// The game left behind last time, if there is one and it can still be read.
 pub fn saved() -> Result(Game, Nil) {
-  read_save() |> result.try(decode)
+  read_file(game_file) |> result.try(decode)
 }
 
-@external(erlang, "sudoku_ffi", "forget_save")
-pub fn forget() -> Nil
+pub fn forget() -> Nil {
+  forget_file(game_file)
+}
 
 /// Where a game is kept, for the parting message to say.
-@external(erlang, "sudoku_ffi", "save_path")
-pub fn path() -> String
+pub fn path() -> String {
+  file_path(game_file)
+}
 
-@external(erlang, "sudoku_ffi", "write_save")
-fn write_save(text: String) -> Bool
+const game_file = "game"
 
-@external(erlang, "sudoku_ffi", "read_save")
-fn read_save() -> Result(String, Nil)
+const bests_file = "bests"
+
+@external(erlang, "sudoku_ffi", "file_path")
+fn file_path(name: String) -> String
+
+@external(erlang, "sudoku_ffi", "write_file")
+fn write_file(name: String, text: String) -> Bool
+
+@external(erlang, "sudoku_ffi", "read_file")
+fn read_file(name: String) -> Result(String, Nil)
+
+@external(erlang, "sudoku_ffi", "forget_file")
+fn forget_file(name: String) -> Nil
+
+// ---------------------------------------------------------------------------
+// The record books
+// ---------------------------------------------------------------------------
+
+/// The quickest unaided solve at each difficulty, in milliseconds.
+pub type Bests =
+  Dict(generator.Difficulty, Int)
+
+/// What the record books make of a finished game, writing the time down if it
+/// belongs there.
+///
+/// This is the only moment the book is opened, which is why it is opened for
+/// reading and writing at once.
+pub fn settle(current: Game) -> game.Verdict {
+  let books = bests()
+  let verdict = judge(current, books)
+
+  case verdict {
+    game.BestYet -> {
+      let _ = write_bests(kept(current, books))
+      Nil
+    }
+    _ -> Nil
+  }
+
+  verdict
+}
+
+/// What the record books make of a game, given what they already hold. Kept
+/// apart from the reading and writing so that it can be thought about, and
+/// tested, on its own.
+pub fn judge(current: Game, books: Bests) -> game.Verdict {
+  case current.puzzle.origin, current.ending, game.unaided(current) {
+    generator.Dealt(difficulty), Some(game.Solved), True ->
+      case dict.get(books, difficulty) {
+        Ok(best) ->
+          case game.elapsed_ms(current) < best {
+            True -> game.BestYet
+            False -> game.Behind(best)
+          }
+        Error(_) -> game.BestYet
+      }
+
+    // Solved, but with the answer to hand one way or another.
+    _, Some(game.Solved), False -> game.Aided
+
+    // A puzzle typed in has no difficulty to file a time under, and a game
+    // not won has no time to file.
+    _, _, _ -> game.Untimed
+  }
+}
+
+fn kept(current: Game, books: Bests) -> Bests {
+  case current.puzzle.origin {
+    generator.Dealt(difficulty) ->
+      dict.insert(books, difficulty, game.elapsed_ms(current))
+    generator.Handwritten -> books
+  }
+}
+
+/// The quickest unaided solve at each difficulty so far.
+pub fn bests() -> Bests {
+  let text = read_file(bests_file) |> result.unwrap("")
+
+  use books, line <- list.fold(string.split(text, "\n"), dict.new())
+  case string.split_once(string.trim(line), " ") {
+    Error(_) -> books
+    Ok(#(name, taken)) ->
+      case generator.named(name), int.parse(string.trim(taken)) {
+        Ok(difficulty), Ok(milliseconds) ->
+          dict.insert(books, difficulty, milliseconds)
+        _, _ -> books
+      }
+  }
+}
+
+fn write_bests(books: Bests) -> Bool {
+  let lines = {
+    use difficulty <- list.filter_map(generator.difficulties)
+    case dict.get(books, difficulty) {
+      Error(_) -> Error(Nil)
+      Ok(taken) ->
+        Ok(
+          string.lowercase(generator.label(difficulty))
+          <> " "
+          <> int.to_string(taken),
+        )
+    }
+  }
+
+  write_file(bests_file, string.join(lines, "\n"))
+}
 
 // ---------------------------------------------------------------------------
 // Fields

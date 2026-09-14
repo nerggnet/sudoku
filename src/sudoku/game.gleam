@@ -39,6 +39,8 @@ pub type Game {
     resting_since: Option(Int),
     /// What the game has offered to do if asked a second time.
     offered: Option(Offer),
+    /// What the record books made of this game, once it was over.
+    verdict: Option(Verdict),
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -76,6 +78,30 @@ pub fn pages() -> List(Help) {
   [Keys, MoreKeys, ..list.map(logic.techniques, About)]
 }
 
+/// What the record books make of a game that is over.
+///
+/// Only a puzzle solved unaided is timed. Checking and hints both work from
+/// the answer, and a time set with the answer to hand is not a time; filling
+/// the candidates in is another matter, since it works out nothing the player
+/// could not have worked out with a pencil.
+pub type Verdict {
+  /// Quicker than anything at this difficulty before it.
+  BestYet
+  /// Timed, with a standing best still to beat.
+  Behind(best: Int)
+  /// Not timed: the game was asked for something along the way.
+  Aided
+  /// Not timed: a puzzle typed in has no difficulty to file a time under,
+  /// and a game not won has no time to file.
+  Untimed
+}
+
+/// Whether the game was played without asking it for anything: no hints, and
+/// checking never switched on.
+pub fn unaided(game: Game) -> Bool {
+  game.hints == 0 && !game.checking
+}
+
 /// The three ways a game can be over.
 pub type Ending {
   Solved
@@ -104,6 +130,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     help: None,
     resting_since: None,
     offered: None,
+    verdict: None,
     hints: 0,
     mistakes: 0,
     ending: None,
@@ -174,6 +201,7 @@ fn wake(game: Game) -> Game {
     help: None,
     resting_since: None,
     offered: None,
+    verdict: None,
     started_ms: game.started_ms + rested,
   )
 }
@@ -403,6 +431,7 @@ fn afresh(game: Game) -> Game {
   Game(
     ..done,
     offered: None,
+    verdict: None,
     message: "Marked all "
       <> int.to_string(list.length(empty))
       <> " empty cells afresh.\n"
@@ -739,12 +768,7 @@ fn reveal(game: Game) -> Game {
   let shown = game |> remember |> with_board(solved)
 
   // No message: the finished panel already says what happened.
-  Game(
-    ..shown,
-    ending: Some(Revealed),
-    checking: False,
-    finished_ms: Some(term.now_ms()),
-  )
+  Game(..shown, ending: Some(Revealed), finished_ms: Some(term.now_ms()))
 }
 
 fn with_board(game: Game, next: Board) -> Game {
@@ -759,13 +783,9 @@ fn remember(game: Game) -> Game {
 fn settle(game: Game) -> Game {
   case board.is_solved(game.board) {
     False -> game
-    True ->
-      Game(
-        ..game,
-        ending: Some(Solved),
-        finished_ms: Some(term.now_ms()),
-        checking: False,
-      )
+    // Checking is left on: it is the record that the game was asked, and a
+    // solved grid has nothing left for it to call out anyway.
+    True -> Game(..game, ending: Some(Solved), finished_ms: Some(term.now_ms()))
   }
 }
 

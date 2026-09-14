@@ -1,5 +1,6 @@
 //// A Sudoku game for the terminal.
 
+import gleam/dict
 import gleam/int
 import gleam/io
 import gleam/list
@@ -185,8 +186,17 @@ fn play(current: game.Game) -> #(game.Step, game.Game) {
   term.write(frame)
 
   case game.update(current, press(frame)) {
-    game.Continue(next) -> play(next)
+    game.Continue(next) -> play(judged(current, next))
     step -> #(step, current)
+  }
+}
+
+/// The moment a puzzle is solved is the moment to see what the record books
+/// make of it, and the only moment they are opened.
+fn judged(before: game.Game, after: game.Game) -> game.Game {
+  case game.is_finished(before), game.is_finished(after) {
+    False, True -> game.Game(..after, verdict: Some(store.settle(after)))
+    _, _ -> after
   }
 }
 
@@ -203,7 +213,7 @@ fn choices() -> List(Origin) {
 }
 
 fn choose(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
-  let frame = menu(raw, saved)
+  let frame = menu(raw, saved, store.bests())
   term.write(frame)
 
   case press(frame), saved {
@@ -229,14 +239,19 @@ fn summary(current: game.Game) -> String {
   <> render.clock(game.elapsed_ms(current))
 }
 
-fn menu(raw: Bool, saved: Result(game.Game, Nil)) -> String {
+fn menu(
+  raw: Bool,
+  saved: Result(game.Game, Nil),
+  bests: store.Bests,
+) -> String {
   let options = {
     use origin, index <- list.index_map(choices())
     "   "
     <> term.styled("96", int.to_string(index + 1))
     <> "  "
     <> string.pad_end(generator.origin_label(origin), 10, " ")
-    <> term.styled("90", aside(origin))
+    <> term.styled("90", string.pad_end(aside(origin), 24, " "))
+    <> term.styled("92", best(origin, bests))
   }
 
   let room = case cramped() {
@@ -321,6 +336,19 @@ fn measured(count: Int) -> String {
   case count > 0 {
     True -> int.to_string(count)
     False -> "?"
+  }
+}
+
+/// The time to beat at this difficulty, where there is one. A puzzle typed
+/// in has no difficulty to have a best at.
+fn best(origin: Origin, bests: store.Bests) -> String {
+  case origin {
+    generator.Handwritten -> ""
+    generator.Dealt(difficulty) ->
+      case dict.get(bests, difficulty) {
+        Error(_) -> ""
+        Ok(taken) -> "best " <> render.clock(taken)
+      }
   }
 }
 
