@@ -1158,6 +1158,42 @@ pub fn a_hint_takes_the_next_step_and_says_why_test() {
   assert string.ends_with(hinted.message, ".")
 }
 
+pub fn a_hint_answers_the_cell_you_are_on_test() {
+  let start = fixture()
+
+  // A cell that can be worked out, but not the one the reasoning would have
+  // picked of its own accord.
+  let assert Ok(elsewhere) = {
+    use index <- list.find(board.indices())
+    index != step(start, key.Char("H")).cursor
+    && board.value(start.board, index) == 0
+    && logic.settles(start.board.values, index) != Error(Nil)
+  }
+
+  let hinted = step(game.Game(..start, cursor: elsewhere), key.Char("H"))
+
+  assert hinted.cursor == elsewhere
+  assert board.value(hinted.board, elsewhere) == game.answer(start, elsewhere)
+  assert string.contains(hinted.message, board.name(elsewhere))
+}
+
+pub fn a_hint_looks_elsewhere_when_this_cell_will_not_go_yet_test() {
+  let start = fixture()
+
+  let assert Ok(stuck) = {
+    use index <- list.find(board.indices())
+    board.value(start.board, index) == 0
+    && logic.settles(start.board.values, index) == Error(Nil)
+  }
+
+  // Better a move somewhere else than an answer here it cannot account for.
+  let hinted = step(game.Game(..start, cursor: stuck), key.Char("H"))
+
+  assert hinted.cursor != stuck
+  assert nothing_wrong(hinted)
+  assert string.contains(hinted.message, board.name(hinted.cursor))
+}
+
 pub fn a_hint_goes_where_the_reasoning_is_test() {
   // Not where the cursor happens to be: the cell under it may not be the one
   // that can be worked out next, and a hint that cannot explain itself is

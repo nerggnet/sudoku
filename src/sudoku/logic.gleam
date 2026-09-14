@@ -162,6 +162,43 @@ pub fn next(grid: Grid) -> Result(Step, Nil) {
   step(grid, pencil(grid))
 }
 
+/// The simplest step that settles one particular cell, if what is on the
+/// board settles it at all.
+///
+/// Only two techniques settle a cell rather than ruling candidates out, so
+/// these two are the whole of what can be said about a cell on its own. The
+/// rest is said about a unit, and belongs to whatever `next` makes of it.
+pub fn settles(grid: Grid, index: Int) -> Result(Step, Nil) {
+  let marks = pencil(grid)
+
+  case candidates(marks, index) {
+    [] -> Error(Nil)
+    [digit] -> Ok(Step(NakedSingle, Settle(index, digit), [index], [digit], []))
+    digits -> only_home(marks, index, digits)
+  }
+}
+
+/// Whether any of the cell's candidates has nowhere else to go in one of the
+/// three units the cell belongs to.
+fn only_home(
+  marks: Pencil,
+  index: Int,
+  digits: List(Int),
+) -> Result(Step, Nil) {
+  use unit <- list.find_map(list.filter(board.units(), list.contains(_, index)))
+  use digit <- list.find_map(digits)
+
+  case holding(marks, unit, digit) {
+    [only] ->
+      case only == index {
+        True ->
+          Ok(Step(HiddenSingle, Settle(index, digit), [index], [digit], unit))
+        False -> Error(Nil)
+      }
+    _ -> Error(Nil)
+  }
+}
+
 /// The hardest technique a grid needs before it gives up its answer, or
 /// `Error` where reasoning alone does not get there.
 ///

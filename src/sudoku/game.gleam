@@ -373,10 +373,29 @@ fn hint(game: Game) -> Game {
   case board.empty_count(game.board) {
     0 -> Game(..game, message: "The grid is already full.")
     _ ->
-      case sound_step(game) {
-        Ok(step) -> take(game, step)
-        Error(_) -> tell(game)
+      case here(game), sound_step(game) {
+        // The cell being looked at is the cell being asked about.
+        Ok(step), _ -> take(game, step)
+        _, Ok(step) -> take(game, step)
+        _, _ -> tell(game)
       }
+  }
+}
+
+/// What can be said about the cell the player is on, if anything can.
+///
+/// A hint is asked for while staring at a particular cell more often than
+/// not, so that is the cell it answers. Only when the board has nothing to
+/// say about that one yet does the hint go looking elsewhere: better a move
+/// somewhere else than an answer here it cannot account for.
+fn here(game: Game) -> Result(logic.Step, Nil) {
+  case board.value(game.board, game.cursor) {
+    0 ->
+      case logic.settles(game.board.values, game.cursor) {
+        Ok(step) -> sound(game, step)
+        Error(_) -> Error(Nil)
+      }
+    _ -> Error(Nil)
   }
 }
 
@@ -389,25 +408,29 @@ fn hint(game: Game) -> Game {
 fn sound_step(game: Game) -> Result(logic.Step, Nil) {
   case logic.next(game.board.values) {
     Error(_) -> Error(Nil)
-    Ok(step) ->
-      case step.move {
-        logic.Settle(index, digit) ->
-          case digit == answer(game, index) {
-            True -> Ok(step)
-            False -> Error(Nil)
-          }
-        // An elimination leaves the grid as it was, so the reasoning would
-        // hand out the same one for ever. It is only worth offering when it
-        // rubs a mark of the player's out: then something has moved, and the
-        // next hint has something else to say.
-        logic.RuleOut(cells, digits) ->
-          case
-            rules_out_the_answer(game, cells, digits),
-            rubs_out(game, cells, digits)
-          {
-            False, True -> Ok(step)
-            _, _ -> Error(Nil)
-          }
+    Ok(step) -> sound(game, step)
+  }
+}
+
+fn sound(game: Game, step: logic.Step) -> Result(logic.Step, Nil) {
+  case step.move {
+    logic.Settle(index, digit) ->
+      case digit == answer(game, index) {
+        True -> Ok(step)
+        False -> Error(Nil)
+      }
+
+    // An elimination leaves the grid as it was, so the reasoning would hand
+    // out the same one for ever. It is only worth offering when it rubs a
+    // mark of the player's out: then something has moved, and the next hint
+    // has something else to say.
+    logic.RuleOut(cells, digits) ->
+      case
+        rules_out_the_answer(game, cells, digits),
+        rubs_out(game, cells, digits)
+      {
+        False, True -> Ok(step)
+        _, _ -> Error(Nil)
       }
   }
 }

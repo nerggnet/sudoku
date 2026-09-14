@@ -117,10 +117,11 @@ The status line keeps both rows whether or not there is anything for the
 second, so the board above it never shifts by a row between one message and
 the next.
 
-The hint goes wherever the next move actually is rather than wherever the
-cursor happens to be, because the cell you are staring at may not be the one that
-can be worked out yet — and a hint that cannot explain itself is only the
-answer again.
+A hint answers the cell you are on. You asked while looking at it, so that is
+the cell it takes first — and only two techniques settle a cell rather than
+ruling candidates out, so whether this one will go yet is a quick question to
+ask. When it will not go yet, the hint moves to a cell that will, rather than
+handing you an answer here it cannot account for.
 
 A hint always moves something. Where the next step settles a digit it writes
 it in; where the step only rules candidates out it rubs them out of your
