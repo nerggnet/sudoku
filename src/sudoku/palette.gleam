@@ -35,6 +35,19 @@ pub const alarm = "1;91"
 /// without relying on the colour being seen.
 pub const wrong = "1;91;4"
 
+/// A key to press, where the game is listing them for choosing between. Not
+/// the same thing as a digit written in, though they look alike: one is an
+/// instruction and the other is an answer.
+pub const key = "96"
+
+/// A time to beat, mentioned in passing. The green a result is announced in
+/// is bolder; this one sits in a list and should not shout.
+pub const best = "92"
+
+/// Something the player should know that is nobody's fault — a terminal in
+/// line mode, say. Not `alarm`, which is for something gone wrong.
+pub const note = "93"
+
 pub const empty = "90"
 
 pub const dim = "90"

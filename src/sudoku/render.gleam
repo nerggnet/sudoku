@@ -5,6 +5,7 @@
 //// the frame ends with an erase-to-end-of-screen, which means the previous
 //// frame does not have to be cleared first.
 
+import gleam/dict
 import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
@@ -13,10 +14,11 @@ import gleam/string
 import sudoku/board
 import sudoku/editor.{type Editor}
 import sudoku/game.{type Game}
-import sudoku/generator
+import sudoku/generator.{type Difficulty, type Origin}
 import sudoku/grids
 import sudoku/help
 import sudoku/palette
+import sudoku/store
 import sudoku/term
 
 /// How much room a frame needs: the widest line it draws, and the most rows.
@@ -437,7 +439,7 @@ fn finished(current: Game) -> List(String) {
       <> term.styled(palette.dim, "  They are the ones in red.")
     _ ->
       term.styled(palette.good, "Solved in " <> clock(game.elapsed_ms(current)))
-      <> term.styled(palette.good, aside(current.hints))
+      <> term.styled(palette.good, with_hints(current.hints))
       <> recorded(current)
   }
 
@@ -462,11 +464,130 @@ fn recorded(current: Game) -> String {
   }
 }
 
-fn aside(hints: Int) -> String {
+/// What a solve cost in hints, tacked onto the time it took.
+fn with_hints(hints: Int) -> String {
   case hints {
     0 -> "!"
     1 -> ", with one hint."
     _ -> ", with " <> int.to_string(hints) <> " hints."
+  }
+}
+
+// --------------------------------------------------------------------------
+// The opening menu
+// --------------------------------------------------------------------------
+
+/// The game left behind last time, said in a line: what it was, how much of
+/// it is left, and how long it took to get that far.
+fn summary(current: game.Game) -> String {
+  generator.origin_label(current.puzzle.origin)
+  <> ", "
+  <> int.to_string(board.empty_count(current.board))
+  <> " to go, "
+  <> clock(game.elapsed_ms(current))
+}
+
+pub fn menu_frame(
+  raw: Bool,
+  saved: Result(game.Game, Nil),
+  bests: store.Bests,
+) -> String {
+  let options = {
+    use origin, index <- list.index_map(generator.origins())
+    "   "
+    <> term.styled(palette.key, int.to_string(index + 1))
+    <> "  "
+    <> string.pad_end(generator.origin_label(origin), 10, " ")
+    <> term.styled(palette.dim, string.pad_end(aside(origin), 24, " "))
+    <> term.styled(palette.best, best(origin, bests))
+  }
+
+  let room = case cramped() {
+    "" -> []
+    complaint -> ["", term.styled(palette.alarm, complaint)]
+  }
+
+  let note = case raw {
+    True -> []
+    False -> [
+      "",
+      term.styled(
+        palette.note,
+        "This terminal is in line mode: press Enter after each key.",
+      ),
+    ]
+  }
+
+  term.screen(
+    list.flatten([
+      [term.styled(palette.title, "S U D O K U"), "", "Choose a puzzle:", ""],
+      options,
+      [
+        "",
+        "   "
+          <> term.styled(
+          palette.dim,
+          "Each level names the hardest reasoning its puzzles ask for.",
+        ),
+      ],
+      case saved {
+        Error(_) -> []
+        Ok(current) -> [
+          "",
+          "   "
+            <> term.styled(palette.key, "r")
+            <> "  "
+            <> string.pad_end("Resume", 10, " ")
+            <> term.styled(palette.dim, summary(current)),
+        ]
+      },
+      ["", "   " <> term.styled(palette.key, "q") <> "  quit"],
+      room,
+      note,
+    ]),
+  )
+}
+
+/// What each menu entry gets you: for a dealt puzzle, the hardest reasoning
+/// it will ask of you, and for a custom one, a grid to type a puzzle of your
+/// own into.
+fn aside(origin: Origin) -> String {
+  case origin {
+    generator.Dealt(difficulty) -> generator.asks_for(difficulty)
+    generator.Handwritten -> "type in a puzzle from a newspaper"
+  }
+}
+
+/// The time to beat at this difficulty, where there is one. A puzzle typed
+/// in has no difficulty to have a best at.
+fn best(origin: Origin, bests: store.Bests) -> String {
+  case origin {
+    generator.Handwritten -> ""
+    generator.Dealt(difficulty) ->
+      case dict.get(bests, difficulty) {
+        Error(_) -> ""
+        Ok(taken) -> "best " <> clock(taken)
+      }
+  }
+}
+
+pub fn generating(difficulty: Difficulty) -> String {
+  term.screen([
+    term.styled(palette.title, "S U D O K U"),
+    "",
+    term.styled(
+      palette.dim,
+      "Carving out " <> article(generator.label(difficulty)) <> " puzzle...",
+    ),
+  ])
+}
+
+/// `a` or `an`, so that dealing an Expert puzzle does not read as dealing
+/// "a Expert" one.
+fn article(word: String) -> String {
+  case string.starts_with(string.lowercase(word), "e") {
+    True -> "an " <> word
+    False -> "a " <> word
   }
 }
 

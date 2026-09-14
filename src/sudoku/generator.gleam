@@ -37,6 +37,12 @@ pub type Puzzle {
 /// so how hard it is was settled by whoever wrote it.
 pub const difficulties = [Easy, Medium, Hard, Expert]
 
+/// Every kind of puzzle there is, in the order they are offered: dealt at
+/// each difficulty, easiest first, and then one typed in by hand.
+pub fn origins() -> List(Origin) {
+  difficulties |> list.map(Dealt) |> list.append([Handwritten])
+}
+
 pub fn label(difficulty: Difficulty) -> String {
   case difficulty {
     Easy -> "Easy"

@@ -1,7 +1,5 @@
 //// A Sudoku game for the terminal.
 
-import gleam/dict
-import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -10,7 +8,7 @@ import gleam/string
 import sudoku/board
 import sudoku/editor
 import sudoku/game
-import sudoku/generator.{type Difficulty, type Origin}
+import sudoku/generator.{type Difficulty}
 import sudoku/help
 import sudoku/key
 import sudoku/render
@@ -172,7 +170,7 @@ fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
     Play(puzzle) -> start(raw, game.new(puzzle))
     Compose -> compose(raw, editor.new())
     Deal(difficulty) -> {
-      term.write(generating(difficulty))
+      term.write(render.generating(difficulty))
       start(raw, game.new(generator.generate(difficulty)))
     }
   }
@@ -232,132 +230,22 @@ fn judged(before: game.Game, after: game.Game) -> game.Game {
 // Opening menu
 // ---------------------------------------------------------------------------
 
-/// What the menu offers: a puzzle dealt at each difficulty, and last of all
-/// one typed in by hand.
-fn choices() -> List(Origin) {
-  generator.difficulties
-  |> list.map(generator.Dealt)
-  |> list.append([generator.Handwritten])
-}
-
+/// Show what is on offer and take the answer. The drawing is next door in
+/// `render`, so what is on the screen and what a keystroke means are the same
+/// list read twice rather than two lists that have to agree.
 fn choose(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
-  let frame = menu(raw, saved, store.bests())
+  let frame = render.menu_frame(raw, saved, store.bests())
   term.write(frame)
 
   case press(frame), saved {
     key.Quit, _ | key.Char("q"), _ | key.Char("Q"), _ -> Stop
     key.Char("r"), Ok(current) | key.Char("R"), Ok(current) -> Resume(current)
     key.Digit(picked), _ ->
-      case list.drop(choices(), picked - 1) {
+      case list.drop(generator.origins(), picked - 1) {
         [generator.Dealt(difficulty), ..] -> Deal(difficulty)
         [generator.Handwritten, ..] -> Compose
         [] -> choose(raw, saved)
       }
     _, _ -> choose(raw, saved)
   }
-}
-
-/// The game left behind last time, said in a line: what it was, how much of
-/// it is left, and how long it took to get that far.
-fn summary(current: game.Game) -> String {
-  generator.origin_label(current.puzzle.origin)
-  <> ", "
-  <> int.to_string(board.empty_count(current.board))
-  <> " to go, "
-  <> render.clock(game.elapsed_ms(current))
-}
-
-fn menu(
-  raw: Bool,
-  saved: Result(game.Game, Nil),
-  bests: store.Bests,
-) -> String {
-  let options = {
-    use origin, index <- list.index_map(choices())
-    "   "
-    <> term.styled("96", int.to_string(index + 1))
-    <> "  "
-    <> string.pad_end(generator.origin_label(origin), 10, " ")
-    <> term.styled("90", string.pad_end(aside(origin), 24, " "))
-    <> term.styled("92", best(origin, bests))
-  }
-
-  let room = case render.cramped() {
-    "" -> []
-    complaint -> ["", term.styled("93", complaint)]
-  }
-
-  let note = case raw {
-    True -> []
-    False -> [
-      "",
-      term.styled(
-        "93",
-        "This terminal is in line mode: press Enter after each key.",
-      ),
-    ]
-  }
-
-  term.screen(
-    list.flatten([
-      [term.styled("1;95", "S U D O K U"), "", "Choose a puzzle:", ""],
-      options,
-      [
-        "",
-        "   "
-          <> term.styled(
-          "90",
-          "Each level names the hardest reasoning its puzzles ask for.",
-        ),
-      ],
-      case saved {
-        Error(_) -> []
-        Ok(current) -> [
-          "",
-          "   "
-            <> term.styled("96", "r")
-            <> "  "
-            <> string.pad_end("Resume", 10, " ")
-            <> term.styled("90", summary(current)),
-        ]
-      },
-      ["", "   " <> term.styled("96", "q") <> "  quit"],
-      room,
-      note,
-    ]),
-  )
-}
-
-/// What each menu entry gets you: for a dealt puzzle, the hardest reasoning
-/// it will ask of you, and for a custom one, a grid to type a puzzle of your
-/// own into.
-fn aside(origin: Origin) -> String {
-  case origin {
-    generator.Dealt(difficulty) -> generator.asks_for(difficulty)
-    generator.Handwritten -> "type in a puzzle from a newspaper"
-  }
-}
-
-/// The time to beat at this difficulty, where there is one. A puzzle typed
-/// in has no difficulty to have a best at.
-fn best(origin: Origin, bests: store.Bests) -> String {
-  case origin {
-    generator.Handwritten -> ""
-    generator.Dealt(difficulty) ->
-      case dict.get(bests, difficulty) {
-        Error(_) -> ""
-        Ok(taken) -> "best " <> render.clock(taken)
-      }
-  }
-}
-
-fn generating(difficulty: Difficulty) -> String {
-  term.screen([
-    term.styled("1;95", "S U D O K U"),
-    "",
-    term.styled(
-      "90",
-      "Carving out a " <> generator.label(difficulty) <> " puzzle...",
-    ),
-  ])
 }

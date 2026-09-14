@@ -1,5 +1,6 @@
 //// Drawing the screen, and what it says.
 
+import gleam/dict
 import gleam/int
 import gleam/list
 import gleam/option
@@ -7,6 +8,7 @@ import gleam/string
 import helper
 import sudoku/board
 import sudoku/game
+import sudoku/generator
 import sudoku/help
 import sudoku/key
 import sudoku/logic
@@ -418,4 +420,95 @@ pub fn a_terminal_that_will_not_say_is_left_alone_test() {
   // question mark rather than guessed at.
   assert string.contains(render.cramped_at(60, -1), "60 by ?")
   assert string.contains(render.cramped_at(-1, 20), "? by 20")
+}
+
+// ---------------------------------------------------------------------------
+// The opening menu
+// ---------------------------------------------------------------------------
+
+/// The menu as it is drawn with nothing saved and no times to beat.
+fn opening() -> List(String) {
+  helper.lines_of(render.menu_frame(True, Error(Nil), dict.new()))
+}
+
+pub fn the_menu_offers_every_kind_of_puzzle_test() {
+  let lines = opening()
+
+  // Numbered from one, in the order the digits are read back in.
+  use origin, index <- list.index_map(generator.origins())
+  let wanted = int.to_string(index + 1)
+  assert list.any(lines, fn(line) {
+    string.contains(line, wanted)
+    && string.contains(line, generator.origin_label(origin))
+  })
+}
+
+pub fn the_menu_says_what_each_level_asks_for_test() {
+  let lines = opening()
+
+  use difficulty <- list.each(generator.difficulties)
+  assert list.any(lines, string.contains(_, generator.asks_for(difficulty)))
+}
+
+pub fn the_menu_shows_a_time_to_beat_where_there_is_one_test() {
+  let bests = dict.from_list([#(generator.Hard, 125_000)])
+  let lines = helper.lines_of(render.menu_frame(True, Error(Nil), bests))
+
+  assert list.any(lines, fn(line) {
+    string.contains(line, "Hard") && string.contains(line, "best 02:05")
+  })
+
+  // And nothing at all for the levels with no time behind them.
+  assert !list.any(opening(), string.contains(_, "best"))
+}
+
+pub fn the_menu_offers_a_saved_game_back_test() {
+  let waiting = helper.step(helper.fixture(), key.Digit(4))
+  let lines = helper.lines_of(render.menu_frame(True, Ok(waiting), dict.new()))
+
+  // What it was, how much is left of it, and how long it has taken.
+  assert list.any(lines, fn(line) {
+    string.contains(line, "Resume")
+    && string.contains(line, "Medium")
+    && string.contains(line, "to go")
+  })
+
+  // With nothing put down, there is nothing to pick up.
+  assert !list.any(opening(), string.contains(_, "Resume"))
+}
+
+pub fn the_menu_says_when_the_terminal_is_in_line_mode_test() {
+  let lines = helper.lines_of(render.menu_frame(False, Error(Nil), dict.new()))
+
+  assert list.any(lines, string.contains(_, "press Enter after each key"))
+  assert !list.any(opening(), string.contains(_, "press Enter"))
+}
+
+pub fn the_menu_fits_the_screen_test() {
+  let lines =
+    helper.lines_of(render.menu_frame(
+      False,
+      Ok(helper.fixture()),
+      dict.from_list([
+        #(generator.Easy, 1),
+        #(generator.Medium, 2),
+        #(generator.Hard, 3),
+        #(generator.Expert, 4),
+      ]),
+    ))
+
+  assert list.length(lines) <= render.rows
+  use line <- list.each(lines)
+  assert string.length(line) <= render.columns
+}
+
+pub fn a_puzzle_being_dealt_is_named_with_the_right_article_test() {
+  let said = fn(difficulty) {
+    helper.lines_of(render.generating(difficulty)) |> string.join(" ")
+  }
+
+  assert string.contains(said(generator.Easy), "an Easy puzzle")
+  assert string.contains(said(generator.Expert), "an Expert puzzle")
+  assert string.contains(said(generator.Hard), "a Hard puzzle")
+  assert string.contains(said(generator.Medium), "a Medium puzzle")
 }

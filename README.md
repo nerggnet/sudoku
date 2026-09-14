@@ -624,10 +624,10 @@ throws the old one away.
 | `sudoku/hint` | turning the reasoning into a hint, and pointing it somewhere |
 | `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/store` | writing a game down, reading it back, and keeping times |
-| `sudoku/render` | drawing a frame |
+| `sudoku/render` | drawing a screen: the menu, the board, the editor |
 | `sudoku/help` | the keys, the techniques, and the pages that explain them |
 | `sudoku/grids` | drawing a nine by nine, for the board and the help alike |
-| `sudoku/palette` | the colours it is all drawn in |
+| `sudoku/palette` | the colours it is all drawn in, and what each one means |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |
 
@@ -637,6 +637,13 @@ and the one rule long enough to want a module of its own. `rules` and `hint`
 both reach into `game`; `game` reaches into neither, which is what lets the
 three be three rather than a circle. Everything else — drawing, saving,
 the record books — still talks to `game` alone and did not notice.
+
+Every screen is drawn by `render` and every colour comes out of `palette`.
+That was not always true — the menu drew itself in the main module out of
+hardcoded escape codes, which is how it ended up with a slightly different
+green from the rest of the game and a yellow complaint about the window where
+the board's was red. Colour is a vocabulary, and a screen that keeps its own
+copy of it drifts.
 
 Pencil marks live on the board rather than in the game around it, which is
 what lets undo capture them without any extra bookkeeping. Both grids come out

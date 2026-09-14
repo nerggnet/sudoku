@@ -315,10 +315,13 @@ fn strip(characters: List(String), kept: List(String), scan: Scan) -> String {
 }
 
 pub fn visible_lines(current: game.Game) -> List(String) {
-  render.frame(current)
-  |> plain
-  |> string.split("\r\n")
-  |> list.map(string.trim_end)
+  lines_of(render.frame(current))
+}
+
+/// The lines of any frame, not only a game's: the menu takes ingredients
+/// rather than a game, so it cannot go through `visible_lines`.
+pub fn lines_of(frame: String) -> List(String) {
+  frame |> plain |> string.split("\r\n") |> list.map(string.trim_end)
 }
 
 pub fn is_grid_row(line: String) -> Bool {
