@@ -408,6 +408,7 @@ fn other_mode(current: Game) -> String {
 const board_keys = [
   #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
   #("1 - 9", "write a digit, or pencil one in while marking"),
+  #("shift 1 - 9", "pencil a digit in either way round"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
   #("f", "pencil the candidates into every bare cell"),
   #("m", "switch between writing and marking"),

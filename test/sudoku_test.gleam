@@ -863,6 +863,23 @@ pub fn the_delete_key_decodes_test() {
   assert press([0x1b, 0x5b, 0x33, 0x7e]) == key.Erase
 }
 
+pub fn shifted_digits_decode_test() {
+  // The number row with shift held. Both rows are read, so ! is a 1 either
+  // way and @ is a 2 on the keyboard that has one there.
+  assert press([0x21]) == key.Shifted(1)
+  assert press([0x22]) == key.Shifted(2)
+  assert press([0x40]) == key.Shifted(2)
+  assert press([0x29]) == key.Shifted(9)
+
+  // Where the two rows disagree the first of them wins: ( sits over 8 on one
+  // keyboard and 9 on another, and there is no telling which is in front of
+  // the player.
+  assert press([0x28]) == key.Shifted(8)
+
+  // A character over no digit at all is still itself.
+  assert press([0x3d]) == key.Char("=")
+}
+
 pub fn letter_case_is_kept_test() {
   // `h` moves the cursor and `H` asks for a hint, so they must stay distinct.
   assert press([0x68]) == key.Char("h")
@@ -1677,6 +1694,29 @@ pub fn the_hints_reason_from_the_marks_you_have_test() {
 // ---------------------------------------------------------------------------
 // Marking during play
 // ---------------------------------------------------------------------------
+
+pub fn shift_and_a_digit_marks_either_way_round_test() {
+  // Writing, and pencilling one in without leaving.
+  let marked = step(fixture(), key.Shifted(4))
+  assert board.sorted_marks(marked.board, 2) == [4]
+  assert board.value(marked.board, 2) == 0
+  assert !marked.marking
+
+  // The same key rubs it out again, and does so while marking too.
+  assert board.sorted_marks(step(marked, key.Shifted(4)).board, 2) == []
+  let while_marking = step(step(marked, key.Char("m")), key.Shifted(4))
+  assert board.sorted_marks(while_marking.board, 2) == []
+  assert while_marking.marking
+}
+
+pub fn shift_and_a_digit_types_a_clue_in_test() {
+  // In the editor there is nothing to distinguish them, so the shifted row
+  // types digits like the unshifted one.
+  let typed = editor.new() |> edit(key.Shifted(5)) |> edit(key.Digit(3))
+
+  assert editor.value(typed, 0) == 5
+  assert editor.value(typed, 1) == 3
+}
 
 pub fn m_switches_between_writing_and_marking_test() {
   let start = fixture()

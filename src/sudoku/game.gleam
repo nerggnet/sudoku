@@ -253,6 +253,12 @@ fn play(game: Game, pressed: Key) -> Step {
     key.Digit(digit) if game.marking -> Continue(mark(game, digit))
     key.Digit(digit) -> Continue(place(game, digit))
 
+    // Shift and a digit pencils one in without leaving writing, and rubs one
+    // out without leaving marking. Now that the candidates can be filled in
+    // wholesale, marking is mostly rubbing out, and a mode switch each way
+    // round for every one of them is a great deal of switching.
+    key.Shifted(digit) -> Continue(mark(game, digit))
+
     key.Erase if game.marking -> Continue(unmark(game))
     key.Erase -> Continue(erase(game))
 

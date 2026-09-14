@@ -1,5 +1,6 @@
 //// Turning raw bytes from the terminal into keystrokes.
 
+import gleam/list
 import gleam/string
 import sudoku/term
 
@@ -10,6 +11,10 @@ pub type Key {
   Right
   /// A digit key, 1 through 9.
   Digit(Int)
+  /// A digit with shift held: `!` for 1, `"` or `@` for 2, and so on. The
+  /// shifted row is not the same on every keyboard, so what counts is the
+  /// position of the key rather than the character it produces.
+  Shifted(Int)
   /// Anything meaning "clear this cell": 0, space, backspace or delete.
   Erase
   /// A printable key. Case is kept, so `H` and `h` are different keys.
@@ -98,9 +103,30 @@ fn from_byte(byte: Int) -> Key {
   }
 }
 
+/// The number row with shift held, on two of the keyboards it is laid out
+/// differently on. A player whose keyboard is neither still has the mode
+/// switch, which is what everybody had before.
+const shifted_rows = ["!\"#$%&/()", "!@#$%^&*("]
+
 fn printable(byte: Int) -> Key {
   case string.utf_codepoint(byte) {
-    Ok(codepoint) -> Char(string.from_utf_codepoints([codepoint]))
     Error(_) -> Unknown
+    Ok(codepoint) -> {
+      let character = string.from_utf_codepoints([codepoint])
+      case shifted(character) {
+        Ok(digit) -> Shifted(digit)
+        Error(_) -> Char(character)
+      }
+    }
   }
+}
+
+/// Which digit this character sits over, if it sits over one.
+fn shifted(character: String) -> Result(Int, Nil) {
+  use row <- list.find_map(shifted_rows)
+
+  row
+  |> string.to_graphemes
+  |> list.index_map(fn(over, index) { #(over, index + 1) })
+  |> list.key_find(character)
 }

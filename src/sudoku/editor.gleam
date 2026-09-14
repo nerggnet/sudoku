@@ -71,7 +71,7 @@ pub fn update(current: Editor, pressed: Key) -> Step {
     key.Left | key.Char("h") | key.Char("a") -> Continue(move(current, 0, -1))
     key.Right | key.Char("l") | key.Char("d") -> Continue(move(current, 0, 1))
 
-    key.Digit(digit) -> Continue(type_in(current, digit))
+    key.Digit(digit) | key.Shifted(digit) -> Continue(type_in(current, digit))
     key.Erase -> Continue(type_in(current, 0))
 
     key.Char("u") -> Continue(undo(current))

@@ -43,6 +43,7 @@ newspaper.
 | --- | --- |
 | `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
 | `1`–`9` | write a digit, or pencil one in while marking |
+| shift `1`–`9` | pencil a digit in either way round |
 | `0`, space, backspace | clear the cell, or its marks while marking |
 | `f` | pencil the candidates into every bare cell |
 | `m` | switch between writing and marking |
@@ -446,6 +447,15 @@ says `Custom` where it would otherwise name a difficulty.
 Press `m` to switch to marking, then `1`–`9` to pencil candidates into a cell
 and the same key again to rub one out. `m` switches back to writing digits;
 the header and the key hints along the bottom say which mode you are in.
+
+Shift and a digit pencils one in without leaving writing, and rubs one out
+without leaving marking, which saves a great deal of switching now that `f`
+fills the candidates in and marking is mostly rubbing them out again. What
+the shifted number row produces depends on the keyboard, so both the Swedish
+row and the American one are read: `!` is a 1 on either. Where the two
+disagree — `(` sits over 8 on one and 9 on the other — the Swedish reading
+wins, there being no way to tell which keyboard is in front of the player.
+Anyone whose row is neither still has `m`.
 
 Marks get a grid of their own beside the board rather than being squeezed into
 it, which leaves the board as compact and readable as it was without them. The
