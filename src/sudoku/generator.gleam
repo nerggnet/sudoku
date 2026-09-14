@@ -9,6 +9,7 @@
 import gleam/dict
 import gleam/list
 import sudoku/board.{type Board, type Grid, type Peers}
+import sudoku/logic
 import sudoku/random
 import sudoku/solver
 
@@ -52,34 +53,108 @@ pub fn origin_label(origin: Origin) -> String {
   }
 }
 
-/// Roughly how many clues to leave behind. Fewer clues means more searching,
-/// so this is also what makes generation slower at the hard end.
-pub fn target_clues(difficulty: Difficulty) -> Int {
+/// What a difficulty asks of a player: the reasoning it should call for, at
+/// the least and at the most, and how many clues to leave standing.
+///
+/// Two different things make a puzzle hard and a difficulty sets them both.
+/// One is the reasoning: a grid that never asks for more than a naked single
+/// is easy whatever else is true of it. The other is how much of the grid is
+/// missing, which is not reasoning at all but hunting — a singles-only puzzle
+/// with twenty clues is still a long stare before the first digit goes in.
+type Band {
+  Band(clues: Int, floor: logic.Technique, ceiling: logic.Technique)
+}
+
+fn band(difficulty: Difficulty) -> Band {
   case difficulty {
-    Easy -> 45
-    Medium -> 36
-    Hard -> 30
-    Expert -> 26
+    Easy -> Band(40, logic.NakedSingle, logic.NakedSingle)
+    Medium -> Band(32, logic.HiddenSingle, logic.HiddenSingle)
+    Hard -> Band(26, logic.LockedCandidates, logic.LockedCandidates)
+    // The floor for the hardest puzzles, and the ceiling of what the
+    // reasoning knows how to do.
+    Expert -> Band(17, logic.NakedPair, logic.XWing)
   }
 }
 
+/// The hardest reasoning a puzzle at this difficulty is allowed to call for.
+/// Carving stops where the next cell out would ask for more, so no dealt
+/// puzzle ever needs a guess: one that could not be reasoned out was never
+/// carved that far.
+pub fn hardest(difficulty: Difficulty) -> logic.Technique {
+  band(difficulty).ceiling
+}
+
+/// The reasoning a difficulty asks for, for the menu to say so.
+pub fn asks_for(difficulty: Difficulty) -> String {
+  let Band(floor:, ceiling:, ..) = band(difficulty)
+  case logic.rank(floor) == logic.rank(ceiling) {
+    True -> logic.labels(floor)
+    False -> logic.labels(floor) <> " and better"
+  }
+}
+
+/// How many grids to carve looking for one that asks for the reasoning its
+/// difficulty promises.
+///
+/// Carving is greedy and takes what it is given, so a grid often comes out
+/// easier than its level wants and the answer is to carve another. The
+/// hardest of them is kept as they go, so running out of attempts deals the
+/// best of the bunch rather than the last of it: a puzzle a shade easier than
+/// promised beats one that never arrives.
+const attempts = 30
+
 pub fn generate(difficulty: Difficulty) -> Puzzle {
   let peers = board.peers_table()
+  deal(difficulty, peers, attempts - 1, cut(difficulty, peers))
+}
+
+fn deal(
+  difficulty: Difficulty,
+  peers: Peers,
+  left: Int,
+  best: Puzzle,
+) -> Puzzle {
+  case left <= 0 || asks_enough(band(difficulty), best) {
+    True -> best
+    False ->
+      deal(difficulty, peers, left - 1, harder_of(best, cut(difficulty, peers)))
+  }
+}
+
+/// One grid, carved as far as its difficulty will let it go.
+fn cut(difficulty: Difficulty, peers: Peers) -> Puzzle {
   let assert Ok(solution) = solver.search(peers, board.empty_grid(), True)
     as "an empty grid always has a solution"
 
-  let target = target_clues(difficulty)
-
+  let band = band(difficulty)
   let grid =
     solution
-    |> carve(peers, symmetric_groups(), target, _)
-    |> carve(peers, single_groups(), target, _)
+    |> carve(band, symmetric_groups(), _)
+    |> carve(band, single_groups(), _)
 
   Puzzle(
     board: board.from_grid(grid),
     solution: solution,
     origin: Dealt(difficulty),
   )
+}
+
+fn asks_enough(band: Band, puzzle: Puzzle) -> Bool {
+  asks_for_rank(puzzle) >= logic.rank(band.floor)
+}
+
+fn harder_of(one: Puzzle, other: Puzzle) -> Puzzle {
+  case asks_for_rank(other) > asks_for_rank(one) {
+    True -> other
+    False -> one
+  }
+}
+
+fn asks_for_rank(puzzle: Puzzle) -> Int {
+  case logic.rate(puzzle.board.values) {
+    Ok(needed) -> logic.rank(needed)
+    Error(_) -> -1
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -140,20 +215,22 @@ fn single_groups() -> List(List(Int)) {
   board.indices() |> list.map(fn(index) { [index] }) |> random.shuffle
 }
 
-fn carve(
-  peers: Peers,
-  groups: List(List(Int)),
-  target: Int,
-  grid: Grid,
-) -> Grid {
+/// Take each group of cells out in turn, keeping the ones the puzzle can
+/// spare and putting back the ones it cannot.
+///
+/// A grid the reasoning can finish has exactly one answer, since every step
+/// it took was forced, so asking whether the puzzle is still within its
+/// difficulty asks whether it still has a single answer at the same time.
+fn carve(band: Band, groups: List(List(Int)), grid: Grid) -> Grid {
   use grid, group <- list.fold(groups, grid)
 
-  case clue_count(grid) <= target {
+  case clue_count(grid) <= band.clues {
     True -> grid
     False -> {
       let stripped =
         list.fold(group, grid, fn(grid, index) { dict.insert(grid, index, 0) })
-      case solver.count(peers, stripped, 2) == 1 {
+
+      case within(band.ceiling, stripped) {
         True -> stripped
         False -> grid
       }
@@ -163,4 +240,11 @@ fn carve(
 
 fn clue_count(grid: Grid) -> Int {
   grid |> dict.values |> list.count(fn(digit) { digit != 0 })
+}
+
+fn within(ceiling: logic.Technique, grid: Grid) -> Bool {
+  case logic.rate(grid) {
+    Ok(needed) -> logic.rank(needed) <= logic.rank(ceiling)
+    Error(_) -> False
+  }
 }

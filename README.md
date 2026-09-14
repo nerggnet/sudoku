@@ -6,9 +6,10 @@ A Sudoku game for the terminal, written in Gleam.
 gleam run
 ```
 
-Pick a difficulty, then play. Puzzles are generated fresh each time and always
-have exactly one solution. Or pick `Custom` and type a puzzle in yourself, out
-of a newspaper.
+Pick a difficulty, then play. Puzzles are generated fresh each time, always
+have exactly one solution, and can always be reasoned out — none of them ever
+needs a guess. Or pick `Custom` and type a puzzle in yourself, out of a
+newspaper.
 
 ```
  S U D O K U    Medium    marking
@@ -52,6 +53,36 @@ Clues are fixed and cannot be overwritten. Digits that clash with another in
 the same row, column or box turn red as you type them, and the cells sharing a
 row, column or box with the cursor are shaded so it is easier to see what a
 cell can still be.
+
+## Difficulty
+
+A difficulty is not a clue count. It is the hardest reasoning a puzzle will
+ask of you, which is the thing a clue count only gestures at: two puzzles with
+the same number of clues can be a minute apart or an hour.
+
+| | asks for | clues | carving |
+| --- | --- | --- | --- |
+| Easy | naked singles | 39–40 | instant |
+| Medium | hidden singles | 31–32 | instant |
+| Hard | locked candidates | 26–27 | about a third of a second |
+| Expert | naked pairs and better | 22–27 | about a second |
+
+Each level is what it says: measured over twenty-five puzzles apiece, every
+Easy needed nothing but naked singles, every Medium wanted a hidden single
+somewhere, every Hard a locked candidate, and every Expert a pair or better,
+up to the occasional X-wing.
+
+Clues still come into it, because two different things make a puzzle hard.
+The reasoning is one — a grid that never asks for more than a naked single is
+easy whatever else is true of it. The other is how much of the grid is
+missing, which is not reasoning at all but hunting: a singles-only puzzle with
+twenty clues is still a long stare before the first digit goes in. So a level
+sets both, and carving stops at whichever comes first.
+
+Nothing dealt ever needs a guess. Carving only takes a cell out if what is
+left can still be reasoned to the end, so a puzzle that could not be is never
+carved that far. That also does the work of checking the answer is unique:
+reasoning never guesses, so a grid it can finish has exactly one answer.
 
 ## Checking, and what it costs
 
@@ -176,6 +207,7 @@ well as digits.
 | `sudoku/board` | the grid, its units, pencil marks, and what counts as a clash |
 | `sudoku/solver` | backtracking search, and counting solutions |
 | `sudoku/generator` | filling a grid at random, then carving clues out of it |
+| `sudoku/logic` | solving the way a person does, and rating a puzzle by it |
 | `sudoku/game` | game state and what each key does to it |
 | `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/render` | drawing a frame |
@@ -194,11 +226,21 @@ begins. Generating one carves clues out of a solution; typing one in works the
 other way round, solving the clues to find the answer the game will check
 against, and refusing them if there is not exactly one.
 
-The solver expands the empty cell with the fewest candidates first, which
-keeps the search small enough that generating even an Expert puzzle takes
-about a tenth of a second. Generation fills a grid at random, then removes
-cells in rotationally symmetric pairs for as long as the puzzle still has
-exactly one solution.
+There are two solvers, because there are two questions. `sudoku/solver`
+searches, expanding the empty cell with the fewest candidates first, and
+answers what the digits are; it is what fills a grid at random to start a
+puzzle off. `sudoku/logic` reasons, trying naked singles, hidden singles,
+locked candidates, pairs, triples and X-wings in that order, and answers how
+the digits can be worked out and how hard that is. Rating a grid that way
+takes about a millisecond, which is what makes it affordable to ask the
+question after every single cell carving takes out.
+
+Generation fills a grid at random and then removes cells in rotationally
+symmetric pairs, and singly where a pair will not go, for as long as the
+puzzle stays inside its difficulty. Carving is greedy and often lands easier
+than the level wants, so it carves up to thirty grids and keeps the hardest —
+which is why an Expert puzzle takes about a second to deal and an Easy one
+arrives at once.
 
 Keyboard input needs OTP 26 or later, which is where
 `shell:start_interactive({noshell, raw})` arrived. Without it — on older OTP,

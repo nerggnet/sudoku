@@ -114,18 +114,26 @@ fn menu(raw: Bool) -> String {
     list.flatten([
       [term.styled("1;95", "S U D O K U"), "", "Choose a puzzle:", ""],
       options,
+      [
+        "",
+        "   "
+          <> term.styled(
+          "90",
+          "Each level names the hardest reasoning its puzzles ask for.",
+        ),
+      ],
       ["", "   " <> term.styled("96", "q") <> "  quit"],
       note,
     ]),
   )
 }
 
-/// What each menu entry gets you: a clue count for a dealt puzzle, and for a
-/// custom one, a grid to type a puzzle of your own into.
+/// What each menu entry gets you: for a dealt puzzle, the hardest reasoning
+/// it will ask of you, and for a custom one, a grid to type a puzzle of your
+/// own into.
 fn aside(origin: Origin) -> String {
   case origin {
-    generator.Dealt(difficulty) ->
-      int.to_string(generator.target_clues(difficulty)) <> " clues"
+    generator.Dealt(difficulty) -> generator.asks_for(difficulty)
     generator.Handwritten -> "type in a puzzle from a newspaper"
   }
 }

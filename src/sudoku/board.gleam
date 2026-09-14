@@ -50,6 +50,51 @@ pub fn empty_grid() -> Grid {
   |> dict.from_list
 }
 
+/// The letters the rows are labelled with, top to bottom. Columns are
+/// numbered, so a cell is named like `C4`.
+pub const row_labels = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+
+/// A cell's name as the player sees it, such as `C4`.
+pub fn name(index: Int) -> String {
+  row_letter(row_of(index)) <> int.to_string(col_of(index) + 1)
+}
+
+/// The letter a row is labelled with.
+pub fn row_letter(row: Int) -> String {
+  case list.drop(row_labels, row) {
+    [letter, ..] -> letter
+    [] -> "?"
+  }
+}
+
+pub fn row_name(index: Int) -> String {
+  "row " <> row_letter(row_of(index))
+}
+
+pub fn column_name(index: Int) -> String {
+  "column " <> int.to_string(col_of(index) + 1)
+}
+
+/// A box named by where it sits rather than by a number nobody can picture:
+/// `the top-left box`, `the middle box`.
+pub fn box_name(index: Int) -> String {
+  let down = case row_of(index) / 3 {
+    0 -> "top"
+    1 -> "middle"
+    _ -> "bottom"
+  }
+  let across = case col_of(index) / 3 {
+    0 -> "left"
+    1 -> "centre"
+    _ -> "right"
+  }
+
+  case down, across {
+    "middle", "centre" -> "the middle box"
+    _, _ -> "the " <> down <> "-" <> across <> " box"
+  }
+}
+
 pub fn row_of(index: Int) -> Int {
   index / side
 }
@@ -66,27 +111,32 @@ pub fn at(row: Int, col: Int) -> Int {
   row * side + col
 }
 
+/// The nine rows, top to bottom.
+pub fn rows() -> List(List(Int)) {
+  let digits = span(0, side - 1)
+  list.map(digits, fn(row) { list.map(digits, fn(col) { at(row, col) }) })
+}
+
+/// The nine columns, left to right.
+pub fn columns() -> List(List(Int)) {
+  let digits = span(0, side - 1)
+  list.map(digits, fn(col) { list.map(digits, fn(row) { at(row, col) }) })
+}
+
+/// The nine boxes, in reading order.
+pub fn boxes() -> List(List(Int)) {
+  use box <- list.map(span(0, side - 1))
+  let top = box / 3 * 3
+  let left = box % 3 * 3
+  list.flat_map(span(0, 2), fn(row) {
+    list.map(span(0, 2), fn(col) { at(top + row, left + col) })
+  })
+}
+
 /// The 27 groups of nine cells that must each hold the digits 1-9 exactly
 /// once: nine rows, nine columns and nine boxes.
 pub fn units() -> List(List(Int)) {
-  let digits = span(0, side - 1)
-
-  let rows =
-    list.map(digits, fn(row) { list.map(digits, fn(col) { at(row, col) }) })
-
-  let cols =
-    list.map(digits, fn(col) { list.map(digits, fn(row) { at(row, col) }) })
-
-  let boxes =
-    list.map(digits, fn(box) {
-      let top = box / 3 * 3
-      let left = box % 3 * 3
-      list.flat_map(span(0, 2), fn(row) {
-        list.map(span(0, 2), fn(col) { at(top + row, left + col) })
-      })
-    })
-
-  list.flatten([rows, cols, boxes])
+  list.flatten([rows(), columns(), boxes()])
 }
 
 /// The 20 cells that share a row, column or box with this one.
@@ -266,6 +316,18 @@ pub fn toggle_mark(board: Board, index: Int, digit: Int) -> Board {
       }
       Board(..board, marks: write_marks(board.marks, index, next))
     }
+  }
+}
+
+/// Rub one pencil mark out, if it is there at all.
+pub fn erase_mark(board: Board, index: Int, digit: Int) -> Board {
+  case dict.get(board.marks, index) {
+    Error(_) -> board
+    Ok(marks) ->
+      Board(
+        ..board,
+        marks: write_marks(board.marks, index, set.delete(marks, digit)),
+      )
   }
 }
 

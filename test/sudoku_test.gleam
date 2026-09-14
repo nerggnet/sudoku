@@ -10,6 +10,7 @@ import sudoku/editor
 import sudoku/game
 import sudoku/generator
 import sudoku/key
+import sudoku/logic
 import sudoku/render
 import sudoku/solver
 
@@ -339,6 +340,217 @@ pub fn counting_stops_at_the_limit_test() {
 }
 
 // ---------------------------------------------------------------------------
+// Solving by reasoning
+// ---------------------------------------------------------------------------
+
+pub fn reasoning_solves_an_ordinary_puzzle_test() {
+  let #(steps, reasoned) = logic.unfold(grid(puzzle_text))
+
+  assert board.to_string(reasoned) == board.to_string(grid(solution_text))
+  assert steps != []
+}
+
+/// The test that carries the others: whatever a technique claims, it has to
+/// agree with the answer the puzzle was carved from. A digit settled is the
+/// digit that belongs there, and a digit ruled out is never the one that did.
+pub fn every_step_agrees_with_the_answer_test() {
+  use difficulty <- list.each(generator.difficulties)
+  let puzzle = generator.generate(difficulty)
+  let #(steps, _) = logic.unfold(puzzle.board.values)
+
+  use step <- list.each(steps)
+  case step.move {
+    logic.Settle(index, digit) -> {
+      assert dict.get(puzzle.solution, index) == Ok(digit)
+    }
+    logic.RuleOut(cells, digits) -> {
+      use index <- list.each(cells)
+      let assert Ok(answer) = dict.get(puzzle.solution, index)
+      assert !list.contains(digits, answer)
+    }
+  }
+}
+
+pub fn a_step_always_changes_something_test() {
+  // A technique that ruled nothing out would be reported for ever.
+  let puzzle = generator.generate(generator.Hard)
+  let #(steps, _) = logic.unfold(puzzle.board.values)
+
+  use step <- list.each(steps)
+  case step.move {
+    logic.Settle(_, _) -> Nil
+    logic.RuleOut(cells, digits) -> {
+      assert cells != []
+      assert digits != []
+    }
+  }
+}
+
+pub fn the_simplest_step_comes_first_test() {
+  // One cell left blank can only be a naked single.
+  let one_short = dict.insert(grid(solution_text), 40, 0)
+  let assert Ok(step) = logic.next(one_short)
+
+  assert step.technique == logic.NakedSingle
+  assert step.move == logic.Settle(40, 5)
+  assert step.evidence == [40]
+}
+
+pub fn a_hint_names_a_digit_that_belongs_test() {
+  let assert Ok(step) = logic.next(grid(puzzle_text))
+  let assert logic.Settle(index, digit) = step.move
+
+  assert dict.get(grid(solution_text), index) == Ok(digit)
+  // Nothing harder than a single is needed to get started here.
+  assert logic.rank(step.technique) <= logic.rank(logic.HiddenSingle)
+}
+
+pub fn reasoning_runs_out_on_an_empty_grid_test() {
+  // Every cell can take anything, so no technique has anything to say.
+  let #(steps, reasoned) = logic.unfold(board.empty_grid())
+
+  assert steps == []
+  assert reasoned == board.empty_grid()
+  assert logic.rate(board.empty_grid()) == Error(Nil)
+}
+
+pub fn a_finished_grid_asks_nothing_test() {
+  assert logic.rate(grid(solution_text)) == Ok(logic.NakedSingle)
+}
+
+pub fn a_puzzle_is_rated_by_its_hardest_step_test() {
+  let assert Ok(rating) = logic.rate(grid(puzzle_text))
+  let #(steps, _) = logic.unfold(grid(puzzle_text))
+
+  // Nothing harder was used, and the rating was really used.
+  use step <- list.each(steps)
+  assert logic.rank(step.technique) <= logic.rank(rating)
+}
+
+pub fn an_explanation_names_what_it_is_about_test() {
+  let hard_cases = [
+    #(needs_naked_pair, logic.NakedPair),
+    #(needs_hidden_pair, logic.HiddenPair),
+    #(needs_naked_triple, logic.NakedTriple),
+    #(needs_x_wing, logic.XWing),
+    #(puzzle_text, logic.NakedSingle),
+  ]
+
+  use #(text, technique) <- list.each(hard_cases)
+  let #(steps, _) = logic.unfold(grid(text))
+  let assert Ok(step) =
+    list.find(steps, fn(step) { step.technique == technique })
+  let said = logic.explain(step)
+
+  // It names the technique, so the player has something to look up and to
+  // recognise the next time it comes round.
+  assert string.starts_with(
+    string.lowercase(said),
+    string.lowercase(logic.label(technique)),
+  )
+
+  // Every digit the step turns on is named, it reads as a sentence rather
+  // than a dump of the working, and it fits the status line.
+  assert string.ends_with(said, ".")
+  assert string.length(said) < 78
+
+  use digit <- list.each(step.about)
+  assert string.contains(said, int.to_string(digit))
+}
+
+pub fn techniques_are_listed_easiest_first_test() {
+  let ranks = list.map(logic.techniques, logic.rank)
+
+  assert ranks == list.sort(ranks, by: int.compare)
+  assert list.unique(ranks) == ranks
+  // Every technique is listed, and every one has a name.
+  assert list.length(logic.techniques) == 7
+  assert list.all(logic.techniques, fn(t) { logic.label(t) != "" })
+}
+
+/// Puzzles hunted out of generated ones until each of the rarer techniques
+/// was called for. A generated puzzle needs them only now and then, so they
+/// are kept here to make sure the techniques that find them stay honest.
+const needs_naked_pair = "
+  ... ... .51
+  27. 8.. 46.
+  ... 39. 2..
+  ..6 1.. ..4
+  ..9 ... ...
+  3.. ..2 9..
+  ..2 .73 ...
+  .37 ..6 .12
+  9.. ... ...
+"
+
+const needs_hidden_pair = "
+  8.. ... 7..
+  ..5 7.4 ...
+  6.. .3. .9.
+  93. ..5 ...
+  56. ... .21
+  ... 1.. .59
+  .5. .7. ..2
+  ... 8.2 4..
+  ..6 ... ..7
+"
+
+const needs_naked_triple = "
+  ... ..4 1.3
+  ... 1.. ...
+  9.. ..5 .46
+  ..6 2.. ..9
+  .5. 9.3 .2.
+  2.8 .16 ...
+  76. 5.. ..1
+  ... ... ...
+  1.5 6.. ...
+"
+
+const needs_x_wing = "
+  .6. 32. .7.
+  ... 5.8 42.
+  ... 7.4 6..
+  .14 ... ..2
+  ... ... ...
+  7.. ... 84.
+  ..9 8.1 ...
+  .71 4.6 ...
+  ... ..3 .6.
+"
+
+pub fn the_rarer_techniques_are_used_where_they_are_needed_test() {
+  let hard_cases = [
+    #(needs_naked_pair, logic.NakedPair),
+    #(needs_hidden_pair, logic.HiddenPair),
+    #(needs_naked_triple, logic.NakedTriple),
+    #(needs_x_wing, logic.XWing),
+  ]
+
+  use #(text, technique) <- list.each(hard_cases)
+  let start = grid(text)
+  let #(steps, _) = logic.unfold(start)
+  let assert Ok(answer) = solver.solve(start) as "the fixtures are solvable"
+
+  // The technique really is called for here...
+  assert list.any(steps, fn(step) { step.technique == technique })
+
+  // ...and every step of the way agrees with the answer the search finds,
+  // which is the two solvers checking each other.
+  use step <- list.each(steps)
+  case step.move {
+    logic.Settle(index, digit) -> {
+      assert dict.get(answer, index) == Ok(digit)
+    }
+    logic.RuleOut(cells, digits) -> {
+      use index <- list.each(cells)
+      let assert Ok(right) = dict.get(answer, index)
+      assert !list.contains(digits, right)
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Generating
 // ---------------------------------------------------------------------------
 
@@ -365,19 +577,28 @@ pub fn generated_puzzles_have_one_answer_test() {
   assert solver.count_solutions(puzzle.board.values, 5) == 1
 }
 
-pub fn generated_puzzles_hit_their_clue_target_test() {
+/// The promise a difficulty makes: a dealt puzzle can always be reasoned out,
+/// and never asks for more reasoning than the level it came from allows.
+pub fn generated_puzzles_can_be_reasoned_out_test() {
   use difficulty <- list.each(generator.difficulties)
   let puzzle = generator.generate(difficulty)
-  let clues = 81 - board.empty_count(puzzle.board)
 
-  assert clues <= generator.target_clues(difficulty)
-  // Carving never goes below the 17-clue floor for a unique Sudoku.
-  assert clues >= 17
+  let assert Ok(needed) = logic.rate(puzzle.board.values)
+    as "a dealt puzzle never needs a guess"
+  assert logic.rank(needed) <= logic.rank(generator.hardest(difficulty))
+
+  // And it is still a puzzle: carving never goes below the 17-clue floor.
+  assert 81 - board.empty_count(puzzle.board) >= 17
 }
 
-pub fn difficulty_targets_descend_test() {
-  let targets = list.map(generator.difficulties, generator.target_clues)
-  assert targets == list.reverse(list.sort(targets, by: int.compare))
+pub fn difficulty_ceilings_ascend_test() {
+  let ceilings = {
+    use difficulty <- list.map(generator.difficulties)
+    logic.rank(generator.hardest(difficulty))
+  }
+
+  assert ceilings == list.sort(ceilings, by: int.compare)
+  assert list.unique(ceilings) == ceilings
 }
 
 // ---------------------------------------------------------------------------
