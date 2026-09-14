@@ -307,8 +307,45 @@ pub fn write(board: Board, index: Int, digit: Int) -> Board {
 
 /// Clear a cell's digit. Any marks on it are left alone, so a wrong guess can
 /// be taken back without losing the reasoning that led to it.
+/// Rub a digit out, and give it back to the marks it was taken from.
+///
+/// Writing a digit retracts it from the marks around it. That is the game's
+/// own bookkeeping rather than the player's reasoning, so taking the digit
+/// back has to undo it too — otherwise every digit written and thought
+/// better of leaves a hole in the marks that nothing will ever fill, since
+/// `f` passes over any cell that has marks at all. Holes like that collect
+/// until the marks say things that cannot be true.
+///
+/// Only cells that already carry marks get it back, and only where the digit
+/// is really free again. A cell with no marks is one nobody has pencilled
+/// yet, and a single mark appearing in it out of nowhere would read as a
+/// naked single.
 pub fn erase(board: Board, index: Int) -> Board {
-  write(board, index, 0)
+  let digit = value(board, index)
+  let cleared = write(board, index, 0)
+
+  case digit {
+    0 -> cleared
+    _ -> Board(..cleared, marks: restore(cleared, peers_of(index), digit))
+  }
+}
+
+fn restore(board: Board, cells: List(Int), digit: Int) -> Dict(Int, Set(Int)) {
+  use marks, cell <- list.fold(cells, board.marks)
+  case dict.get(marks, cell) {
+    Error(_) -> marks
+    Ok(existing) ->
+      case value(board, cell) == 0 && free_at(board, cell, digit) {
+        True -> write_marks(marks, cell, set.insert(existing, digit))
+        False -> marks
+      }
+  }
+}
+
+/// Whether a digit can still go in a cell, read off the board alone.
+fn free_at(board: Board, cell: Int, digit: Int) -> Bool {
+  use peer <- list.all(peers_of(cell))
+  value(board, peer) != digit
 }
 
 // ---------------------------------------------------------------------------

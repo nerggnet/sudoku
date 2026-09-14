@@ -289,3 +289,70 @@ pub fn reveals_tidy_up_marks_too_test() {
 
   assert board.sorted_marks(helper.revealed(marked).board, 2) == []
 }
+
+pub fn erasing_a_digit_gives_it_back_to_the_marks_around_it_test() {
+  // Writing retracts the digit from the marks around it, which is the game's
+  // own bookkeeping. Taking the digit back has to undo that too.
+  let peers = board.peers_table()
+  let filled = helper.step(helper.fixture(), key.Char("f"))
+  let assert [a, ..] = helper.blanks()
+
+  let digit = game.answer(filled, a) % 9 + 1
+  let played =
+    game.Game(..filled, cursor: a)
+    |> helper.step(key.Digit(digit))
+    |> helper.step(key.Erase)
+
+  // Every marked cell agrees with the board again.
+  use index <- list.each(board.indices())
+  let shown = board.sorted_marks(played.board, index)
+  case board.value(played.board, index) == 0 && shown != [] {
+    False -> Nil
+    True -> {
+      assert shown == board.candidates(played.board.values, peers, index)
+      Nil
+    }
+  }
+}
+
+pub fn a_digit_is_only_given_back_where_it_can_go_test() {
+  let filled = helper.step(helper.fixture(), key.Char("f"))
+  let assert [a, ..] = helper.blanks()
+  let digit = game.answer(filled, a)
+
+  // Write the right digit, then take it back. Cells that can see another of
+  // the same digit must not get it back.
+  let played =
+    game.Game(..filled, cursor: a)
+    |> helper.step(key.Digit(digit))
+    |> helper.step(key.Erase)
+
+  use index <- list.each(board.peers_of(a))
+  case board.value(played.board, index) == 0 {
+    False -> Nil
+    True -> {
+      let elsewhere =
+        list.any(board.peers_of(index), fn(peer) {
+          board.value(played.board, peer) == digit
+        })
+      let given_back =
+        list.contains(board.sorted_marks(played.board, index), digit)
+      assert !{ elsewhere && given_back }
+      Nil
+    }
+  }
+}
+
+pub fn a_bare_cell_is_left_bare_rather_than_given_one_mark_test() {
+  // Nothing has pencilled it yet, and a single mark appearing out of nowhere
+  // would read as a naked single.
+  let assert [a, b, ..] = helper.blanks()
+  let digit = game.answer(helper.fixture(), a) % 9 + 1
+
+  let played =
+    game.Game(..helper.fixture(), cursor: a)
+    |> helper.step(key.Digit(digit))
+    |> helper.step(key.Erase)
+
+  assert board.sorted_marks(played.board, b) == []
+}

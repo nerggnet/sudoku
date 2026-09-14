@@ -387,21 +387,34 @@ fn fill(current: game.Game) -> game.Game {
     && set.is_empty(board.marks_at(current.board, index))
   }
 
-  case bare, current.offered == Some(game.RedoMarks) {
-    // Asked a second time with nothing bare left: mark the lot afresh, which
-    // is the only way to be rid of marks made wrongly by hand.
+  // A cell nothing can go in is not a cell waiting to be pencilled. Counting
+  // it as one left it bare for ever: every f would report having filled it,
+  // nothing would go in, and the offer to mark the lot afresh — which only
+  // comes when there is nothing bare left — could never arrive.
+  let #(fillable, stuck) =
+    list.partition(bare, fn(index) {
+      board.candidates(grid, peers, index) != []
+    })
+
+  case fillable, current.offered == Some(game.RedoMarks) {
+    // Asked a second time with nothing left to fill: mark the lot afresh,
+    // which is the only way to be rid of marks made wrongly by hand.
     [], True -> afresh(current)
 
     [], False ->
       game.Game(
         ..current,
         offered: Some(game.RedoMarks),
-        message: "Every empty cell is marked up already.\nPress f again to mark them all afresh.",
+        message: case nothing_fits(stuck) {
+            "" -> "Every empty cell is marked up already."
+            complaint -> complaint
+          }
+          <> "\nPress f again to mark them all afresh.",
       )
 
     _, _ -> {
       let pencilled = {
-        use marked, index <- list.fold(bare, current.board)
+        use marked, index <- list.fold(fillable, current.board)
         use marked, digit <- list.fold(
           board.candidates(grid, peers, index),
           marked,
@@ -410,23 +423,51 @@ fn fill(current: game.Game) -> game.Game {
       }
 
       let filled = current |> game.remember |> game.with_board(pencilled)
-      let left = board.empty_count(current.board) - list.length(bare)
+      let left = board.empty_count(current.board) - list.length(fillable)
 
       game.Game(
         ..filled,
         message: "Pencilled in "
-          <> int.to_string(list.length(bare))
+          <> int.to_string(list.length(fillable))
           <> " cells.\n"
-          <> case left {
-            0 -> "Every empty cell now shows what it could still take."
-            1 -> "The one you had marked already is left as it was."
-            _ ->
-              "The "
-              <> int.to_string(left)
-              <> " you had marked already are left as they were."
+          <> case nothing_fits(stuck) {
+            // Worth more than the tally of what was left alone: a cell that
+            // can take nothing means the grid cannot be finished as it is.
+            "" ->
+              case left {
+                0 -> "Every empty cell now shows what it could still take."
+                1 -> "The one you had marked already is left as it was."
+                _ ->
+                  "The "
+                  <> int.to_string(left)
+                  <> " you had marked already are left as they were."
+              }
+            complaint -> complaint
           },
       )
     }
+  }
+}
+
+/// An empty cell with no digit left to put in it, said out loud.
+///
+/// Its row, its column and its box hold all nine between them, which anybody
+/// can see by looking at the cell — the same kind of fact as a clash, and
+/// free for the same reason. It says the grid is broken, not which digit
+/// broke it: that is checking, and checking is not free.
+fn nothing_fits(stuck: List(Int)) -> String {
+  case stuck {
+    [] -> ""
+    [only] ->
+      "Nothing can go in "
+      <> board.name(only)
+      <> ": something already written must be wrong."
+    [first, ..rest] ->
+      "Nothing can go in "
+      <> board.name(first)
+      <> " or "
+      <> int.to_string(list.length(rest))
+      <> " other cells: something written must be wrong."
   }
 }
 

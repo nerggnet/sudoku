@@ -717,7 +717,11 @@ that digit's mark in every cell that can see it. Not while checking is on and
 the digit is wrong, though — the marks around a digit the game is calling out
 in the same breath are the reasoning you need to put it right, so they stay
 where they are. Erasing a digit leaves marks alone too, so taking back a
-wrong guess does not cost you the reasoning behind it. Undo covers marks as
+wrong guess does not cost you the reasoning behind it — and erasing gives the
+digit back to the marks around it, since it was the game that took it out of
+them when the digit went in. Without that, every digit written and thought
+better of would leave a hole in the marks that nothing would ever fill, and
+the holes would collect until the marks said things that could not be true. Undo covers marks as
 well as digits, and `r` walks forward again through whatever was undone —
 until something else is written, which makes a different way forward and
 throws the old one away.
