@@ -92,20 +92,30 @@ says what it did:
 
 ```
  Naked single: C6 can only be a 4.
+ Every other digit is already in its row, column or box.
+
  Hidden single: A2 is the only cell in row A that can take a 9.
+ The other empty cells in row A can all see a 9 already.
+
  Locked candidates: every 1 in the top-left box is in row C.
+ So no 1 anywhere else in row C — C6 loses it.
+
  Naked pair: C8 and F8 take 7 and 8 between them.
- Hidden pair: only C2 and C3 can take 4 or 7 in their row.
- Naked triple: A2, A3 and A4 take 2, 7 and 8 between them.
+ One each, whichever way round, so D8 and E8 lose both.
+
  X-wing: a 9 in rows B and F keeps to columns 2 and 9.
+ One in each row means one in each column, so 4 cells lose it.
 ```
 
 The names are the ones Sudoku players use, so they are worth learning: a
 player told that C8 and F8 take 7 and 8 between them has been given this one
 move, and a player told it is a naked pair has been given every naked pair
-they will ever meet. What follows the name is the crux rather than the whole
-argument, because the consequence happens on the screen as it is said — the
-digit goes in, or the marks come out.
+they will ever meet. The first row names the technique and states the crux;
+the second says why that settles it and what has just changed on the board.
+
+The status line keeps both rows whether or not there is anything for the
+second, so the board above it never shifts by a row between one message and
+the next.
 
 The hint goes wherever the next move actually is rather than wherever the
 cursor happens to be, because the cell you are staring at may not be the one that

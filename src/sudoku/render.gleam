@@ -313,7 +313,21 @@ fn status(current: Game, clashes: Set(Int)) -> List(String) {
     text -> term.styled(dim_style, "  \u{2502}  ") <> text
   }
 
-  ["", term.styled(dim_style, facts) <> marks, current.message]
+  ["", term.styled(dim_style, facts) <> marks, ..said(current.message)]
+}
+
+/// What the message says, over two rows.
+///
+/// The second row is where a hint puts why its reasoning settles anything,
+/// which will not fit on the first alongside the name of the technique. It is
+/// kept whether or not there is anything to put in it, so that the board
+/// above never shifts a row between one message and the next.
+fn said(message: String) -> List(String) {
+  case string.split(message, "\n") {
+    [what] -> [what, ""]
+    [what, why, ..] -> [what, term.styled(dim_style, why)]
+    [] -> ["", ""]
+  }
 }
 
 /// The cursor cell's marks, written out in full. This is where an asterisk in
@@ -422,7 +436,9 @@ fn finished(current: Game) -> List(String) {
       <> term.styled(good_style, aside(current.hints))
   }
 
-  ["", headline, term.styled(dim_style, "n new puzzle  \u{2502}  q quit")]
+  // No blank line above: the message's second row is nearly always the gap,
+  // and a 24-row terminal has none to spare once the panel is up.
+  [headline, term.styled(dim_style, "n new puzzle  \u{2502}  q quit")]
 }
 
 fn aside(hints: Int) -> String {

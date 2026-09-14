@@ -386,7 +386,8 @@ fn rubs_out(game: Game, cells: List(Int), digits: List(Int)) -> Bool {
 }
 
 fn take(game: Game, step: logic.Step) -> Game {
-  let said = logic.explain(step)
+  let #(what, why) = logic.explain(step)
+  let said = what <> "\n" <> why
 
   case step.move {
     logic.Settle(index, digit) -> {
@@ -445,7 +446,7 @@ fn tell(game: Game) -> Game {
         message: board.name(index)
           <> " is a "
           <> int.to_string(answer(game, index))
-          <> ".",
+          <> ".\nNothing simple to reason from here, so that one is from the answer.",
       )
       |> settle
     }

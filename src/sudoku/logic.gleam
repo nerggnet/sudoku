@@ -252,8 +252,98 @@ fn forget(marks: Pencil, cells: List(Int), digits: List(Int)) -> Pencil {
 /// What follows the name is the crux of it rather than the whole argument.
 /// The consequence — the digit going in, the marks coming out — happens on
 /// the screen as it is said, and the name is there for the rest.
-pub fn explain(step: Step) -> String {
-  title(step.technique) <> ": " <> crux(step)
+pub fn explain(step: Step) -> #(String, String) {
+  #(title(step.technique) <> ": " <> crux(step), because(step))
+}
+
+/// The line under the first: why the crux settles it, and what has just
+/// changed on the board because it does.
+///
+/// One clause, and never the working in full. A hint nobody reads to the end
+/// of has explained nothing.
+fn because(step: Step) -> String {
+  case step.technique, step.move {
+    NakedSingle, Settle(_, _) ->
+      "Every other digit is already in its row, column or box."
+
+    HiddenSingle, Settle(_, digit) ->
+      "The other empty cells in "
+      <> unit_name(step.unit)
+      <> " can all see a "
+      <> int.to_string(digit)
+      <> " already."
+
+    LockedCandidates, RuleOut(cells, _) ->
+      "So no "
+      <> written(step.about)
+      <> " anywhere else in "
+      <> unit_name(step.unit)
+      <> " — "
+      <> these(cells)
+      <> " "
+      <> lose(cells)
+      <> " it."
+
+    NakedPair, RuleOut(cells, _) ->
+      "One each, whichever way round, so "
+      <> these(cells)
+      <> " "
+      <> lose(cells)
+      <> " both."
+
+    NakedTriple, RuleOut(cells, _) ->
+      "One each, so " <> these(cells) <> " " <> lose(cells) <> " all three."
+
+    HiddenPair, RuleOut(_, _) ->
+      "One each, so nothing else fits in either of them."
+
+    XWing, RuleOut(cells, _) -> {
+      let #(base, cover) = case reads_across(step) {
+        True -> #("row", "column")
+        False -> #("column", "row")
+      }
+
+      "One in each "
+      <> base
+      <> " means one in each "
+      <> cover
+      <> ", so "
+      <> these(cells)
+      <> " "
+      <> lose(cells)
+      <> " it."
+    }
+
+    _, _ -> ""
+  }
+}
+
+/// Which way the rectangle was read: whether the eliminations landed in the
+/// columns its corners sit in, or in the rows.
+fn reads_across(step: Step) -> Bool {
+  let columns = list.map(step.evidence, board.col_of)
+  case step.move {
+    Settle(_, _) -> True
+    RuleOut(cells, _) ->
+      list.all(cells, fn(index) { list.contains(columns, board.col_of(index)) })
+  }
+}
+
+/// One cell loses a candidate; several lose theirs.
+fn lose(cells: List(Int)) -> String {
+  case cells {
+    [_] -> "loses"
+    _ -> "lose"
+  }
+}
+
+/// Cells by name while there are few enough for names to help, and by the
+/// count of them once there are not.
+fn these(cells: List(Int)) -> String {
+  case list.length(cells) {
+    few if few <= 3 -> named(cells)
+    many -> int.to_string(many) <> " cells"
+  }
 }
 
 fn title(technique: Technique) -> String {
@@ -300,17 +390,8 @@ fn crux(step: Step) -> String {
       <> unit_kind(step.unit)
       <> "."
 
-    XWing, RuleOut(cells, _) -> {
-      // Which way the rectangle was read decides which pair of lines is the
-      // one the digit is pinned across.
-      let #(base, cover) = case
-        list.all(cells, fn(index) {
-          list.contains(
-            list.map(step.evidence, board.col_of),
-            board.col_of(index),
-          )
-        })
-      {
+    XWing, RuleOut(_, _) -> {
+      let #(base, cover) = case reads_across(step) {
         True -> #(rows_of(step.evidence), columns_of(step.evidence))
         False -> #(columns_of(step.evidence), rows_of(step.evidence))
       }

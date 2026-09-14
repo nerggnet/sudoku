@@ -440,22 +440,27 @@ pub fn an_explanation_names_what_it_is_about_test() {
   let #(steps, _) = logic.unfold(grid(text))
   let assert Ok(step) =
     list.find(steps, fn(step) { step.technique == technique })
-  let said = logic.explain(step)
+  let #(what, why) = logic.explain(step)
 
   // It names the technique, so the player has something to look up and to
   // recognise the next time it comes round.
   assert string.starts_with(
-    string.lowercase(said),
+    string.lowercase(what),
     string.lowercase(logic.label(technique)),
   )
 
-  // Every digit the step turns on is named, it reads as a sentence rather
-  // than a dump of the working, and it fits the status line.
-  assert string.ends_with(said, ".")
-  assert string.length(said) < 78
+  // Both rows read as sentences rather than a dump of the working, and both
+  // fit the status line.
+  assert string.ends_with(what, ".")
+  assert string.ends_with(why, ".")
+  assert string.length(what) < 78
+  assert string.length(why) < 78
+
+  // The second row says why, so it is never the first one over again.
+  assert why != what
 
   use digit <- list.each(step.about)
-  assert string.contains(said, int.to_string(digit))
+  assert string.contains(what, int.to_string(digit))
 }
 
 pub fn techniques_are_listed_easiest_first_test() {
@@ -1751,6 +1756,24 @@ pub fn the_help_screen_lists_the_keys_test() {
 
   // Help takes the screen over rather than sharing it with the board.
   assert !list.any(lines, is_grid_row)
+}
+
+/// The status line is two rows whatever it has to say, so the board above it
+/// never shifts by a row between one message and the next.
+pub fn the_message_is_always_two_rows_test() {
+  let height = fn(current: game.Game) { list.length(visible_lines(current)) }
+
+  let quiet = game.Game(..fixture(), message: "")
+  let hinted = step(fixture(), key.Char("H"))
+  let undone = step(fixture(), key.Char("u"))
+
+  assert height(quiet) == height(hinted)
+  assert height(undone) == height(hinted)
+
+  // The hint really does fill both rows, and the second says why.
+  let assert [what, why] = string.split(hinted.message, "\n")
+  assert what != ""
+  assert why != ""
 }
 
 pub fn every_frame_fits_a_short_terminal_test() {
