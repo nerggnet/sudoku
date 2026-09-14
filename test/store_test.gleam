@@ -161,6 +161,14 @@ pub fn the_finished_panel_says_what_the_books_made_of_it_test() {
   assert list.any(said(game.Behind(125_000)), string.contains(_, "02:05"))
   assert list.any(said(game.Aided), string.contains(_, "Not recorded"))
 
+  // A record the books would not take still says it was one, and then says
+  // plainly that it did not land.
+  assert list.any(said(game.BestNotKept), string.contains(_, "Your best yet"))
+  assert list.any(said(game.BestNotKept), string.contains(
+    _,
+    "could not be saved",
+  ))
+
   // An untimed game says nothing about records at all.
   assert !list.any(said(game.Untimed), string.contains(_, "recorded"))
   assert !list.any(said(game.Untimed), string.contains(_, "best"))

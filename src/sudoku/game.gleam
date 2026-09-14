@@ -120,8 +120,11 @@ pub fn pages() -> List(Help) {
 /// the candidates in is another matter, since it works out nothing the player
 /// could not have worked out with a pencil.
 pub type Verdict {
-  /// Quicker than anything at this difficulty before it.
+  /// Quicker than anything at this difficulty before it, and written down.
   BestYet
+  /// Quicker than anything before it, but the record books would not take
+  /// it. A time nobody can look up afterwards is worth saying out loud now.
+  BestNotKept
   /// Timed, with a standing best still to beat.
   Behind(best: Int)
   /// Not timed: the game was asked for something along the way.

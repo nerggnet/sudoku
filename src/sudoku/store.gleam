@@ -134,15 +134,31 @@ fn check(clues: Grid, answer: Grid, values: Grid) -> Result(Nil, Nil) {
 // The file itself
 // ---------------------------------------------------------------------------
 
+/// What became of a game when it was put down.
+pub type Kept {
+  /// Written down, and where to find it again.
+  PutDown(where: String)
+  /// Nothing was written, and nothing needed to be: the game was over.
+  NothingToKeep
+  /// There was a game to keep and it could not be written. Worth saying: an
+  /// hour of somebody's puzzle and a confident sentence about where it went
+  /// is worse than no sentence at all.
+  Lost(where: String)
+}
+
 /// Keep this game to come back to. A game already over is not kept: there is
 /// nothing left to come back to.
-pub fn keep(current: Game) -> Nil {
+pub fn keep(current: Game) -> Kept {
   case game.is_finished(current) {
-    True -> forget()
-    False -> {
-      let _ = write_file(game_file, encode(current))
-      Nil
+    True -> {
+      forget()
+      NothingToKeep
     }
+    False ->
+      case write_file(game_file, encode(current)) {
+        True -> PutDown(path())
+        False -> Lost(path())
+      }
   }
 }
 
@@ -155,8 +171,10 @@ pub fn forget() -> Nil {
   forget_file(game_file)
 }
 
-/// Where a game is kept, for the parting message to say.
-pub fn path() -> String {
+/// Where a game is kept. Handed out with the answer about whether one landed
+/// there, rather than on its own: a path is only worth printing alongside
+/// what did or did not happen at it.
+fn path() -> String {
   file_path(game_file)
 }
 
@@ -194,14 +212,15 @@ pub fn settle(current: Game) -> game.Verdict {
   let verdict = judge(current, books)
 
   case verdict {
-    game.BestYet -> {
-      let _ = write_bests(kept(current, books))
-      Nil
-    }
-    _ -> Nil
+    // The books are only worth anything if the writing lands. A time nobody
+    // can look up later is not a record, whatever the panel says.
+    game.BestYet ->
+      case write_bests(with_time(current, books)) {
+        True -> game.BestYet
+        False -> game.BestNotKept
+      }
+    _ -> verdict
   }
-
-  verdict
 }
 
 /// What the record books make of a game, given what they already hold. Kept
@@ -228,7 +247,7 @@ pub fn judge(current: Game, books: Bests) -> game.Verdict {
   }
 }
 
-fn kept(current: Game, books: Bests) -> Bests {
+fn with_time(current: Game, books: Bests) -> Bests {
   case current.puzzle.origin {
     generator.Dealt(difficulty) ->
       dict.insert(books, difficulty, game.elapsed_ms(current))

@@ -451,6 +451,9 @@ fn finished(current: Game) -> List(String) {
 fn recorded(current: Game) -> String {
   case current.verdict {
     Some(game.BestYet) -> term.styled(palette.good, " Your best yet.")
+    Some(game.BestNotKept) ->
+      term.styled(palette.good, " Your best yet,")
+      <> term.styled(palette.alarm, " but it could not be saved.")
     Some(game.Behind(best)) ->
       term.styled(palette.dim, " Your best is " <> clock(best) <> ".")
     Some(game.Aided) ->

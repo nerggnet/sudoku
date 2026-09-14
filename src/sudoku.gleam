@@ -108,15 +108,19 @@ fn typed_in(argument: String) -> Result(Choice, String) {
   }
 }
 
-/// What to say once the screen has been handed back: where an unfinished game
-/// went, and the puzzle itself, which is a line of text anybody can type into
-/// Custom and play for themselves.
+/// Put the game down and say what happened to it: where it went, or that it
+/// did not go anywhere, and then the puzzle itself, which is a line of text
+/// anybody can type into Custom and play for themselves.
+///
+/// Saving happens here rather than as the game ends, so that what is written
+/// down and what is said about it cannot come apart.
 fn parting(played: Option(game.Game)) -> Nil {
   use current <- option_each(played)
 
-  case game.is_finished(current) {
-    True -> Nil
-    False -> io.println("\nSaved in " <> store.path())
+  case store.keep(current) {
+    store.NothingToKeep -> Nil
+    store.PutDown(where) -> io.println("\nSaved in " <> where)
+    store.Lost(where) -> io.println("\nCould not save in " <> where <> ".")
   }
 
   io.println("\nThis puzzle:")
@@ -199,10 +203,9 @@ fn start(raw: Bool, current: game.Game) -> Option(game.Game) {
       store.forget()
       run(raw)
     }
-    _ -> {
-      store.keep(ended)
-      Some(ended)
-    }
+    // Not kept here: the parting message does that, so that the saving and
+    // the sentence about it are one thing.
+    _ -> Some(ended)
   }
 }
 

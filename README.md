@@ -394,6 +394,23 @@ This puzzle:
 ...5....3.4..6.82.75...86...3...5...8956.1374...4...9...69...38.28.1..6.3....6...
 ```
 
+That sentence is the answer to whether the write happened, not a guess at it.
+Where the file cannot be written — a directory that is not writable, a disk
+with nothing left on it — the game says so instead, and the puzzle line is
+still there to keep by hand:
+
+```
+Could not save in /Users/you/.local/share/sudoku/game.
+```
+
+The same goes for a record. A best time that the books would not take is
+still a best time, and the panel says both halves of that rather than the
+flattering half:
+
+```
+ Solved in 08:41! Your best yet, but it could not be saved.
+```
+
 That is the line to send someone when you want them to try the grid that beat
 you — and `gleam run -- <the line>` is how they play it, rather than typing
 eighty-one characters into `Custom` by hand. A line that is not a puzzle with
