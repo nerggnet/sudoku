@@ -186,6 +186,24 @@ choose from, so the hints go quieter rather than wrong. A mark too narrow can
 lead the reasoning somewhere the answer does not go, and there the hint checks
 itself, declines, and says that nothing settles the cell yet.
 
+If an empty cell has nothing left that can go in it — its row, its column and
+its box holding all nine digits between them — `f` says so:
+
+```
+ Pencilled in 31 cells.
+ Nothing can go in D7: something already written must be wrong.
+```
+
+That is the same kind of fact as the clash counter: anybody can see it by
+looking at the cell, and it says the grid is broken without saying which
+digit broke it. Naming the wrong digit is checking, and checking is not free.
+
+Such a cell is not one waiting to be pencilled, so it no longer counts as
+one. It used to: `f` reported filling it, put nothing in it because nothing
+would go, and left it bare — so something was always still bare and the offer
+to mark every cell afresh, which only comes when nothing is, could never
+arrive.
+
 ## Hints that explain themselves
 
 `H` used to name a digit and leave it at that, which answers the cell and

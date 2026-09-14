@@ -356,3 +356,64 @@ pub fn a_bare_cell_is_left_bare_rather_than_given_one_mark_test() {
 
   assert board.sorted_marks(played.board, b) == []
 }
+
+pub fn a_cell_nothing_can_go_in_is_said_out_loud_test() {
+  // Box every digit out of one empty cell by writing the others around it.
+  let peers = board.peers_table()
+  let assert [target, ..] = helper.blanks()
+
+  let boxed = {
+    use current, index <- list.fold(board.indices(), helper.fixture())
+    let free = board.candidates(current.board.values, peers, target)
+    case
+      index != target,
+      board.value(current.board, index) == 0,
+      list.contains(board.peers_of(target), index),
+      free
+    {
+      True, True, True, [first, ..] ->
+        game.Game(..current, cursor: index) |> helper.step(key.Digit(first))
+      _, _, _, _ -> current
+    }
+  }
+
+  assert board.value(boxed.board, target) == 0
+  assert board.candidates(boxed.board.values, peers, target) == []
+
+  let filled = helper.step(boxed, key.Char("f"))
+  assert string.contains(
+    filled.message,
+    "Nothing can go in " <> board.name(target),
+  )
+  assert string.contains(filled.message, "must be wrong")
+}
+
+pub fn a_cell_nothing_can_go_in_does_not_block_marking_afresh_test() {
+  // It used to: f counted it as bare, pencilled nothing into it, and the
+  // offer to mark the lot afresh never came because something was always
+  // still bare.
+  let peers = board.peers_table()
+  let assert [target, ..] = helper.blanks()
+
+  let boxed = {
+    use current, index <- list.fold(board.indices(), helper.fixture())
+    let free = board.candidates(current.board.values, peers, target)
+    case
+      index != target,
+      board.value(current.board, index) == 0,
+      list.contains(board.peers_of(target), index),
+      free
+    {
+      True, True, True, [first, ..] ->
+        game.Game(..current, cursor: index) |> helper.step(key.Digit(first))
+      _, _, _, _ -> current
+    }
+  }
+
+  let offered =
+    boxed |> helper.step(key.Char("f")) |> helper.step(key.Char("f"))
+  assert string.contains(offered.message, "Press f again")
+
+  let afresh = helper.step(offered, key.Char("f"))
+  assert string.contains(afresh.message, "afresh")
+}

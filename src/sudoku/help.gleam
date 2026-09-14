@@ -27,7 +27,7 @@ const board_keys = [
   #("1 - 9", "write a digit, or pencil one in while marking"),
   #("shift 1 - 9", "pencil a digit in either way round"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
-  #("f", "pencil the candidates into every bare cell"),
+  #("f", "pencil the candidates in; warns of a dead cell"),
   #("S then 1 - 9", "mark out where that digit can go; S again stops"),
   #("m", "switch between writing and marking"),
   #("u", "undo"),
