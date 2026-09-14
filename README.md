@@ -122,7 +122,9 @@ and keeps them shaded while you move around looking at them. `S` again stops.
 ```
 
 Rows B, D and I have their 7 already, so nothing in them is shaded; nor is
-anything in the three columns and the two boxes that have one. The sevens
+anything in the three columns and the two boxes that have one. Move onto one
+of the shaded cells and it keeps a `+` where the shading was, since the
+cursor sits on top of any colour underneath it. The sevens
 already on the board keep their own shading, so both halves of the answer are
 on screen at once — where the digit has got to, and where it could still go.
 
@@ -536,16 +538,22 @@ block — points instead:
 ```
  A │ 8 · 5 │ · 1 · │ 4 6 · │
  B │ · 4 6 │ 8 5 · │ 3 7 1 │
- C │›· 7›3 │›·›·›4 │›8›5›· │
+ C │›·›7›3 │›·›·›4 │›8›5›· │
 ```
 
 `Hidden single: C2 is the only cell in row C that can take a 7.` — and there
-is row C, with C2 left alone because the cursor is already sitting on it. The
-pointer goes where the space was, so the grid is exactly as wide either way.
+is row C. The pointer goes where the space was, so the grid is exactly as
+wide either way.
 
 A scan gets its own mark in the same column, `+`, since the two can be up at
 once and a cell a hint is arguing from is not the same as a cell a digit
 could go in.
+
+One cell gets a mark in colour too: the one the cursor is on. Its colour is
+spoken for by the cursor, which is reverse video and shows through nothing,
+and it is the cell the player most wants an answer about — they went there to
+look at it. Without the mark, the one cell a scan could not tell you about
+was the one you were standing on.
 
 The washes behind the cursor's row and column, and behind cells holding the
 same digit as the one under it, simply go. They are there to help the eye

@@ -264,27 +264,37 @@ fn painted(
   glyph: String,
   colour: String,
 ) -> String {
-  let wash = background(washes, index, matching)
   let styles =
-    [wash, colour]
+    [background(washes, index, matching), colour]
     |> list.filter(fn(style) { style != "" })
     |> string.join(";")
 
-  term.styled(styles, lead(wash) <> glyph)
+  term.styled(styles, lead(washes, index) <> glyph)
 }
 
 /// The column in front of a cell. It is a space, so that a wash reads as a
-/// solid block — except where a hint is pointing at the cell and there is no
-/// colour to point with, and the column has to do the pointing itself.
+/// solid block — except where the wash cannot be seen, and the column has to
+/// say what it was going to say instead.
 ///
-/// Only the hint gets one. The cursor is reverse video, which needs no
-/// colour; the washes behind its row, its column and the digit it is sitting
-/// on are there to help the eye wander, and an eye can wander without them.
-fn lead(wash: String) -> String {
-  case term.plain(), wash {
-    True, _ if wash == palette.hint_wash -> palette.pointer
-    True, _ if wash == palette.scan_wash -> palette.could_go
-    _, _ -> " "
+/// Two ways it cannot be seen. There is no colour at all, and then nothing is
+/// shaded. Or the cell is the one the cursor is on, whose colour is spoken
+/// for by the cursor — and that is the cell the player most wants an answer
+/// about, since it is the one they have gone to look at.
+///
+/// Only what is being said gets a column. The washes behind the cursor's row,
+/// its column and the digit it is sitting on are there to help the eye wander
+/// rather than to say anything, and an eye can wander without them.
+fn lead(washes: Washes, index: Int) -> String {
+  let unseen = term.plain() || index == washes.cursor
+
+  case
+    unseen,
+    set.contains(washes.lit, index),
+    set.contains(washes.scanned, index)
+  {
+    True, True, _ -> palette.pointer
+    True, _, True -> palette.could_go
+    _, _, _ -> " "
   }
 }
 

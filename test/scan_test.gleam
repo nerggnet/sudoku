@@ -140,3 +140,27 @@ pub fn a_digit_with_nowhere_left_to_go_says_so_test() {
   assert board.could_take(looking.board, 7) == []
   assert string.contains(looking.message, "already placed")
 }
+
+pub fn the_cell_under_the_cursor_says_whether_it_could_take_it_test() {
+  // The cursor's colour is spoken for by the cursor, so the one cell the
+  // player has gone to look at was the one cell the scan could not answer
+  // about. It gets a mark in the column instead, in colour as well as plain.
+  let looking = looking_for(7)
+  let assert [candidate, ..] = board.could_take(looking.board, 7)
+  let room = list.length(board.could_take(looking.board, 7))
+
+  let on_it = game.Game(..looking, cursor: candidate)
+  let plain = helper.without_colour(fn() { render.frame(on_it) })
+
+  // Every cell that could take a 7, the cursor's own included.
+  assert helper.occurrences(plain, palette.could_go) == 2 * room
+  assert helper.occurrences(render.frame(on_it), palette.could_go) == 2
+
+  // And nothing is marked when the cursor is somewhere a 7 cannot go.
+  let assert Ok(elsewhere) =
+    list.find(board.indices(), fn(index) {
+      !list.contains(board.could_take(looking.board, 7), index)
+    })
+  let away = game.Game(..looking, cursor: elsewhere)
+  assert helper.occurrences(render.frame(away), palette.could_go) == 0
+}

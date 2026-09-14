@@ -69,15 +69,18 @@ pub fn a_hint_points_at_its_cells_without_colour_test() {
   let plain = helper.without_colour(fn() { render.frame(hinted) })
 
   // The wash is gone, so the pointer has to stand in for it: once for every
-  // cell of the row the hint is arguing from, in both grids, bar the one the
-  // cursor is sitting on — that stays reverse video, which needs no colour.
+  // cell of the row the hint is arguing from, in both grids. The cell the
+  // cursor is on gets one too — its colour is spoken for either way.
   assert !string.contains(plain, helper.hint_wash)
-  assert count(plain, palette.pointer) == 2 * { list.length(row) - 1 }
+  assert count(plain, palette.pointer) == 2 * list.length(row)
 
-  // In colour the wash does the pointing, and the grid keeps its spaces.
+  // In colour the wash does the pointing everywhere it can be seen, which is
+  // everywhere but the cell the cursor is on — that one gets a mark in both
+  // grids and nowhere else does.
   let coloured = render.frame(hinted)
+  assert list.contains(row, hinted.cursor)
   assert string.contains(coloured, helper.hint_wash)
-  assert !string.contains(coloured, palette.pointer)
+  assert count(coloured, palette.pointer) == 2
 }
 
 pub fn a_plain_board_is_the_same_width_test() {
