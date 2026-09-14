@@ -1318,12 +1318,46 @@ pub fn a_finished_puzzle_ignores_further_edits_test() {
 
 pub fn help_opens_and_any_key_closes_it_test() {
   let opened = step(fixture(), key.Char("?"))
-  assert opened.show_help
+  assert opened.help == option.Some(game.Keys)
 
-  assert !step(opened, key.Char("?")).show_help
-  assert !step(opened, key.Down).show_help
+  assert step(opened, key.Char("?")).help == option.None
+  assert step(opened, key.Down).help == option.None
   // Dismissing help does not also move the cursor.
   assert step(opened, key.Down).cursor == opened.cursor
+}
+
+pub fn the_help_pages_through_the_techniques_test() {
+  let opened = step(fixture(), key.Char("?"))
+
+  // Right off the keys is the first technique, and left off it is the last.
+  let assert [_keys, first, ..] = game.pages()
+  let assert Ok(last) = list.last(game.pages())
+
+  assert step(opened, key.Right).help == option.Some(first)
+  assert step(opened, key.Left).help == option.Some(last)
+
+  // Paging through every page comes back round to where it started.
+  let round = {
+    use current, _ <- list.fold(game.pages(), opened)
+    step(current, key.Right)
+  }
+  assert round.help == opened.help
+
+  // There is a page for every technique, and the keys besides.
+  assert list.length(game.pages()) == list.length(logic.techniques) + 1
+}
+
+pub fn paging_the_help_does_not_reach_the_board_test() {
+  // The arrows turn pages while the help is up, so there is no reading about
+  // a technique and moving the cursor by accident.
+  let opened = step(fixture(), key.Char("?"))
+  let paged = step(step(opened, key.Right), key.Left)
+
+  assert paged.cursor == opened.cursor
+  assert paged.board == opened.board
+
+  // Quitting still works from the help, though.
+  assert game.update(opened, key.Char("q")) == game.Exit
 }
 
 pub fn quit_and_restart_leave_the_loop_test() {
@@ -1774,6 +1808,36 @@ pub fn the_message_is_always_two_rows_test() {
   let assert [what, why] = string.split(hinted.message, "\n")
   assert what != ""
   assert why != ""
+}
+
+/// The technique pages are drawn by hand, so the guard that they fit has to
+/// be a test rather than the eye that drew them.
+pub fn every_help_page_fits_the_screen_test() {
+  use page <- list.each(game.pages())
+  let showing = game.Game(..fixture(), help: option.Some(page))
+  let lines = visible_lines(showing)
+
+  assert list.length(lines) <= 24
+  use line <- list.each(lines)
+  assert string.length(line) <= 78
+}
+
+pub fn every_technique_has_a_page_that_names_it_test() {
+  use technique <- list.each(logic.techniques)
+  let showing = game.Game(..fixture(), help: option.Some(game.About(technique)))
+  let lines = visible_lines(showing)
+
+  // The page is titled with the technique, and says which page it is.
+  assert list.any(lines, fn(line) {
+    string.contains(
+      string.lowercase(line),
+      string.lowercase(logic.label(technique)),
+    )
+  })
+  assert list.any(lines, string.contains(_, "page "))
+
+  // And it draws something, rather than only describing it.
+  assert list.any(lines, string.contains(_, "\u{2500}"))
 }
 
 pub fn every_frame_fits_a_short_terminal_test() {

@@ -46,7 +46,7 @@ newspaper.
 | `H` | take the next step, and say why |
 | `R` | reveal the whole solution |
 | `n` | start a new puzzle |
-| `?` | help |
+| `?` | help, and the techniques a page at a time |
 | `q` | quit |
 
 Clues are fixed and cannot be overwritten. Digits that clash with another in
@@ -132,6 +132,53 @@ with a wrong digit already in it: a hint checks every digit against the answer
 before writing it, because reasoning from a wrong digit leads somewhere the
 answer does not go.
 
+## The help, and the techniques
+
+`?` opens the help on the keys. `←` and `→` page from there through the seven
+ways of working a digit out, one to a page: what it is, a small board showing
+it happening, and what it settles. Anything else puts the help away, and while
+it is up the arrows turn pages rather than moving the cursor, so there is no
+reading about a technique and losing your place on the board.
+
+```
+ Naked pair
+
+ Two cells in a unit holding the same two candidates take one each
+ between them, whichever way round, so nothing else can have either.
+
+        1     2     3     4     5     6     7     8     9
+     ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+   C │  79 │  4  │  79 │ 1379│  3  │  5  │  8  │  6  │  2  │
+     └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+
+ C1 and C3 take 7 and 9, so C4 is down to a 1 or a 3.
+
+ ← →  page 5 of 8     any other key returns
+```
+
+The strips show what the cells of one unit have left in them. Where a
+technique is about one digit's whereabouts rather than one cell's contents,
+the page draws a board instead, marking where that digit can still go and
+where the reasoning has just shut it out:
+
+```
+ Locked candidates
+
+       1 2 3   4 5 6   7 8 9
+     ┌───────┬───────┬───────┐
+   A │ 1 1 · │ 1 · 1 │ · 1 · │
+   B │ · · · │ · 1 · │ 1 · · │
+   C │ · · · │ · · 1 │ · · 1 │
+     └───────┴───────┴───────┘
+
+ Every 1 in the left box is in row A, so A4, A6 and A8 lose theirs.
+```
+
+The examples are drawn by hand rather than lifted from a real grid, since a
+real one comes with sixty other cells to look past. The names are the ones
+Sudoku players use, so a page is also somewhere to start if you want to read
+more about one elsewhere.
+
 ## Checking, and what it costs
 
 `c` calls out the digits that disagree with the answer. It turns a guess into
@@ -208,7 +255,7 @@ gap; the arrow keys go back over anything mistyped.
 | `x` | clear the grid and start over |
 | `p` | play the puzzle |
 | `n` | back to the menu |
-| `?` | help |
+| `?` | help, and the techniques a page at a time |
 | `q` | quit |
 
 `p` starts the game, but only once the clues hold together. Two of the same

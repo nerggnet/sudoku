@@ -7,13 +7,14 @@
 
 import gleam/int
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/set.{type Set}
 import gleam/string
 import sudoku/board
 import sudoku/editor.{type Editor}
 import sudoku/game.{type Game}
 import sudoku/generator
+import sudoku/logic
 import sudoku/term
 
 const empty_cell = "\u{00b7}"
@@ -70,9 +71,9 @@ pub fn frame(current: Game) -> String {
     header(generator.origin_label(current.puzzle.origin), mode)
     |> tallied(current)
 
-  case current.show_help {
-    True -> term.screen(list.flatten([head, keys(key_reference, mark_notes)]))
-    False -> {
+  case current.help {
+    Some(page) -> term.screen(list.flatten([head, help(page)]))
+    None -> {
       let clashes = board.conflicts(current.board)
       term.screen(
         list.flatten([
@@ -168,8 +169,14 @@ fn caption(left: String, right: String) -> String {
 /// so that a highlight reads as a solid block. The column ruler is built with
 /// the same helper, which is what keeps it aligned with the cells.
 fn banded(cells: List(String), separator: String) -> String {
+  chunked(cells, 3, separator)
+}
+
+/// The same in bands of whatever size, which is what lets a diagram of one
+/// digit's whereabouts drop the box rules it has no use for.
+fn chunked(cells: List(String), size: Int, separator: String) -> String {
   cells
-  |> list.sized_chunk(3)
+  |> list.sized_chunk(size)
   |> list.map(fn(band) { string.concat(band) <> " " })
   |> string.join(separator)
   |> fn(bands) { separator <> bands <> separator }
@@ -200,9 +207,23 @@ fn grid(cell: fn(Int) -> String) -> List(String) {
 }
 
 fn rule(left: String, join: String, right: String) -> String {
-  let bar = string.repeat("\u{2500}", 7)
-  "  "
-  <> term.styled(dim_style, left <> bar <> join <> bar <> join <> bar <> right)
+  banded_rule(left, join, right, 3, "  ")
+}
+
+/// A rule across however many bands of however many cells, with the same
+/// margin as the rows it belongs to.
+fn banded_rule(
+  left: String,
+  join: String,
+  right: String,
+  size: Int,
+  margin: String,
+) -> String {
+  let bars =
+    list.repeat(string.repeat("\u{2500}", size * 2 + 1), 9 / size)
+    |> string.join(join)
+
+  margin <> term.styled(dim_style, left <> bars <> right)
 }
 
 fn row_line(cell: fn(Int) -> String, row: Int, label: String) -> String {
@@ -388,6 +409,7 @@ const key_reference = [
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
   #("?", "close this help"),
+  #("\u{2190} \u{2192}", "page through the techniques, one to a page"),
   #("q", "quit"),
 ]
 
@@ -416,8 +438,277 @@ fn keys(
     entries,
     [""],
     list.map(notes, term.styled(dim_style, _)),
-    ["", term.styled(dim_style, "Any key returns to the board.")],
   ])
+}
+
+// ---------------------------------------------------------------------------
+// The help, page by page
+// ---------------------------------------------------------------------------
+
+/// The keys on the first page, and then a page on each way of working a digit
+/// out: what it is, a small board showing it happening, and what it settles.
+///
+/// The examples are drawn by hand rather than lifted out of a real grid. A
+/// real one comes with sixty other cells to look past, and the whole point of
+/// a page is the one thing it is about.
+fn help(page: game.Help) -> List(String) {
+  let body = case page {
+    game.Keys -> keys(key_reference, mark_notes)
+    game.About(technique) -> about(technique)
+  }
+
+  list.append(body, [
+    "",
+    term.styled(
+      dim_style,
+      "\u{2190} \u{2192}  " <> paging(page) <> "     any other key returns",
+    ),
+  ])
+}
+
+fn paging(page: game.Help) -> String {
+  let pages = game.pages()
+  let at = list.length(list.take_while(pages, fn(other) { other != page })) + 1
+
+  "page " <> int.to_string(at) <> " of " <> int.to_string(list.length(pages))
+}
+
+fn about(technique: logic.Technique) -> List(String) {
+  let #(what, example, so) = teaching(technique)
+
+  list.flatten([
+    [term.styled("1", capitalised(logic.label(technique))), ""],
+    list.map(what, term.styled(dim_style, _)),
+    [""],
+    example,
+    [""],
+    [term.styled(entered_style, so)],
+  ])
+}
+
+fn capitalised(name: String) -> String {
+  string.uppercase(string.slice(name, 0, 1))
+  <> string.slice(name, 1, string.length(name) - 1)
+}
+
+/// What each technique is, what it looks like, and what it settles.
+///
+/// The strips show what the cells of one unit have left in them. The maps
+/// show one digit at a time: where it can still go, and where this way of
+/// looking at it has just shut it out.
+fn teaching(
+  technique: logic.Technique,
+) -> #(List(String), List(String), String) {
+  case technique {
+    logic.NakedSingle -> #(
+      [
+        "A cell with one candidate left has to take it. Everything else that",
+        "could have gone there is already spoken for by a peer.",
+      ],
+      strip("C", ["18", "4", "79", "28", "3", "5", "18", "6", "79"], [4], []),
+      "C5 has one candidate left, so that is what it is: a 3.",
+    )
+
+    logic.HiddenSingle -> #(
+      [
+        "A digit with one cell left in a unit has to go there, however much",
+        "else that cell could still have taken.",
+      ],
+      strip(
+        "C",
+        ["27", "279", "89", "89", "1279", "27", "89", "89", "279"],
+        [4],
+        [],
+      ),
+      "Only C5 can take a 1, so that is where the row's 1 goes.",
+    )
+
+    logic.LockedCandidates -> #(
+      [
+        "A digit shut into one line of a box has to be somewhere along that",
+        "line, so it cannot be anywhere else along it.",
+      ],
+      // The left box can only take its 1 in row A, so the rest of row A
+      // cannot have one. A hash is a cell the digit can still go in, a bang
+      // one this has just shut it out of.
+      map("1", ["##.!.!.!.", "....#.#..", ".....#..#"], True),
+      "Every 1 in the left box is in row A, so A4, A6 and A8 lose theirs.",
+    )
+
+    logic.NakedPair -> #(
+      [
+        "Two cells in a unit holding the same two candidates take one each",
+        "between them, whichever way round, so nothing else can have either.",
+      ],
+      strip("C", ["79", "4", "79", "1379", "3", "5", "8", "6", "2"], [0, 2], [3]),
+      "C1 and C3 take 7 and 9, so C4 is down to a 1 or a 3.",
+    )
+
+    logic.HiddenPair -> #(
+      [
+        "Two digits in a unit with the same two cells to go in take one each,",
+        "so those two cells can hold nothing else.",
+      ],
+      strip(
+        "C",
+        ["123", "34", "124", "34", "5", "6", "7", "8", "9"],
+        [0, 2],
+        [],
+      ),
+      "Only C1 and C3 can take a 1 or a 2, so both lose their other digits.",
+    )
+
+    logic.NakedTriple -> #(
+      [
+        "Three cells between them holding three candidates take one each, on",
+        "the same reasoning as two cells holding two.",
+      ],
+      strip(
+        "C",
+        ["27", "79", "29", "1", "2579", "6", "8", "3", "4"],
+        [0, 1, 2],
+        [4],
+      ),
+      "C1, C2 and C3 take 2, 7 and 9, so C5 has to be the 5.",
+    )
+
+    logic.XWing -> #(
+      [
+        "A digit down to the same two columns in two rows takes one corner in",
+        "each row, and so one in each column. Or the other way about.",
+      ],
+      // Rows B and F can only take their 9 in column 2 or column 9. The
+      // corners make a rectangle, and every other 9 in those two columns
+      // has to go.
+      map(
+        "9",
+        [
+          ".!.......", ".#......#", "........!", ".........", ".!.......",
+          ".#......#", ".........", "........!", ".........",
+        ],
+        False,
+      ),
+      "The 9s in rows B and F keep to columns 2 and 9, so four others go.",
+    )
+  }
+}
+
+/// One unit's worth of cells and what each of them has left in it.
+fn strip(
+  label: String,
+  cells: List(String),
+  lit: List(Int),
+  out: List(Int),
+) -> List(String) {
+  let wall = term.styled(dim_style, "\u{2502}")
+  let wide = 5
+
+  let ruler =
+    "    "
+    <> term.styled(
+      dim_style,
+      " "
+        <> {
+        use column <- list.map(board.span(1, 9))
+        centred(int.to_string(column), wide) <> " "
+      }
+      |> string.concat,
+    )
+
+  let rules = fn(left, join, right) {
+    "    "
+    <> term.styled(
+      dim_style,
+      left
+        <> {
+        list.repeat(string.repeat("\u{2500}", wide), 9) |> string.join(join)
+      }
+        <> right,
+    )
+  }
+
+  let row =
+    "  "
+    <> term.styled(dim_style, label)
+    <> " "
+    <> wall
+    <> {
+      use cell, at <- list.index_map(cells)
+      let colour = case list.contains(lit, at), list.contains(out, at) {
+        True, _ -> given_style
+        _, True -> conflict_style
+        _, _ -> empty_style
+      }
+      term.styled(colour, centred(cell, wide)) <> wall
+    }
+    |> string.concat
+
+  [
+    ruler,
+    rules("\u{250c}", "\u{252c}", "\u{2510}"),
+    row,
+    rules("\u{2514}", "\u{2534}", "\u{2518}"),
+  ]
+}
+
+/// Where one digit can still go, drawn as the board is drawn: `#` for a cell
+/// it can take, `!` for one this reasoning has just shut it out of, and a dot
+/// for the rest.
+///
+/// Box rules are drawn only where the technique is about boxes. For one about
+/// rows and columns they are three lines of noise, and three lines is the
+/// difference between the page fitting and not.
+fn map(digit: String, rows: List(String), boxed: Bool) -> List(String) {
+  let size = case boxed {
+    True -> 3
+    False -> 9
+  }
+
+  let ruler =
+    "    "
+    <> term.styled(
+      dim_style,
+      chunked(
+        list.map(board.span(1, 9), fn(column) { " " <> int.to_string(column) }),
+        size,
+        " ",
+      ),
+    )
+
+  let lines = {
+    use line, at <- list.index_map(rows)
+    let cells = {
+      use marker <- list.map(string.to_graphemes(line))
+      case marker {
+        "#" -> term.styled(given_style, " " <> digit)
+        "!" -> term.styled(conflict_style, " " <> digit)
+        _ -> term.styled(empty_style, " \u{b7}")
+      }
+    }
+
+    "  "
+    <> term.styled(dim_style, board.row_letter(at))
+    <> " "
+    <> chunked(cells, size, term.styled(dim_style, "\u{2502}"))
+  }
+
+  let rules = fn(left, join, right) {
+    banded_rule(left, join, right, size, "    ")
+  }
+
+  list.flatten([
+    [ruler],
+    [rules("\u{250c}", "\u{252c}", "\u{2510}")],
+    lines,
+    [rules("\u{2514}", "\u{2534}", "\u{2518}")],
+  ])
+}
+
+/// Text in the middle of a field that wide, leaning left where it cannot sit
+/// exactly in the middle.
+fn centred(text: String, wide: Int) -> String {
+  let left = { wide - string.length(text) + 1 } / 2
+  string.pad_end(string.repeat(" ", left) <> text, wide, " ")
 }
 
 fn finished(current: Game) -> List(String) {
@@ -461,7 +752,11 @@ pub fn editor_frame(current: Editor) -> String {
   case current.show_help {
     True ->
       term.screen(
-        list.flatten([head, keys(editor_key_reference, editor_notes)]),
+        list.flatten([
+          head,
+          keys(editor_key_reference, editor_notes),
+          ["", term.styled(dim_style, "Any key returns to the board.")],
+        ]),
       )
     False -> {
       let clashes = board.grid_conflicts(current.clues)

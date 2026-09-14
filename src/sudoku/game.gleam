@@ -32,7 +32,8 @@ pub type Game {
     checking: Bool,
     /// Whether the digit keys write pencil marks instead of answers.
     marking: Bool,
-    show_help: Bool,
+    /// The page of help on show, if any.
+    help: Option(Help),
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -41,6 +42,18 @@ pub type Game {
     started_ms: Int,
     finished_ms: Option(Int),
   )
+}
+
+/// The help, a page at a time: the keys, and then a page on each way of
+/// working a digit out.
+pub type Help {
+  Keys
+  About(logic.Technique)
+}
+
+/// Every page, in the order they are paged through.
+pub fn pages() -> List(Help) {
+  [Keys, ..list.map(logic.techniques, About)]
 }
 
 /// The three ways a game can be over.
@@ -68,7 +81,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     message: "Press ? for help.",
     checking: False,
     marking: False,
-    show_help: False,
+    help: None,
     hints: 0,
     mistakes: 0,
     ending: None,
@@ -105,13 +118,44 @@ pub fn is_wrong(game: Game, index: Int) -> Bool {
 }
 
 pub fn update(game: Game, pressed: Key) -> Step {
+  case game.help {
+    Some(page) -> browse(game, page, pressed)
+    None -> play(game, pressed)
+  }
+}
+
+/// While the help is up it has the keyboard to itself: the arrows turn the
+/// pages and anything else puts it away. Nothing reaches the board, so there
+/// is no reading about a technique and moving the cursor by accident.
+fn browse(game: Game, page: Help, pressed: Key) -> Step {
+  case pressed {
+    key.Quit | key.Char("q") | key.Char("Q") -> Exit
+    key.Right | key.Char("l") -> Continue(turn(game, page, 1))
+    key.Left | key.Char("h") -> Continue(turn(game, page, -1))
+    _ -> Continue(Game(..game, help: None))
+  }
+}
+
+fn turn(game: Game, page: Help, by: Int) -> Game {
+  let pages = pages()
+  let count = list.length(pages)
+  let at = case list.take_while(pages, fn(other) { other != page }) {
+    before -> list.length(before)
+  }
+
+  let next = case list.drop(pages, { at + by + count } % count) {
+    [page, ..] -> page
+    [] -> Keys
+  }
+
+  Game(..game, help: Some(next))
+}
+
+fn play(game: Game, pressed: Key) -> Step {
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
     key.Char("n") | key.Char("N") -> Restart
-    key.Char("?") -> Continue(Game(..game, show_help: !game.show_help))
-
-    // While the help overlay is up, any other key dismisses it.
-    _ if game.show_help -> Continue(Game(..game, show_help: False))
+    key.Char("?") -> Continue(Game(..game, help: Some(Keys)))
 
     _ if game.finished_ms != None ->
       Continue(Game(..game, message: "Press n for a new puzzle, or q to quit."))
