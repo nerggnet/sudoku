@@ -691,6 +691,7 @@ throws the old one away.
 | `sudoku/game` | the state of a game, and the plain facts about it |
 | `sudoku/rules` | what each key does to it |
 | `sudoku/hint` | turning the reasoning into a hint, and pointing it somewhere |
+| `sudoku/invocation` | reading what the command line asked for |
 | `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/store` | writing a game down, reading it back, and keeping times |
 | `sudoku/render` | drawing a screen: the menu, the board, the editor |

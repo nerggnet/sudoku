@@ -4,12 +4,11 @@ import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/string
 import sudoku/board
 import sudoku/editor
 import sudoku/game
 import sudoku/generator.{type Difficulty}
-import sudoku/help
+import sudoku/invocation
 import sudoku/key
 import sudoku/render
 import sudoku/rules
@@ -17,10 +16,10 @@ import sudoku/store
 import sudoku/term
 
 pub fn main() -> Nil {
-  case asked_for(term.arguments()) {
+  case opening(term.arguments()) {
     // Said before the screen is taken over, where it can be read afterwards.
     Error(complaint) -> io.println(complaint)
-    Ok(Opening(opening, plain)) -> {
+    Ok(#(opening, plain)) -> {
       // Only ever switched on here: without the flag the environment has the
       // say, and NO_COLOR is not something to talk anybody out of.
       case plain {
@@ -43,67 +42,25 @@ pub fn main() -> Nil {
   }
 }
 
-/// What the command line asked for: a puzzle to open with, where it named
-/// one, and how the game should be drawn.
-type Opening {
-  Opening(choice: Option(Choice), plain: Bool)
-}
+/// What the command line leaves the game to do, which is what it asked for
+/// with the one thing added that reading words cannot settle: whether there
+/// is in fact a game waiting to be picked up.
+fn opening(arguments: List(String)) -> Result(#(Option(Choice), Bool), String) {
+  use asked <- result.try(invocation.read(arguments))
 
-/// The one flag there is. Everything else on the command line names a puzzle.
-const plain_flag = "--plain"
-
-/// What the command line asks for: nothing, and the menu decides; something,
-/// and it is gone to straight away; or nonsense, which is said plainly and
-/// stops there.
-///
-/// Flags are taken out first. They say how the game should look rather than
-/// what it should deal, so they can come before or after the puzzle, and what
-/// is left over is read as though they had never been there.
-fn asked_for(arguments: List(String)) -> Result(Opening, String) {
-  let #(flags, rest) = list.partition(arguments, string.starts_with(_, "-"))
-
-  use _ <- result.try(case list.all(flags, fn(flag) { flag == plain_flag }) {
-    True -> Ok(Nil)
-    False -> Error(help.usage())
-  })
-
-  let plain = list.contains(flags, plain_flag)
-
-  case rest {
-    [] -> Ok(Opening(None, plain))
-    [only] ->
-      asked(only) |> result.map(fn(choice) { Opening(Some(choice), plain) })
-    _ -> Error(help.usage())
-  }
-}
-
-fn asked(argument: String) -> Result(Choice, String) {
-  case string.lowercase(argument) {
-    "resume" ->
+  let chosen = case asked.asked {
+    invocation.Menu -> Ok(None)
+    invocation.Compose -> Ok(Some(Compose))
+    invocation.Deal(difficulty) -> Ok(Some(Deal(difficulty)))
+    invocation.Play(puzzle) -> Ok(Some(Play(puzzle)))
+    invocation.Resume ->
       case store.saved() {
-        Ok(current) -> Ok(Resume(current))
+        Ok(current) -> Ok(Some(Resume(current)))
         Error(_) -> Error("There is no game waiting to be picked up.")
       }
-    "custom" -> Ok(Compose)
-    name ->
-      case generator.named(name) {
-        Ok(difficulty) -> Ok(Deal(difficulty))
-        Error(_) -> typed_in(argument)
-      }
   }
-}
 
-/// A puzzle given as its 81 characters, the same line the game prints on the
-/// way out and the editor takes.
-fn typed_in(argument: String) -> Result(Choice, String) {
-  case board.parse(argument) {
-    Error(_) -> Error(help.usage())
-    Ok(clues) ->
-      case generator.from_clues(clues) {
-        Ok(puzzle) -> Ok(Play(puzzle))
-        Error(rejection) -> Error(editor.refusal(rejection))
-      }
-  }
+  chosen |> result.map(fn(choice) { #(choice, asked.plain) })
 }
 
 /// Put the game down and say what happened to it: where it went, or that it
