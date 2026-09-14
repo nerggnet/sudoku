@@ -16,7 +16,15 @@ pub const given = "1;97"
 
 pub const entered = "96"
 
-pub const conflict = "1;91"
+/// A digit clashing with another in its row, column or box: red, and struck
+/// through so that it says so without the red being seen. Bold is spoken for
+/// by the clues, underline by a wrong digit and reverse by the cursor, which
+/// leaves this — apt enough for a digit that cannot stand.
+pub const conflict = "1;9;91"
+
+/// Red for something gone wrong that is said in words rather than drawn in a
+/// cell. Words do not need striking through to be read.
+pub const alarm = "1;91"
 
 /// Wrong, while checking is on: red, and underlined so that it says so
 /// without relying on the colour being seen.

@@ -92,7 +92,7 @@ fn tallied(head: List(String), current: Game) -> List(String) {
     [], _ -> head
     [title, ..rest], False -> {
       let colour = case current.mistakes >= game.mistake_limit {
-        True -> palette.conflict
+        True -> palette.alarm
         False -> palette.mark
       }
       let tally =
@@ -368,7 +368,7 @@ fn finished(current: Game) -> List(String) {
     // writing one too many and asking and being told about several.
     Some(game.Forfeited) ->
       term.styled(
-        palette.conflict,
+        palette.alarm,
         int.to_string(current.mistakes) <> " wrong digits: forfeited.",
       )
       <> term.styled(palette.dim, "  They are the ones in red.")

@@ -58,9 +58,15 @@ newspaper.
 | `Ctrl-L` | draw the screen again |
 
 Clues are fixed and cannot be overwritten. Digits that clash with another in
-the same row, column or box turn red as you type them, and the cells sharing a
-row, column or box with the cursor are shaded so it is easier to see what a
-cell can still be.
+the same row, column or box turn red and are struck through as you type them,
+and the cells sharing a row, column or box with the cursor are shaded so it is
+easier to see what a cell can still be.
+
+The striking through is not decoration. A terminal without colour still draws
+attributes, so clues stay bold, a wrong digit stays underlined, the cursor
+stays in reverse video — and a clash, which had only its redness to go on,
+would otherwise have looked exactly like a clue. There is a test that any two
+things the player must tell apart differ by more than their colour.
 
 ## Difficulty
 

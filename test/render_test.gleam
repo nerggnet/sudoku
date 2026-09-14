@@ -1,5 +1,6 @@
 //// Drawing the screen, and what it says.
 
+import gleam/int
 import gleam/list
 import gleam/option
 import gleam/string
@@ -9,6 +10,7 @@ import sudoku/game
 import sudoku/help
 import sudoku/key
 import sudoku/logic
+import sudoku/palette
 import sudoku/render
 
 pub fn escape_stripping_leaves_the_text_test() {
@@ -342,6 +344,44 @@ pub fn the_help_opens_at_what_the_last_hint_was_about_test() {
   // With no hint behind it, the help opens where it always did.
   assert helper.step(helper.fixture(), key.Char("?")).help
     == option.Some(game.Keys)
+}
+
+/// What is left of a style once the colours are taken out of it: the
+/// attributes, which a terminal without colour still draws.
+fn without_colour(style: String) -> List(String) {
+  use kept, parameter <- list.fold(string.split(style, ";"), [])
+  case int.parse(parameter) {
+    // 0 to 29 are attributes — bold, underline, struck through. Above that
+    // is colour, and 38 and 48 take two more parameters with them.
+    Ok(code) if code < 30 -> [parameter, ..kept]
+    _ -> kept
+  }
+}
+
+pub fn the_board_can_be_read_without_colour_test() {
+  // A terminal with no colour draws the attributes and nothing else, so any
+  // two things the player has to tell apart must differ in those alone.
+  let given = without_colour(palette.given)
+  let entered = without_colour(palette.entered)
+  let conflict = without_colour(palette.conflict)
+  let wrong = without_colour(palette.wrong)
+
+  assert given != entered
+  assert conflict != given
+  assert conflict != entered
+  assert conflict != wrong
+  assert wrong != given
+  assert wrong != entered
+
+  // The cursor is reverse video, which is no colour at all.
+  assert without_colour(palette.cursor) == ["7"]
+}
+
+pub fn words_are_not_struck_through_test() {
+  // Striking a digit out says it cannot stand. Striking out a sentence says
+  // it should not be read, which is the opposite of what a panel is for.
+  assert !list.contains(without_colour(palette.alarm), "9")
+  assert list.contains(without_colour(palette.conflict), "9")
 }
 
 pub fn the_cursor_is_highlighted_test() {
