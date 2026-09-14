@@ -9,6 +9,7 @@ import sudoku/game
 import sudoku/key
 import sudoku/logic
 import sudoku/render
+import sudoku/rules
 
 pub fn a_new_game_starts_on_the_first_empty_cell_test() {
   let started = helper.fixture()
@@ -211,7 +212,7 @@ pub fn paging_the_help_does_not_reach_the_board_test() {
   assert paged.board == opened.board
 
   // Quitting still works from the help, though.
-  assert game.update(opened, key.Char("q")) == game.Exit
+  assert rules.update(opened, key.Char("q")) == game.Exit
 }
 
 pub fn giving_up_a_puzzle_under_way_is_asked_for_twice_test() {
@@ -223,8 +224,8 @@ pub fn giving_up_a_puzzle_under_way_is_asked_for_twice_test() {
   assert string.contains(asked.message, "Press n again")
   assert asked.board == played.board
 
-  assert game.update(asked, key.Char("n")) == game.Restart
-  assert game.update(asked, key.Char("N")) == game.Restart
+  assert rules.update(asked, key.Char("n")) == game.Restart
+  assert rules.update(asked, key.Char("N")) == game.Restart
 }
 
 pub fn a_newline_is_not_a_keystroke_test() {
@@ -237,7 +238,7 @@ pub fn a_newline_is_not_a_keystroke_test() {
     |> helper.step(key.Char("n"))
     |> helper.step(key.Unknown)
 
-  assert game.update(asked, key.Char("n")) == game.Restart
+  assert rules.update(asked, key.Char("n")) == game.Restart
 
   let reading = helper.step(helper.fixture(), key.Char("?"))
   assert helper.step(reading, key.Unknown).help == reading.help
@@ -266,17 +267,17 @@ pub fn an_offer_to_give_up_does_not_keep_test() {
 
 pub fn a_puzzle_with_nothing_in_it_is_given_up_at_once_test() {
   // Nothing has been done to it, so there is nothing to lose by asking.
-  assert game.update(helper.fixture(), key.Char("n")) == game.Restart
+  assert rules.update(helper.fixture(), key.Char("n")) == game.Restart
 
   // And a puzzle already over is over.
   let done = helper.step(helper.fixture(), key.Char("R"))
-  assert game.update(done, key.Char("n")) == game.Restart
+  assert rules.update(done, key.Char("n")) == game.Restart
 }
 
 pub fn quit_and_restart_leave_the_loop_test() {
-  assert game.update(helper.fixture(), key.Char("q")) == game.Exit
-  assert game.update(helper.fixture(), key.Quit) == game.Exit
-  assert game.update(helper.fixture(), key.Char("n")) == game.Restart
+  assert rules.update(helper.fixture(), key.Char("q")) == game.Exit
+  assert rules.update(helper.fixture(), key.Quit) == game.Exit
+  assert rules.update(helper.fixture(), key.Char("n")) == game.Restart
 }
 
 pub fn the_clock_grows_an_hour_hand_test() {

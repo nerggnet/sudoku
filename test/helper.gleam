@@ -14,6 +14,7 @@ import sudoku/generator
 import sudoku/key
 import sudoku/logic
 import sudoku/render
+import sudoku/rules
 import sudoku/solver
 
 // A puzzle with a single solution, and that solution.
@@ -166,7 +167,7 @@ pub fn fixture() -> game.Game {
 }
 
 pub fn step(current: game.Game, pressed: key.Key) -> game.Game {
-  let assert game.Continue(next) = game.update(current, pressed)
+  let assert game.Continue(next) = rules.update(current, pressed)
   next
 }
 

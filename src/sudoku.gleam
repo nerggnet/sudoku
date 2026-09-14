@@ -14,6 +14,7 @@ import sudoku/generator.{type Difficulty, type Origin}
 import sudoku/help
 import sudoku/key
 import sudoku/render
+import sudoku/rules
 import sudoku/store
 import sudoku/term
 
@@ -209,7 +210,7 @@ fn play(current: game.Game) -> #(game.Step, game.Game) {
   let frame = render.frame(current)
   term.write(frame)
 
-  case game.update(current, press(frame)) {
+  case rules.update(current, press(frame)) {
     game.Continue(next) -> play(judged(current, next))
     step -> #(step, current)
   }

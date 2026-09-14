@@ -602,7 +602,9 @@ throws the old one away.
 | `sudoku/solver` | backtracking search, and counting solutions |
 | `sudoku/generator` | filling a grid at random, then carving clues out of it |
 | `sudoku/logic` | solving the way a person does, and rating a puzzle by it |
-| `sudoku/game` | game state and what each key does to it |
+| `sudoku/game` | the state of a game, and the plain facts about it |
+| `sudoku/rules` | what each key does to it |
+| `sudoku/hint` | turning the reasoning into a hint, and pointing it somewhere |
 | `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/store` | writing a game down, reading it back, and keeping times |
 | `sudoku/render` | drawing a frame |
@@ -611,6 +613,13 @@ throws the old one away.
 | `sudoku/palette` | the colours it is all drawn in |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |
+
+Those first three used to be one module, and they split the way the sentence
+that described it split: the state, the rules for how a keystroke changes it,
+and the one rule long enough to want a module of its own. `rules` and `hint`
+both reach into `game`; `game` reaches into neither, which is what lets the
+three be three rather than a circle. Everything else — drawing, saving,
+the record books — still talks to `game` alone and did not notice.
 
 Pencil marks live on the board rather than in the game around it, which is
 what lets undo capture them without any extra bookkeeping. Both grids come out
