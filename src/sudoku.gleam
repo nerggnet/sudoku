@@ -43,7 +43,7 @@ fn asked_for(arguments: List(String)) -> Result(Option(Choice), String) {
   case arguments {
     [] -> Ok(None)
     [only] -> asked(only) |> result.map(Some)
-    _ -> Error(usage)
+    _ -> Error(render.usage())
   }
 }
 
@@ -67,7 +67,7 @@ fn asked(argument: String) -> Result(Choice, String) {
 /// way out and the editor takes.
 fn typed_in(argument: String) -> Result(Choice, String) {
   case board.parse(argument) {
-    Error(_) -> Error(usage)
+    Error(_) -> Error(render.usage())
     Ok(clues) ->
       case generator.from_clues(clues) {
         Ok(puzzle) -> Ok(Play(puzzle))
@@ -75,13 +75,6 @@ fn typed_in(argument: String) -> Result(Choice, String) {
       }
   }
 }
-
-const usage = "Usage:
-  gleam run                   choose a puzzle from the menu
-  gleam run -- hard           deal one at that difficulty
-  gleam run -- custom         type a puzzle in
-  gleam run -- resume         pick up the game you left
-  gleam run -- <81 characters>  play that puzzle, dots for the blanks"
 
 /// What to say once the screen has been handed back: where an unfinished game
 /// went, and the puzzle itself, which is a line of text anybody can type into

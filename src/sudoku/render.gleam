@@ -430,6 +430,33 @@ const board_keys = [
   #("r", "do it again"),
 ]
 
+/// How the game can be started, which the help says and the command line
+/// says back when it is handed something it does not know. One list, so that
+/// the two cannot come to disagree.
+pub const invocations = [
+  #("gleam run", "choose a puzzle from the menu"),
+  #("gleam run -- hard", "deal one at that difficulty"),
+  #("gleam run -- custom", "type a puzzle in"),
+  #("gleam run -- resume", "pick up the game you left"),
+  #("gleam run -- <puzzle>", "play that puzzle"),
+]
+
+const starting_notes = [
+  "A puzzle is 81 characters, a digit for each clue and a dot for each blank.",
+  "The game prints the one it was playing as it leaves, which is the line to",
+  "hand to somebody else — and the line they hand to this.",
+]
+
+/// The same, for a terminal that has not been taken over.
+pub fn usage() -> String {
+  let lines = {
+    use #(invocation, meaning) <- list.map(invocations)
+    "  " <> string.pad_end(invocation, 24, " ") <> meaning
+  }
+
+  string.join(["Usage:", ..lines], "\n")
+}
+
 /// Asking the game for something, and leaving.
 const asking_keys = [
   #("c", "check for good; a fourth wrong digit forfeits"),
@@ -461,10 +488,17 @@ fn keys(
   reference: List(#(String, String)),
   notes: List(String),
 ) -> List(String) {
+  // Wide enough for the longest of them, and never so narrow that the pages
+  // stop looking like one another.
+  let column =
+    list.fold(reference, 22, fn(widest, entry) {
+      int.max(widest, string.length(entry.0) + 2)
+    })
+
   let entries = {
     use #(pressed, meaning) <- list.map(reference)
     "  "
-    <> term.styled(entered_style, string.pad_end(pressed, 22, " "))
+    <> term.styled(entered_style, string.pad_end(pressed, column, " "))
     <> term.styled(dim_style, meaning)
   }
 
@@ -490,6 +524,7 @@ fn help(page: game.Help) -> List(String) {
   let body = case page {
     game.Keys -> keys("Keys: the board", board_keys, mark_notes)
     game.MoreKeys -> keys("Keys: asking and finishing", asking_keys, ask_notes)
+    game.Starting -> keys("Starting up", invocations, starting_notes)
     game.About(technique) -> about(technique)
   }
 

@@ -199,8 +199,9 @@ answer does not go.
 
 ## The help, and the techniques
 
-`?` opens the help on the keys. `←` and `→` page from there through the seven
-ways of working a digit out, one to a page: what it is, a small board showing
+`?` opens the help on the keys. `←` and `→` page from there through what the
+command line takes, and then through the seven ways of working a digit out,
+one to a page: what it is, a small board showing
 it happening, and what it settles. Anything else puts the help away, and while
 it is up the arrows turn pages rather than moving the cursor, so there is no
 reading about a technique and losing your place on the board.
