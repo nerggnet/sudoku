@@ -244,7 +244,9 @@ pub fn a_newline_is_not_a_keystroke_test() {
 
   // And it leaves what a hint is pointing at where it was.
   let hinted =
-    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+    helper.aided(helper.fixture())
+    |> helper.step(key.Char("H"))
+    |> helper.step(key.Char("H"))
   assert helper.step(hinted, key.Unknown).showing == hinted.showing
 }
 

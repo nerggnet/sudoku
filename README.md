@@ -168,6 +168,21 @@ The status line keeps both rows whether or not there is anything for the
 second, so the board above it never shifts by a row between one message and
 the next.
 
+The first hint of a game says what it will cost before it costs it:
+
+```
+ A hint makes this an aided game, and aided games are not timed.
+ Press H again to go ahead.
+```
+
+Ask again and the game is aided from then on, which it says beside the
+difficulty for the rest of the puzzle — `Hard (aided)` — since that is what
+the difficulty no longer quite means. The asking comes once: after that, hints
+are given as soon as they are asked for. Checking makes a game aided in the
+same way and by the same reasoning, so a game that has already been checked
+is not asked twice about a hint. A puzzle typed in is never warned about at
+all, having no time to lose.
+
 A hint answers the cell you are on. You asked while looking at it, so that is
 the cell it takes first — and only two techniques settle a cell rather than
 ruling candidates out, so whether this one will go yet is a quick question to
@@ -392,7 +407,8 @@ A puzzle solved unaided is timed, and the menu shows what there is to beat:
 ```
 
 Unaided means the game was never asked for anything: no hints, and checking
-never switched on. Both of those work from the answer, and a time set with the
+never switched on. The game says which it is while you play, beside the
+difficulty, rather than leaving it to the panel at the end. Both of those work from the answer, and a time set with the
 answer to hand is not a time. Filling the candidates in with `f` is another
 matter and does not count against you, since it works out nothing you could
 not have worked out yourself with a pencil.

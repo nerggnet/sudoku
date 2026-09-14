@@ -137,6 +137,12 @@ pub fn press_leaving(bytes: List(Int)) -> #(key.Key, List(Int)) {
   }
 }
 
+/// A game that has already agreed to being helped, so that a test about what
+/// a hint says need not first press H to hear what a hint costs.
+pub fn aided(current: game.Game) -> game.Game {
+  game.Game(..current, aided: True)
+}
+
 pub fn fixture() -> game.Game {
   game.new(generator.Puzzle(
     board: board.from_grid(grid(puzzle_text)),

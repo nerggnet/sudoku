@@ -4,13 +4,83 @@ import gleam/list
 import gleam/string
 import helper
 import sudoku/board
+import sudoku/editor
 import sudoku/game
 import sudoku/key
 import sudoku/logic
 
+pub fn the_first_hint_says_what_it_will_cost_test() {
+  let asked = helper.step(helper.fixture(), key.Char("H"))
+
+  // Nothing given away yet: a warning, and the game still the player's own.
+  assert string.contains(asked.message, "aided")
+  assert string.contains(asked.message, "Press H again")
+  assert asked.hints == 0
+  assert game.unaided(asked)
+  assert asked.board == helper.fixture().board
+}
+
+pub fn asking_again_takes_the_hint_and_the_game_with_it_test() {
+  let taken =
+    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+
+  assert !game.unaided(taken)
+
+  // And it says so beside the difficulty, since that is what the difficulty
+  // no longer quite means.
+  assert list.any(helper.visible_lines(taken), string.contains(_, "(aided)"))
+  assert !list.any(helper.visible_lines(helper.fixture()), string.contains(
+    _,
+    "(aided)",
+  ))
+}
+
+pub fn the_warning_comes_once_and_then_not_again_test() {
+  let taken =
+    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+
+  // The game is already aided, so the next hint is given straight away.
+  let again = helper.step(taken, key.Char("H"))
+  assert !string.contains(again.message, "not timed")
+}
+
+pub fn a_warning_not_taken_up_does_not_keep_test() {
+  let asked =
+    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Right)
+
+  assert game.unaided(helper.step(asked, key.Char("H")))
+  assert string.contains(helper.step(asked, key.Char("H")).message, "not timed")
+}
+
+pub fn checking_makes_a_game_aided_too_test() {
+  // Checking works from the answer just as a hint does, so it costs the same
+  // thing, and says so in the same place.
+  let checked = helper.step(helper.fixture(), key.Char("c"))
+
+  assert !game.unaided(checked)
+  assert list.any(helper.visible_lines(checked), string.contains(_, "(aided)"))
+
+  // With nothing left to lose, a hint is given without asking twice.
+  assert !string.contains(
+    helper.step(checked, key.Char("H")).message,
+    "not timed",
+  )
+}
+
+pub fn a_puzzle_typed_in_is_not_warned_about_test() {
+  // It was never going to be timed, so a hint costs it nothing.
+  let assert editor.Ready(puzzle) =
+    editor.update(helper.typed(helper.puzzle_text), key.Char("p"))
+  let hinted = helper.step(game.new(puzzle), key.Char("H"))
+
+  assert !string.contains(hinted.message, "not timed")
+}
+
 pub fn a_hint_takes_the_next_step_and_says_why_test() {
   let hinted =
-    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+    helper.aided(helper.fixture())
+    |> helper.step(key.Char("H"))
+    |> helper.step(key.Char("H"))
 
   assert hinted.hints >= 1
   assert helper.nothing_wrong(hinted)
@@ -22,7 +92,7 @@ pub fn a_hint_takes_the_next_step_and_says_why_test() {
 }
 
 pub fn a_hint_answers_the_cell_you_are_on_test() {
-  let start = helper.fixture()
+  let start = helper.aided(helper.fixture())
 
   // A cell that can be worked out, but not the one the reasoning would have
   // picked of its own accord.
@@ -43,11 +113,14 @@ pub fn a_hint_answers_the_cell_you_are_on_test() {
 pub fn a_hint_says_so_rather_than_wandering_off_test() {
   let stuck = helper.stuck_cell()
   let waiting =
-    helper.step(game.Game(..helper.fixture(), cursor: stuck), key.Char("H"))
+    helper.step(
+      game.Game(..helper.aided(helper.fixture()), cursor: stuck),
+      key.Char("H"),
+    )
 
   // It stays where the player is looking and says why it has nothing.
   assert waiting.cursor == stuck
-  assert waiting.board == helper.fixture().board
+  assert waiting.board == helper.aided(helper.fixture()).board
   assert string.contains(waiting.message, board.name(stuck))
   assert string.contains(waiting.message, "Press H again")
 
@@ -58,7 +131,7 @@ pub fn a_hint_says_so_rather_than_wandering_off_test() {
 pub fn asking_twice_at_a_stuck_cell_looks_elsewhere_test() {
   let stuck = helper.stuck_cell()
   let moved_on =
-    game.Game(..helper.fixture(), cursor: stuck)
+    game.Game(..helper.aided(helper.fixture()), cursor: stuck)
     |> helper.step(key.Char("H"))
     |> helper.step(key.Char("H"))
 
@@ -74,7 +147,7 @@ pub fn anything_in_between_starts_the_asking_over_test() {
   // Moving away and back is a fresh question, not a second asking of the old
   // one, so it is answered the same way as the first.
   let again =
-    game.Game(..helper.fixture(), cursor: stuck)
+    game.Game(..helper.aided(helper.fixture()), cursor: stuck)
     |> helper.step(key.Char("H"))
     |> helper.step(key.Right)
     |> helper.step(key.Left)
@@ -89,7 +162,7 @@ pub fn a_hint_goes_where_the_reasoning_is_test() {
   // Not where the cursor happens to be: the cell under it may not be the one
   // that can be worked out next, and a hint that cannot explain itself is
   // just the answer again.
-  let on_a_clue = game.Game(..helper.fixture(), cursor: 0)
+  let on_a_clue = game.Game(..helper.aided(helper.fixture()), cursor: 0)
   let hinted = helper.step(on_a_clue, key.Char("H"))
 
   assert hinted.cursor != 0
@@ -155,7 +228,7 @@ pub fn asking_over_and_over_keeps_moving_test() {
 pub fn a_hint_checks_itself_against_the_answer_test() {
   // A wrong digit can lead the reasoning somewhere the answer does not go,
   // so a hint never writes a digit without checking it first.
-  let astray = helper.step(helper.fixture(), key.Digit(1))
+  let astray = helper.step(helper.aided(helper.fixture()), key.Digit(1))
   let hinted = helper.step(astray, key.Char("H"))
 
   assert hinted.hints == 1
@@ -194,15 +267,16 @@ pub fn a_hint_tidies_up_the_marks_where_it_settles_test() {
   // A cell the reasoning can settle, marked up before the hint settles it.
   let assert Ok(settles) = {
     use index <- list.find(board.indices())
-    board.value(helper.fixture().board, index) == 0
-    && logic.settles(helper.fixture().board.values, index) != Error(Nil)
+    board.value(helper.aided(helper.fixture()).board, index) == 0
+    && logic.settles(helper.aided(helper.fixture()).board.values, index)
+    != Error(Nil)
   }
   // Pencilled with the digit that belongs there. A mark of the wrong digit
   // would make the cell look like a naked single for a digit that is not the
   // answer, and a hint checks before it writes.
-  let digit = game.answer(helper.fixture(), settles)
+  let digit = game.answer(helper.aided(helper.fixture()), settles)
   let marked =
-    game.Game(..helper.fixture(), cursor: settles)
+    game.Game(..helper.aided(helper.fixture()), cursor: settles)
     |> helper.step(key.Char("m"))
     |> helper.step(key.Digit(digit))
     |> helper.step(key.Char("m"))
@@ -217,13 +291,14 @@ pub fn a_hint_will_not_write_what_your_marks_say_wrongly_test() {
   // wrongly. The hint declines rather than writing it.
   let assert Ok(settles) = {
     use index <- list.find(board.indices())
-    board.value(helper.fixture().board, index) == 0
-    && logic.settles(helper.fixture().board.values, index) != Error(Nil)
+    board.value(helper.aided(helper.fixture()).board, index) == 0
+    && logic.settles(helper.aided(helper.fixture()).board.values, index)
+    != Error(Nil)
   }
 
-  let wrong = { game.answer(helper.fixture(), settles) % 9 } + 1
+  let wrong = { game.answer(helper.aided(helper.fixture()), settles) % 9 } + 1
   let misled =
-    game.Game(..helper.fixture(), cursor: settles)
+    game.Game(..helper.aided(helper.fixture()), cursor: settles)
     |> helper.step(key.Char("m"))
     |> helper.step(key.Digit(wrong))
     |> helper.step(key.Char("m"))

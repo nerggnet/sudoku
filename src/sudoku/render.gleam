@@ -41,9 +41,14 @@ pub fn frame(current: Game) -> String {
     True -> "marking"
     False -> ""
   }
-  let head =
-    header(generator.origin_label(current.puzzle.origin), mode)
-    |> tallied(current)
+  // A game helped along says so beside its difficulty, since that is what
+  // the difficulty no longer quite means.
+  let named = case game.unaided(current) {
+    True -> generator.origin_label(current.puzzle.origin)
+    False -> generator.origin_label(current.puzzle.origin) <> " (aided)"
+  }
+
+  let head = header(named, mode) |> tallied(current)
 
   case current.help {
     Some(page) -> term.screen(list.flatten([head, help.page(page)]))

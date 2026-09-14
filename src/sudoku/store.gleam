@@ -40,6 +40,7 @@ pub fn encode(current: Game) -> String {
     "cursor " <> int.to_string(current.cursor),
     "clock " <> int.to_string(game.elapsed_ms(current)),
     "checking " <> yes_no(current.checking),
+    "aided " <> yes_no(current.aided),
     "wrong " <> int.to_string(current.mistakes),
     "hints " <> int.to_string(current.hints),
   ]
@@ -93,6 +94,11 @@ pub fn decode(text: String) -> Result(Game, Nil) {
       ),
       cursor: whole_at(fields, "cursor", started.cursor),
       checking: dict.get(fields, "checking") == Ok("yes"),
+      // Older files have no such line, so a game helped along is recognised
+        // by what it was helped with.
+        aided: dict.get(fields, "aided") == Ok("yes")
+        || dict.get(fields, "checking") == Ok("yes")
+        || whole_at(fields, "hints", 0) > 0,
       mistakes: whole_at(fields, "wrong", 0),
       hints: whole_at(fields, "hints", 0),
       started_ms: term.now_ms() - whole_at(fields, "clock", 0),

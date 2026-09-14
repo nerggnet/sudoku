@@ -220,7 +220,7 @@ pub fn the_message_is_always_two_rows_test() {
   }
 
   let quiet = game.Game(..helper.fixture(), message: "")
-  let hinted = helper.step(helper.fixture(), key.Char("H"))
+  let hinted = helper.step(helper.aided(helper.fixture()), key.Char("H"))
   let undone = helper.step(helper.fixture(), key.Char("u"))
 
   assert height(quiet) == height(hinted)
@@ -325,7 +325,9 @@ pub fn what_a_hint_points_at_goes_out_on_the_next_keystroke_test() {
   // Twice: the cell it starts on may not be one that can be worked out yet,
   // and being told so is not a hint.
   let hinted =
-    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+    helper.aided(helper.fixture())
+    |> helper.step(key.Char("H"))
+    |> helper.step(key.Char("H"))
   assert hinted.showing != option.None
 
   let moved = helper.step(hinted, key.Down)
@@ -335,7 +337,9 @@ pub fn what_a_hint_points_at_goes_out_on_the_next_keystroke_test() {
 
 pub fn the_help_opens_at_what_the_last_hint_was_about_test() {
   let hinted =
-    helper.fixture() |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+    helper.aided(helper.fixture())
+    |> helper.step(key.Char("H"))
+    |> helper.step(key.Char("H"))
   let assert option.Some(shown) = hinted.showing
 
   assert helper.step(hinted, key.Char("?")).help

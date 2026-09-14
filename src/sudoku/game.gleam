@@ -50,6 +50,9 @@ pub type Game {
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
+    /// Whether the game has been helped along — by checking, or by a hint —
+    /// and so is no longer a time worth keeping.
+    aided: Bool,
     /// How the game ended, once it has. Set together with `finished_ms`.
     ending: Option(Ending),
     started_ms: Int,
@@ -71,6 +74,9 @@ pub type Offer {
   RedoMarks
   /// There is a puzzle under way. Asking again gives it up.
   GiveUp
+  /// The game is still the player's own work. Asking again takes a hint, and
+  /// it stops being.
+  TakeHint
 }
 
 /// The key that made an offer is the key that takes it up. Anything else
@@ -80,6 +86,7 @@ fn asked_by(offer: Offer) -> List(Key) {
     LookElsewhere(_) -> [key.Char("H")]
     RedoMarks -> [key.Char("f")]
     GiveUp -> [key.Char("n"), key.Char("N")]
+    TakeHint -> [key.Char("H")]
   }
 }
 
@@ -115,10 +122,14 @@ pub type Verdict {
   Untimed
 }
 
-/// Whether the game was played without asking it for anything: no hints, and
-/// checking never switched on.
+/// Whether the game is still the player's own work.
+///
+/// Kept as a fact of its own rather than worked out from the hints taken and
+/// the checking asked for, because the player is told it is about to become
+/// true and agrees to it. What they agreed to should not then depend on what
+/// the hint turned out to say.
 pub fn unaided(game: Game) -> Bool {
-  game.hints == 0 && !game.checking
+  !game.aided
 }
 
 /// The three ways a game can be over.
@@ -154,6 +165,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     showing: None,
     hints: 0,
     mistakes: 0,
+    aided: False,
     ending: None,
     started_ms: term.now_ms(),
     finished_ms: None,
@@ -625,7 +637,8 @@ fn start_checking(game: Game) -> Game {
     False -> {
       let found = list.count(board.indices(), is_wrong(game, _))
       let mistakes = game.mistakes + found
-      let checking = Game(..game, checking: True, mistakes: mistakes)
+      let checking =
+        Game(..game, checking: True, aided: True, mistakes: mistakes)
 
       case mistakes > mistake_limit {
         // No message: the finished panel says what happened, and how much.
@@ -657,6 +670,33 @@ fn found_message(found: Int) -> String {
 /// says why it is there, so what the player takes away is the argument rather
 /// than the digit.
 fn hint(game: Game) -> Game {
+  case warning_due(game) {
+    True -> warn(game)
+    False -> asked_for(Game(..game, aided: True))
+  }
+}
+
+/// Whether to say what a hint costs before giving one.
+///
+/// Once, and only while there is something to lose by it: a game already
+/// helped along has nothing left to spend, and a puzzle typed in was never
+/// going to be timed.
+fn warning_due(game: Game) -> Bool {
+  case game.puzzle.origin {
+    generator.Handwritten -> False
+    generator.Dealt(_) -> unaided(game) && game.offered != Some(TakeHint)
+  }
+}
+
+fn warn(game: Game) -> Game {
+  Game(
+    ..game,
+    offered: Some(TakeHint),
+    message: "A hint makes this an aided game, and aided games are not timed.\nPress H again to go ahead.",
+  )
+}
+
+fn asked_for(game: Game) -> Game {
   case board.empty_count(game.board) {
     0 -> Game(..game, message: "The grid is already full.")
     _ ->

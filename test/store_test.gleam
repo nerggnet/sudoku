@@ -125,7 +125,7 @@ pub fn a_solve_with_help_is_not_timed_test() {
   // A hint is help too, however small.
   let hinted =
     helper.solved(helper.step(
-      helper.step(helper.fixture(), key.Char("H")),
+      helper.step(helper.aided(helper.fixture()), key.Char("H")),
       key.Char("H"),
     ))
   assert hinted.hints >= 1
