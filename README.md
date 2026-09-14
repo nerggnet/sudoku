@@ -552,3 +552,8 @@ has to be followed by Enter, and it says so on the menu.
 gleam run   # Play
 gleam test  # Run the tests
 ```
+
+Tests live beside the subject they are about — `board_test`, `logic_test`,
+`hint_test` and the rest — with the puzzles and fixtures they share in
+`helper`. Gleeunit runs every function ending in `_test` anywhere under
+`test`, so `sudoku_test` holds nothing but the call that starts them.
