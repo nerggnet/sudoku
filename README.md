@@ -688,6 +688,12 @@ well as digits, and `r` walks forward again through whatever was undone —
 until something else is written, which makes a different way forward and
 throws the old one away.
 
+Both of them take the cursor to the cell that changes. The pile holds where
+you were looking along with the board, so undoing a digit you wrote ten cells
+ago puts you back at it rather than changing the board somewhere off screen
+and leaving you to find out. Redo goes to the same cell, whichever way the
+pile is being walked.
+
 ## How it works
 
 | Module | |

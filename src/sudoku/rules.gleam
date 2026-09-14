@@ -508,9 +508,17 @@ fn undo(current: game.Game) -> game.Game {
     [previous, ..rest] ->
       game.Game(
         ..current,
-        board: previous,
+        board: previous.board,
+        // Back to where the change was made, so that it can be watched being
+        // taken back rather than happening off where nobody is looking.
+        cursor: previous.cursor,
         history: rest,
-        undone: [current.board, ..current.undone],
+        // The board to come forward to again, tagged with the same cell: it
+        // is the one that will change, whichever way it is walked.
+        undone: [
+          game.Moment(board: current.board, cursor: previous.cursor),
+          ..current.undone
+        ],
         message: "Undone. Press r to do it again.",
       )
   }
@@ -527,8 +535,12 @@ fn redo(current: game.Game) -> game.Game {
     [next, ..rest] ->
       game.Game(
         ..current,
-        board: next,
-        history: [current.board, ..current.history],
+        board: next.board,
+        cursor: next.cursor,
+        history: [
+          game.Moment(board: current.board, cursor: next.cursor),
+          ..current.history
+        ],
         undone: rest,
         message: "Done again.",
       )

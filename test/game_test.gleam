@@ -350,3 +350,34 @@ pub fn an_offer_to_reveal_lapses_on_the_next_keystroke_test() {
 
   assert !game.is_finished(helper.step(asked, key.Char("R")))
 }
+
+pub fn undo_goes_back_to_where_the_change_was_test() {
+  let start = helper.fixture()
+  let written = helper.step(start, key.Digit(4))
+
+  // Wander off, so that undoing would otherwise happen out of sight.
+  let away = written |> helper.step(key.Down) |> helper.step(key.Down)
+  assert away.cursor != start.cursor
+
+  let undone = helper.step(away, key.Char("u"))
+  assert undone.cursor == start.cursor
+  assert board.value(undone.board, start.cursor) == 0
+
+  // And doing it again puts it back under the same cell, wherever the player
+  // had got to in between.
+  let wandered = helper.step(undone, key.Right)
+  let again = helper.step(wandered, key.Char("r"))
+  assert again.cursor == start.cursor
+  assert board.value(again.board, start.cursor) == 4
+}
+
+pub fn what_the_undo_pile_holds_is_the_cell_it_is_about_test() {
+  // A hint settles a cell of its own choosing, and the pile remembers where
+  // the player was rather than where the hint went.
+  let asked = helper.aided(helper.fixture())
+  let hinted = asked |> helper.step(key.Char("H")) |> helper.step(key.Char("H"))
+
+  let undone = helper.step(hinted, key.Char("u"))
+  assert undone.cursor == asked.cursor
+  assert undone.board == asked.board
+}

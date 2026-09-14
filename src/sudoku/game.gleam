@@ -31,10 +31,10 @@ pub type Game {
     puzzle: Puzzle,
     board: Board,
     cursor: Int,
-    history: List(Board),
-    /// Boards undone, waiting to be done again. Anything else written to the
+    history: List(Moment),
+    /// Moments undone, waiting to be done again. Anything else written to the
     /// board empties it: the way back is only the way back from here.
-    undone: List(Board),
+    undone: List(Moment),
     message: String,
     /// Whether wrong digits are being called out.
     checking: Bool,
@@ -103,6 +103,18 @@ pub fn asked_by(offer: Offer) -> List(Key) {
     StartChecking -> [key.Char("c")]
     Reveal -> [key.Char("R")]
   }
+}
+
+/// The board as it was, and where the player was looking when it was that
+/// way.
+///
+/// The cursor rides along with the board because a change taken back where
+/// nobody is looking might as well not have happened. It is the cell the
+/// change is about rather than wherever the player has since wandered: you
+/// were standing at the cell when you wrote in it, and that is the cell that
+/// changes again whichever way the pile is walked.
+pub type Moment {
+  Moment(board: Board, cursor: Int)
 }
 
 /// Looking for somewhere a digit can still go.
@@ -249,12 +261,15 @@ pub fn with_board(game: Game, next: Board) -> Game {
   Game(..game, board: next, message: "")
 }
 
-/// Put the board on the pile to come back to, and throw away the way
+/// Put this moment on the pile to come back to, and throw away the way
 /// forward: whatever is about to happen is a different way forward.
 pub fn remember(game: Game) -> Game {
   Game(
     ..game,
-    history: list.take([game.board, ..game.history], max_undo),
+    history: list.take(
+      [Moment(board: game.board, cursor: game.cursor), ..game.history],
+      max_undo,
+    ),
     undone: [],
   )
 }
