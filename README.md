@@ -40,6 +40,7 @@ newspaper.
 | `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
 | `1`–`9` | write a digit, or pencil one in while marking |
 | `0`, space, backspace | clear the cell, or its marks while marking |
+| `f` | pencil the candidates into every bare cell |
 | `m` | switch between writing and marking |
 | `u` | undo |
 | `c` | check what is filled in from here on, at a price |
@@ -84,6 +85,23 @@ left can still be reasoned to the end, so a puzzle that could not be is never
 carved that far. That also does the work of checking the answer is unique:
 reasoning never guesses, so a grid it can finish has exactly one answer.
 
+## Filling the candidates in
+
+`f` pencils every candidate into every empty cell that has none: what that
+cell could still take, read off its row, its column and its box.
+
+It costs nothing, because it works out nothing you could not have worked out
+yourself with a pencil and some patience. What it buys is the rest of the
+game. Every technique past a naked single is an argument about candidates, so
+the hints have nothing to point at until some are on the board — press `f` and
+the same forty hints turn up five or six eliminations that were never offered
+before, because there was nothing for them to rub out.
+
+Cells you have already marked are left alone: that is where you have been
+thinking, and this is not the place to rub it out. Writing a digit keeps the
+rest tidy on its own, retracting that digit from every cell that can see it,
+so `f` is usually a thing you press once.
+
 ## Hints that explain themselves
 
 `H` used to name a digit and leave it at that, which answers the cell and
@@ -122,6 +140,14 @@ the cell it takes first — and only two techniques settle a cell rather than
 ruling candidates out, so whether this one will go yet is a quick question to
 ask. When it will not go yet, the hint moves to a cell that will, rather than
 handing you an answer here it cannot account for.
+
+The hints reason from the marks you have made, not only from the digits on
+the board. Narrowing a cell by hand narrows what the reasoning has to work
+with, and rubbing a candidate out is a real change to the position — which is
+what lets a step that only rules candidates out lead to the next one instead
+of coming round again. Marks that are wrong can lead the reasoning astray;
+they cannot lead you astray, because every step is still checked against the
+answer before a hint acts on it.
 
 A hint always moves something. Where the next step settles a digit it writes
 it in; where the step only rules candidates out it rubs them out of your
@@ -174,6 +200,9 @@ where the reasoning has just shut it out:
 
  Every 1 in the left box is in row A, so A4, A6 and A8 lose theirs.
 ```
+
+The clock waits while the help is up. Reading about a technique is not
+playing, and eight pages is long enough that it would otherwise show.
 
 The examples are drawn by hand rather than lifted from a real grid, since a
 real one comes with sixty other cells to look past. The names are the ones

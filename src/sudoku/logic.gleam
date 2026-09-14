@@ -159,7 +159,17 @@ fn work(grid: Grid, marks: Pencil, taken: List(Step)) -> #(List(Step), Grid) {
 
 /// The simplest step a grid will give up, which is what a hint should offer.
 pub fn next(grid: Grid) -> Result(Step, Nil) {
-  step(grid, pencil(grid))
+  next_from(grid, pencil(grid))
+}
+
+/// The same from candidates that have been narrowed by hand.
+///
+/// A player's marks are a position of their own: narrower than the grid alone
+/// allows wherever they have been working, and the only place a step that
+/// rules candidates out leaves a trace. Reasoning from them is what lets one
+/// such step lead to the next.
+pub fn next_from(grid: Grid, marks: Pencil) -> Result(Step, Nil) {
+  step(grid, marks)
 }
 
 /// The simplest step that settles one particular cell, if what is on the
@@ -169,8 +179,11 @@ pub fn next(grid: Grid) -> Result(Step, Nil) {
 /// these two are the whole of what can be said about a cell on its own. The
 /// rest is said about a unit, and belongs to whatever `next` makes of it.
 pub fn settles(grid: Grid, index: Int) -> Result(Step, Nil) {
-  let marks = pencil(grid)
+  settles_from(pencil(grid), index)
+}
 
+/// The same from candidates narrowed by hand.
+pub fn settles_from(marks: Pencil, index: Int) -> Result(Step, Nil) {
   case candidates(marks, index) {
     [] -> Error(Nil)
     [digit] -> Ok(Step(NakedSingle, Settle(index, digit), [index], [digit], []))

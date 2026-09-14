@@ -1406,6 +1406,102 @@ pub fn the_clock_runs_from_the_start_test() {
   assert game.elapsed_ms(fixture()) >= 0
 }
 
+pub fn the_clock_waits_while_the_help_is_up_test() {
+  let start = fixture()
+  let reading = step(start, key.Char("?"))
+  assert reading.resting_since != option.None
+
+  // Closing the help gives back the time spent reading it, by moving the
+  // start of the game along.
+  let back = step(reading, key.Down)
+  assert back.resting_since == option.None
+  assert back.started_ms >= start.started_ms
+  assert game.elapsed_ms(back) <= game.elapsed_ms(start)
+}
+
+pub fn a_finished_time_does_not_move_test() {
+  // The clock has stopped, so reading the help afterwards cannot change what
+  // it says.
+  let done = step(fixture(), key.Char("R"))
+  let after = done |> step(key.Char("?")) |> step(key.Down)
+
+  assert after.started_ms == done.started_ms
+  assert game.elapsed_ms(after) == game.elapsed_ms(done)
+}
+
+// ---------------------------------------------------------------------------
+// Filling the candidates in
+// ---------------------------------------------------------------------------
+
+pub fn f_pencils_the_candidates_into_every_bare_cell_test() {
+  let filled = step(fixture(), key.Char("f"))
+  let peers = board.peers_table()
+
+  use index <- list.each(board.indices())
+  case board.value(filled.board, index) {
+    // What is pencilled in is exactly what the grid still allows.
+    0 -> {
+      assert board.sorted_marks(filled.board, index)
+        == board.candidates(fixture().board.values, peers, index)
+    }
+    // And nothing is pencilled into a cell that already has a digit.
+    _ -> {
+      assert board.sorted_marks(filled.board, index) == []
+    }
+  }
+}
+
+pub fn filling_leaves_the_cells_you_have_marked_alone_test() {
+  // A cell marked by hand is where the player has been thinking.
+  let thought_about =
+    fixture()
+    |> step(key.Char("m"))
+    |> step(key.Digit(4))
+    |> step(key.Char("m"))
+  let cursor = thought_about.cursor
+
+  let filled = step(thought_about, key.Char("f"))
+
+  assert board.sorted_marks(filled.board, cursor) == [4]
+  assert string.contains(filled.message, "left as")
+}
+
+pub fn filling_twice_over_says_there_is_nothing_to_do_test() {
+  let filled = fixture() |> step(key.Char("f"))
+  let again = step(filled, key.Char("f"))
+
+  assert string.contains(again.message, "already")
+  assert again.board == filled.board
+}
+
+pub fn filling_is_one_undo_away_test() {
+  let filled = step(fixture(), key.Char("f"))
+  let undone = step(filled, key.Char("u"))
+
+  assert undone.board == fixture().board
+}
+
+/// Marks that are pencilled in are what the reasoning then works from, which
+/// is what lets a step that only rules candidates out lead to the next one.
+pub fn the_hints_reason_from_the_marks_you_have_test() {
+  // A grid whose reasoning needs an elimination somewhere along the way.
+  let filled = step(playing(needs_naked_pair), key.Char("f"))
+
+  // Take hints until one of them rules candidates out rather than settling a
+  // digit: without marks to rub out, no such hint is ever offered.
+  let #(_, ruled_out) = {
+    use #(current, seen), _ <- list.fold(board.span(1, 30), #(filled, False))
+    let hinted = step(current, key.Char("H"))
+    #(
+      hinted,
+      seen
+        || board.empty_count(hinted.board) == board.empty_count(current.board),
+    )
+  }
+
+  assert ruled_out
+}
+
 // ---------------------------------------------------------------------------
 // Marking during play
 // ---------------------------------------------------------------------------

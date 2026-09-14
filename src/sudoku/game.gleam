@@ -34,6 +34,9 @@ pub type Game {
     marking: Bool,
     /// The page of help on show, if any.
     help: Option(Help),
+    /// When the help went up, while it is up. Reading is not playing, so the
+    /// clock waits for it.
+    resting_since: Option(Int),
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -82,6 +85,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     checking: False,
     marking: False,
     help: None,
+    resting_since: None,
     hints: 0,
     mistakes: 0,
     ending: None,
@@ -132,8 +136,27 @@ fn browse(game: Game, page: Help, pressed: Key) -> Step {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
     key.Right | key.Char("l") -> Continue(turn(game, page, 1))
     key.Left | key.Char("h") -> Continue(turn(game, page, -1))
-    _ -> Continue(Game(..game, help: None))
+    _ -> Continue(wake(game))
   }
+}
+
+/// Put the help away and give back the time spent reading it, by moving the
+/// start of the game along by as long as the help was up.
+///
+/// Not once the game is over: the time then is a result, and a result does
+/// not move.
+fn wake(game: Game) -> Game {
+  let rested = case game.resting_since, game.finished_ms {
+    Some(since), None -> term.now_ms() - since
+    _, _ -> 0
+  }
+
+  Game(
+    ..game,
+    help: None,
+    resting_since: None,
+    started_ms: game.started_ms + rested,
+  )
 }
 
 fn turn(game: Game, page: Help, by: Int) -> Game {
@@ -155,7 +178,10 @@ fn play(game: Game, pressed: Key) -> Step {
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
     key.Char("n") | key.Char("N") -> Restart
-    key.Char("?") -> Continue(Game(..game, help: Some(Keys)))
+    key.Char("?") ->
+      Continue(
+        Game(..game, help: Some(Keys), resting_since: Some(term.now_ms())),
+      )
 
     _ if game.finished_ms != None ->
       Continue(Game(..game, message: "Press n for a new puzzle, or q to quit."))
@@ -171,6 +197,7 @@ fn play(game: Game, pressed: Key) -> Step {
     key.Erase if game.marking -> Continue(unmark(game))
     key.Erase -> Continue(erase(game))
 
+    key.Char("f") -> Continue(fill(game))
     key.Char("m") -> Continue(toggle_marking(game))
     key.Char("u") -> Continue(undo(game))
     key.Char("c") -> Continue(start_checking(game))
@@ -253,6 +280,59 @@ fn written(game: Game, digit: Int) -> Board {
   case game.checking && digit != answer(game, game.cursor) {
     True -> board.write(game.board, game.cursor, digit)
     False -> board.place(game.board, game.cursor, digit)
+  }
+}
+
+/// Pencil every candidate into the empty cells that have none.
+///
+/// This is bookkeeping rather than insight — what a cell could still take is
+/// there to be read off its row, its column and its box by anyone willing to
+/// look — so it costs nothing. What it buys is the rest of the game: every
+/// technique past a naked single is an argument about candidates, and an
+/// argument about candidates needs some on the board to be about.
+///
+/// Cells already marked are left alone. That is where the player has been
+/// thinking, and thinking is not for rubbing out.
+fn fill(game: Game) -> Game {
+  let peers = board.peers_table()
+  let grid = game.board.values
+
+  let bare = {
+    use index <- list.filter(board.indices())
+    board.value(game.board, index) == 0
+    && set.is_empty(board.marks_at(game.board, index))
+  }
+
+  case bare {
+    [] -> Game(..game, message: "Every empty cell is marked up already.")
+    _ -> {
+      let pencilled = {
+        use current, index <- list.fold(bare, game.board)
+        use current, digit <- list.fold(
+          board.candidates(grid, peers, index),
+          current,
+        )
+        board.toggle_mark(current, index, digit)
+      }
+
+      let filled = game |> remember |> with_board(pencilled)
+      let left = board.empty_count(game.board) - list.length(bare)
+
+      Game(
+        ..filled,
+        message: "Pencilled in "
+          <> int.to_string(list.length(bare))
+          <> " cells.\n"
+          <> case left {
+            0 -> "Every empty cell now shows what it could still take."
+            1 -> "The one you had marked already is left as it was."
+            _ ->
+              "The "
+              <> int.to_string(left)
+              <> " you had marked already are left as they were."
+          },
+      )
+    }
   }
 }
 
@@ -391,7 +471,7 @@ fn hint(game: Game) -> Game {
 fn here(game: Game) -> Result(logic.Step, Nil) {
   case board.value(game.board, game.cursor) {
     0 ->
-      case logic.settles(game.board.values, game.cursor) {
+      case logic.settles_from(pencilled(game), game.cursor) {
         Ok(step) -> sound(game, step)
         Error(_) -> Error(Nil)
       }
@@ -406,9 +486,33 @@ fn here(game: Game) -> Result(logic.Step, Nil) {
 /// the wrong digit would be worse than no hint at all, so one that disagrees
 /// with the answer is dropped and the plain telling takes over.
 fn sound_step(game: Game) -> Result(logic.Step, Nil) {
-  case logic.next(game.board.values) {
+  case logic.next_from(game.board.values, pencilled(game)) {
     Error(_) -> Error(Nil)
     Ok(step) -> sound(game, step)
+  }
+}
+
+/// The candidates as the player has them: their own marks wherever they have
+/// made any, and everything the grid allows where they have not.
+///
+/// This is what stops a hint repeating itself. An elimination changes no
+/// digit, so a hint that rubs marks out leaves the grid looking exactly as it
+/// did and the same step waiting; read the marks instead and the position has
+/// moved on, with the next step to show for it.
+///
+/// Marks that are wrong, or left behind, can lead the reasoning astray. They
+/// cannot lead the player astray: every step is still checked against the
+/// answer before a hint acts on it.
+fn pencilled(game: Game) -> logic.Pencil {
+  use marks, index <- list.fold(
+    board.indices(),
+    logic.pencil(game.board.values),
+  )
+
+  let theirs = board.marks_at(game.board, index)
+  case board.value(game.board, index) == 0 && !set.is_empty(theirs) {
+    True -> dict.insert(marks, index, theirs)
+    False -> marks
   }
 }
 

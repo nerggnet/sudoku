@@ -402,6 +402,7 @@ const key_reference = [
   #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
   #("1 - 9", "write a digit, or pencil one in while marking"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
+  #("f", "pencil the candidates into every bare cell"),
   #("m", "switch between writing and marking"),
   #("u", "undo"),
   #("c", "check for good; a fourth wrong digit forfeits"),
@@ -409,7 +410,6 @@ const key_reference = [
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
   #("?", "close this help"),
-  #("\u{2190} \u{2192}", "page through the techniques, one to a page"),
   #("q", "quit"),
 ]
 
