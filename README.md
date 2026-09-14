@@ -43,7 +43,7 @@ newspaper.
 | `m` | switch between writing and marking |
 | `u` | undo |
 | `c` | check what is filled in from here on, at a price |
-| `H` | reveal one cell |
+| `H` | take the next step, and say why |
 | `R` | reveal the whole solution |
 | `n` | start a new puzzle |
 | `?` | help |
@@ -83,6 +83,44 @@ Nothing dealt ever needs a guess. Carving only takes a cell out if what is
 left can still be reasoned to the end, so a puzzle that could not be is never
 carved that far. That also does the work of checking the answer is unique:
 reasoning never guesses, so a grid it can finish has exactly one answer.
+
+## Hints that explain themselves
+
+`H` used to name a digit and leave it at that, which answers the cell and
+teaches nothing. Now it works out the next move the way a person would and
+says what it did:
+
+```
+ Naked single: C6 can only be a 4.
+ Hidden single: A2 is the only cell in row A that can take a 9.
+ Locked candidates: every 1 in the top-left box is in row C.
+ Naked pair: C8 and F8 take 7 and 8 between them.
+ Hidden pair: only C2 and C3 can take 4 or 7 in their row.
+ Naked triple: A2, A3 and A4 take 2, 7 and 8 between them.
+ X-wing: a 9 in rows B and F keeps to columns 2 and 9.
+```
+
+The names are the ones Sudoku players use, so they are worth learning: a
+player told that C8 and F8 take 7 and 8 between them has been given this one
+move, and a player told it is a naked pair has been given every naked pair
+they will ever meet. What follows the name is the crux rather than the whole
+argument, because the consequence happens on the screen as it is said — the
+digit goes in, or the marks come out.
+
+The hint goes wherever the next move actually is rather than wherever the
+cursor happens to be, because the cell you are staring at may not be the one that
+can be worked out yet — and a hint that cannot explain itself is only the
+answer again.
+
+A hint always moves something. Where the next step settles a digit it writes
+it in; where the step only rules candidates out it rubs them out of your
+marks, which is what you would do with it yourself. An elimination you have no
+marks for would change nothing on the screen and be offered again for ever, so
+in that case the hint falls back to naming a digit, the way it always did.
+That is also the fallback for a puzzle beyond the reasoning, and for a grid
+with a wrong digit already in it: a hint checks every digit against the answer
+before writing it, because reasoning from a wrong digit leads somewhere the
+answer does not go.
 
 ## Checking, and what it costs
 

@@ -22,8 +22,6 @@ const empty_cell = "\u{00b7}"
 /// those are is spelled out in the status line when the cursor reaches it.
 const crowded_cell = "*"
 
-const row_labels = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
-
 /// How many columns one grid takes up. Cells are two columns wide, so a band
 /// of three plus its trailing space is seven, four box rules bring the row to
 /// 25, and the row label and its space make 27.
@@ -187,7 +185,7 @@ fn grid(cell: fn(Int) -> String) -> List(String) {
     |> banded(" ")
 
   let bands =
-    row_labels
+    board.row_labels
     |> list.index_map(fn(label, row) { row_line(cell, row, label) })
     |> list.sized_chunk(3)
     |> list.intersperse([rule("\u{251c}", "\u{253c}", "\u{2524}")])
@@ -324,21 +322,12 @@ fn cursor_marks(current: Game) -> String {
   case board.sorted_marks(current.board, current.cursor) {
     [] -> ""
     marks ->
-      term.styled(dim_style, cell_name(current.cursor) <> " marked ")
+      term.styled(dim_style, board.name(current.cursor) <> " marked ")
       <> term.styled(
         mark_style,
         marks |> list.map(int.to_string) |> string.join(" "),
       )
   }
-}
-
-/// A cell's name as it is labelled on screen, such as `C4`.
-fn cell_name(index: Int) -> String {
-  let label = case list.drop(row_labels, board.row_of(index)) {
-    [letter, ..] -> letter
-    [] -> "?"
-  }
-  label <> int.to_string(board.col_of(index) + 1)
 }
 
 fn clock(milliseconds: Int) -> String {
@@ -381,7 +370,7 @@ const key_reference = [
   #("m", "switch between writing and marking"),
   #("u", "undo"),
   #("c", "check for good; a fourth wrong digit forfeits"),
-  #("H", "reveal one cell"),
+  #("H", "take the next step, and say why"),
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
   #("?", "close this help"),
@@ -497,7 +486,7 @@ fn editor_status(current: Editor, clashes: Set(Int)) -> List(String) {
     [
       "clues " <> int.to_string(editor.clue_count(current)),
       "clashes " <> int.to_string(set.size(clashes)),
-      "cell " <> cell_name(current.cursor),
+      "cell " <> board.name(current.cursor),
     ]
     |> string.join("  \u{2502}  ")
 

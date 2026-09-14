@@ -4,10 +4,12 @@ import gleam/dict
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/set
 import sudoku/board.{type Board}
 import sudoku/generator.{type Puzzle}
 import sudoku/key.{type Key}
+import sudoku/logic
 import sudoku/term
 
 const max_undo = 200
@@ -317,9 +319,112 @@ fn found_message(found: Int) -> String {
   }
 }
 
-/// Fill in the cursor cell, or the first empty cell if the cursor is already
-/// on a filled one.
+/// The simplest step the reasoning can find, said out loud and then taken.
+///
+/// A hint used to name a digit and leave it at that, which answers the cell
+/// and teaches nothing. Now it goes wherever the next move actually is and
+/// says why it is there, so what the player takes away is the argument rather
+/// than the digit.
 fn hint(game: Game) -> Game {
+  case board.empty_count(game.board) {
+    0 -> Game(..game, message: "The grid is already full.")
+    _ ->
+      case sound_step(game) {
+        Ok(step) -> take(game, step)
+        Error(_) -> tell(game)
+      }
+  }
+}
+
+/// The reasoning's next step, but only where it agrees with the answer.
+///
+/// The reasoning works from what is on the board, and a wrong digit already
+/// there can lead it somewhere the answer does not go. A hint that fills in
+/// the wrong digit would be worse than no hint at all, so one that disagrees
+/// with the answer is dropped and the plain telling takes over.
+fn sound_step(game: Game) -> Result(logic.Step, Nil) {
+  case logic.next(game.board.values) {
+    Error(_) -> Error(Nil)
+    Ok(step) ->
+      case step.move {
+        logic.Settle(index, digit) ->
+          case digit == answer(game, index) {
+            True -> Ok(step)
+            False -> Error(Nil)
+          }
+        // An elimination leaves the grid as it was, so the reasoning would
+        // hand out the same one for ever. It is only worth offering when it
+        // rubs a mark of the player's out: then something has moved, and the
+        // next hint has something else to say.
+        logic.RuleOut(cells, digits) ->
+          case
+            rules_out_the_answer(game, cells, digits),
+            rubs_out(game, cells, digits)
+          {
+            False, True -> Ok(step)
+            _, _ -> Error(Nil)
+          }
+      }
+  }
+}
+
+fn rules_out_the_answer(
+  game: Game,
+  cells: List(Int),
+  digits: List(Int),
+) -> Bool {
+  use index <- list.any(cells)
+  list.contains(digits, answer(game, index))
+}
+
+/// Whether any of it is pencilled in, and so whether rubbing it out would
+/// show.
+fn rubs_out(game: Game, cells: List(Int), digits: List(Int)) -> Bool {
+  use index <- list.any(cells)
+  let marks = board.marks_at(game.board, index)
+  list.any(digits, set.contains(marks, _))
+}
+
+fn take(game: Game, step: logic.Step) -> Game {
+  let said = logic.explain(step)
+
+  case step.move {
+    logic.Settle(index, digit) -> {
+      let filled =
+        game
+        |> remember
+        |> with_board(board.place(game.board, index, digit))
+
+      Game(..filled, cursor: index, hints: filled.hints + 1, message: said)
+      |> settle
+    }
+
+    // Nothing to write: a step that only rules candidates out rubs them out
+    // of the player's marks instead, which is what they would do with it.
+    logic.RuleOut(cells, digits) -> {
+      let rubbed = {
+        use current, index <- list.fold(cells, game.board)
+        use current, digit <- list.fold(digits, current)
+        board.erase_mark(current, index, digit)
+      }
+
+      let told = case rubbed == game.board {
+        True -> game
+        False -> game |> remember |> with_board(rubbed)
+      }
+
+      Game(
+        ..told,
+        cursor: list.first(cells) |> result.unwrap(game.cursor),
+        hints: told.hints + 1,
+        message: said,
+      )
+    }
+  }
+}
+
+/// The hint of last resort: name the digit, as a hint always used to.
+fn tell(game: Game) -> Game {
   let target = case board.value(game.board, game.cursor) {
     0 -> Some(game.cursor)
     _ -> first_empty(game.board)
@@ -337,7 +442,10 @@ fn hint(game: Game) -> Game {
         ..filled,
         cursor: index,
         hints: filled.hints + 1,
-        message: "Hint: that cell is a " <> int.to_string(answer(game, index)),
+        message: board.name(index)
+          <> " is a "
+          <> int.to_string(answer(game, index))
+          <> ".",
       )
       |> settle
     }

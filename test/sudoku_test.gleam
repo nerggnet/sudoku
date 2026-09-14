@@ -718,7 +718,10 @@ pub fn a_typed_puzzle_plays_like_any_other_test() {
 
   // A3 is a 4 in the answer, so checking and hints know that much.
   assert game.answer(started, 2) == 4
-  assert board.value(step(started, key.Char("H")).board, 2) == 4
+
+  let hinted = step(started, key.Char("H"))
+  assert hinted.hints == 1
+  assert nothing_wrong(hinted)
 }
 
 pub fn an_empty_grid_cannot_be_played_test() {
@@ -1129,18 +1132,137 @@ pub fn forfeiting_says_so_test() {
   assert list.any(lines, is_grid_row)
 }
 
-pub fn a_hint_fills_the_cell_under_the_cursor_test() {
-  let hinted = step(fixture(), key.Char("H"))
-  assert board.value(hinted.board, 2) == 4
-  assert hinted.hints == 1
+/// Nothing on the board disagrees with the answer.
+fn nothing_wrong(current: game.Game) -> Bool {
+  use index <- list.all(board.indices())
+  case board.value(current.board, index) {
+    0 -> True
+    digit -> digit == game.answer(current, index)
+  }
 }
 
-pub fn a_hint_on_a_filled_cell_moves_to_the_next_gap_test() {
+pub fn a_hint_takes_the_next_step_and_says_why_test() {
+  let hinted = step(fixture(), key.Char("H"))
+
+  assert hinted.hints == 1
+  assert nothing_wrong(hinted)
+
+  // It moved to what it is about and named it in words, rather than leaving
+  // the player to work out which cell it meant.
+  assert string.contains(hinted.message, board.name(hinted.cursor))
+  assert string.ends_with(hinted.message, ".")
+}
+
+pub fn a_hint_goes_where_the_reasoning_is_test() {
+  // Not where the cursor happens to be: the cell under it may not be the one
+  // that can be worked out next, and a hint that cannot explain itself is
+  // just the answer again.
   let on_a_clue = game.Game(..fixture(), cursor: 0)
   let hinted = step(on_a_clue, key.Char("H"))
 
-  assert hinted.cursor == 2
-  assert board.value(hinted.board, 2) == 4
+  assert hinted.cursor != 0
+  assert nothing_wrong(hinted)
+  assert string.contains(hinted.message, board.name(hinted.cursor))
+}
+
+/// A game of one of the frozen fixtures, answer and all.
+fn playing(text: String) -> game.Game {
+  let assert Ok(answer) = solver.solve(grid(text))
+    as "the fixtures are solvable"
+  game.new(generator.Puzzle(
+    board: board.from_grid(grid(text)),
+    solution: answer,
+    origin: generator.Handwritten,
+  ))
+}
+
+/// A player who has pencilled every candidate into every empty cell.
+fn fully_marked(current: game.Game) -> game.Game {
+  let peers = board.peers_table()
+  let grid = current.board.values
+
+  let marked = {
+    use marked, index <- list.fold(board.indices(), current.board)
+    case board.value(marked, index) {
+      0 -> {
+        use marked, digit <- list.fold(
+          board.candidates(grid, peers, index),
+          marked,
+        )
+        board.toggle_mark(marked, index, digit)
+      }
+      _ -> marked
+    }
+  }
+
+  game.Game(..current, board: marked)
+}
+
+/// How much is written in, and how much is pencilled in.
+fn written_and_marked(current: game.Game) -> #(Int, Int) {
+  let marks = {
+    use total, index <- list.fold(board.indices(), 0)
+    total + list.length(board.sorted_marks(current.board, index))
+  }
+  #(81 - board.empty_count(current.board), marks)
+}
+
+pub fn a_hint_rubs_out_the_marks_it_rules_out_test() {
+  // Somewhere in this one the reasoning has to rule something out before it
+  // can settle anything, and a player with marks has somewhere for that to
+  // land. Take hints until it comes round.
+  let start = fully_marked(playing(needs_naked_pair))
+
+  let #(last, ruled_something_out) = {
+    use #(current, seen), _ <- list.fold(board.span(1, 25), #(start, False))
+    let hinted = step(current, key.Char("H"))
+    let #(written, marked) = written_and_marked(current)
+    let #(written_after, marked_after) = written_and_marked(hinted)
+
+    // A hint that wrote nothing and rubbed marks out handed over an
+    // elimination rather than an answer.
+    #(hinted, seen || { written == written_after && marked_after < marked })
+  }
+
+  assert ruled_something_out
+
+  // And nothing was ever rubbed out that belonged there.
+  use index <- list.each(board.indices())
+  case board.sorted_marks(last.board, index) {
+    [] -> Nil
+    marks -> {
+      assert list.contains(marks, game.answer(last, index))
+    }
+  }
+}
+
+pub fn a_hint_always_moves_something_test() {
+  // The same puzzle without marks: an elimination would have nowhere to land
+  // and nothing to show, so the hint falls back to naming a digit rather than
+  // offering the same advice for ever.
+  let start = playing(needs_naked_pair)
+  let once = step(start, key.Char("H"))
+  let twice = step(once, key.Char("H"))
+
+  assert board.empty_count(once.board) < board.empty_count(start.board)
+  assert board.empty_count(twice.board) < board.empty_count(once.board)
+  assert nothing_wrong(twice)
+}
+
+pub fn a_hint_checks_itself_against_the_answer_test() {
+  // A wrong digit can lead the reasoning somewhere the answer does not go,
+  // so a hint never writes a digit without checking it first.
+  let astray = step(fixture(), key.Digit(1))
+  let hinted = step(astray, key.Char("H"))
+
+  assert hinted.hints == 1
+  use index <- list.each(board.indices())
+  case index == 2 || board.value(hinted.board, index) == 0 {
+    True -> Nil
+    False -> {
+      assert board.value(hinted.board, index) == game.answer(hinted, index)
+    }
+  }
 }
 
 pub fn revealing_finishes_the_puzzle_test() {
@@ -1366,7 +1488,7 @@ pub fn writing_a_digit_leaves_every_mark_alone_test() {
   assert board.value(board.write(marked, 0, 9), 0) == 5
 }
 
-pub fn hints_and_reveals_tidy_up_marks_too_test() {
+pub fn reveals_tidy_up_marks_too_test() {
   let marked =
     fixture()
     |> step(key.Char("m"))
@@ -1374,8 +1496,20 @@ pub fn hints_and_reveals_tidy_up_marks_too_test() {
     |> step(key.Digit(4))
     |> step(key.Char("m"))
 
-  assert board.sorted_marks(step(marked, key.Char("H")).board, 2) == []
   assert board.sorted_marks(step(marked, key.Char("R")).board, 2) == []
+}
+
+pub fn a_hint_tidies_up_the_marks_where_it_settles_test() {
+  // Wherever the hint is going to settle a digit, mark that cell first.
+  let settles = step(fixture(), key.Char("H")).cursor
+  let marked =
+    game.Game(..fixture(), cursor: settles)
+    |> step(key.Char("m"))
+    |> step(key.Digit(1))
+    |> step(key.Char("m"))
+
+  assert board.sorted_marks(marked.board, settles) == [1]
+  assert board.sorted_marks(step(marked, key.Char("H")).board, settles) == []
 }
 
 // ---------------------------------------------------------------------------
