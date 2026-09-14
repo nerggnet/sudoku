@@ -972,6 +972,46 @@ pub fn undo_walks_back_through_edits_test() {
   assert step(twice, key.Char("u")).history == []
 }
 
+pub fn redo_walks_forward_again_test() {
+  let played =
+    fixture() |> step(key.Digit(4)) |> step(key.Right) |> step(key.Digit(7))
+  let back = played |> step(key.Char("u")) |> step(key.Char("u"))
+
+  assert board.value(back.board, 2) == 0
+  assert board.value(back.board, 3) == 0
+
+  let forward = back |> step(key.Char("r")) |> step(key.Char("r"))
+  assert board.value(forward.board, 2) == 4
+  assert board.value(forward.board, 3) == 7
+  assert forward.board == played.board
+
+  // And there is nothing beyond where it started.
+  assert string.contains(step(forward, key.Char("r")).message, "Nothing")
+}
+
+pub fn there_is_nothing_to_redo_until_something_is_undone_test() {
+  assert string.contains(step(fixture(), key.Char("r")).message, "Nothing")
+}
+
+pub fn writing_something_else_throws_the_way_forward_away_test() {
+  // The board is somewhere else now, and what was undone was the way forward
+  // from where it used to be.
+  let elsewhere =
+    fixture()
+    |> step(key.Digit(4))
+    |> step(key.Char("u"))
+    |> step(key.Digit(1))
+
+  assert string.contains(step(elsewhere, key.Char("r")).message, "Nothing")
+  assert board.value(elsewhere.board, 2) == 1
+}
+
+pub fn undo_says_how_to_take_it_back_test() {
+  let undone = fixture() |> step(key.Digit(4)) |> step(key.Char("u"))
+  assert string.contains(undone.message, "press r")
+    || string.contains(undone.message, "Press r")
+}
+
 pub fn erasing_clears_a_filled_cell_test() {
   let played = fixture() |> step(key.Digit(4)) |> step(key.Erase)
   assert board.value(played.board, 2) == 0

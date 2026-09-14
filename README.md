@@ -47,6 +47,7 @@ newspaper.
 | `f` | pencil the candidates into every bare cell |
 | `m` | switch between writing and marking |
 | `u` | undo |
+| `r` | do it again |
 | `c` | check what is filled in from here on, at a price |
 | `H` | take the next step, and say why |
 | `R` | reveal the whole solution |
@@ -463,7 +464,9 @@ the digit is wrong, though — the marks around a digit the game is calling out
 in the same breath are the reasoning you need to put it right, so they stay
 where they are. Erasing a digit leaves marks alone too, so taking back a
 wrong guess does not cost you the reasoning behind it. Undo covers marks as
-well as digits.
+well as digits, and `r` walks forward again through whatever was undone —
+until something else is written, which makes a different way forward and
+throws the old one away.
 
 ## How it works
 

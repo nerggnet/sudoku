@@ -412,6 +412,7 @@ const board_keys = [
   #("f", "pencil the candidates into every bare cell"),
   #("m", "switch between writing and marking"),
   #("u", "undo"),
+  #("r", "do it again"),
 ]
 
 /// Asking the game for something, and leaving.

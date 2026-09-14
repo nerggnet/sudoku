@@ -27,6 +27,9 @@ pub type Game {
     board: Board,
     cursor: Int,
     history: List(Board),
+    /// Boards undone, waiting to be done again. Anything else written to the
+    /// board empties it: the way back is only the way back from here.
+    undone: List(Board),
     message: String,
     /// Whether wrong digits are being called out.
     checking: Bool,
@@ -124,6 +127,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     board: puzzle.board,
     cursor: first_empty(puzzle.board) |> option.unwrap(0),
     history: [],
+    undone: [],
     message: "Press ? for help.",
     checking: False,
     marking: False,
@@ -255,6 +259,7 @@ fn play(game: Game, pressed: Key) -> Step {
     key.Char("f") -> Continue(fill(game))
     key.Char("m") -> Continue(toggle_marking(game))
     key.Char("u") -> Continue(undo(game))
+    key.Char("r") -> Continue(redo(game))
     key.Char("c") -> Continue(start_checking(game))
     key.Char("H") -> Continue(hint(game))
     key.Char("R") -> Continue(reveal(game))
@@ -500,7 +505,32 @@ fn undo(game: Game) -> Game {
   case game.history {
     [] -> Game(..game, message: "Nothing left to undo.")
     [previous, ..rest] ->
-      Game(..game, board: previous, history: rest, message: "Undone.")
+      Game(
+        ..game,
+        board: previous,
+        history: rest,
+        undone: [game.board, ..game.undone],
+        message: "Undone. Press r to do it again.",
+      )
+  }
+}
+
+/// Walk forward again through what was undone.
+///
+/// Only until something else is written. A board arrived at by another route
+/// has no way forward from here, and offering one would be offering to undo
+/// what the player has just done.
+fn redo(game: Game) -> Game {
+  case game.undone {
+    [] -> Game(..game, message: "Nothing to do again.")
+    [next, ..rest] ->
+      Game(
+        ..game,
+        board: next,
+        history: [game.board, ..game.history],
+        undone: rest,
+        message: "Done again.",
+      )
   }
 }
 
@@ -775,8 +805,14 @@ fn with_board(game: Game, next: Board) -> Game {
   Game(..game, board: next, message: "")
 }
 
+/// Put the board on the pile to come back to, and throw away the way
+/// forward: whatever is about to happen is a different way forward.
 fn remember(game: Game) -> Game {
-  Game(..game, history: list.take([game.board, ..game.history], max_undo))
+  Game(
+    ..game,
+    history: list.take([game.board, ..game.history], max_undo),
+    undone: [],
+  )
 }
 
 /// Notice when the last keystroke completed the puzzle.
