@@ -69,6 +69,18 @@ pub type Offer {
   /// Every empty cell is marked up. Asking again marks them all afresh,
   /// which is the only way to be rid of marks made wrongly by hand.
   RedoMarks
+  /// There is a puzzle under way. Asking again gives it up.
+  GiveUp
+}
+
+/// The key that made an offer is the key that takes it up. Anything else
+/// puts the offer away.
+fn asked_by(offer: Offer) -> List(Key) {
+  case offer {
+    LookElsewhere(_) -> [key.Char("H")]
+    RedoMarks -> [key.Char("f")]
+    GiveUp -> [key.Char("n"), key.Char("N")]
+  }
 }
 
 /// The help, a page at a time: the keys, and then a page on each way of
@@ -176,15 +188,43 @@ pub fn is_wrong(game: Game, index: Int) -> Bool {
 }
 
 pub fn update(game: Game, pressed: Key) -> Step {
-  case game.help {
-    Some(page) -> browse(game, page, pressed)
-    None -> play(game, pressed)
+  case pressed, game.help {
+    // A terminal in line mode sends a newline after every key. The player
+    // did not press it, so it must not count as having pressed something:
+    // it would close the help as soon as it opened, and cancel every offer
+    // before it could be taken up.
+    key.Unknown, _ -> Continue(game)
+    _, Some(page) -> browse(game, page, pressed)
+    _, None -> play(game, pressed)
   }
 }
 
 /// While the help is up it has the keyboard to itself: the arrows turn the
 /// pages and anything else puts it away. Nothing reaches the board, so there
 /// is no reading about a technique and moving the cursor by accident.
+/// Starting another puzzle throws this one away, and the game saved for it
+/// with it. `n` is next to `m` on the keyboard, so reaching for marking and
+/// missing would cost the player the hour they have spent. It is asked for
+/// twice where there is anything to lose, and once where there is not.
+fn giving_up(game: Game) -> Step {
+  case under_way(game), game.offered == Some(GiveUp) {
+    False, _ | _, True -> Restart
+    True, False ->
+      Continue(
+        Game(
+          ..game,
+          offered: Some(GiveUp),
+          message: "Press n again to give up this puzzle.\nNothing of it is kept.",
+        ),
+      )
+  }
+}
+
+/// Whether there is a puzzle here to lose: one begun, and not yet over.
+fn under_way(game: Game) -> Bool {
+  !is_finished(game) && game.board != game.puzzle.board
+}
+
 fn asked_about(showing: Option(logic.Step)) -> Help {
   case showing {
     Some(step) -> About(step.technique)
@@ -241,10 +281,13 @@ fn turn(game: Game, page: Help, by: Int) -> Game {
 fn play(game: Game, pressed: Key) -> Step {
   // An offer only stands for the very next keystroke, and only for the key
   // that made it.
-  let offered = case pressed, game.offered {
-    key.Char("H"), Some(LookElsewhere(_)) -> game.offered
-    key.Char("f"), Some(RedoMarks) -> game.offered
-    _, _ -> None
+  let offered = case game.offered {
+    None -> None
+    Some(offer) ->
+      case list.contains(asked_by(offer), pressed) {
+        True -> game.offered
+        False -> None
+      }
   }
 
   // What the last hint marked out on the board stands for one keystroke too,
@@ -254,7 +297,7 @@ fn play(game: Game, pressed: Key) -> Step {
 
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
-    key.Char("n") | key.Char("N") -> Restart
+    key.Char("n") | key.Char("N") -> giving_up(game)
     // Straight to the page for whatever the last hint was about, since that
     // is what somebody who has just read one is asking after.
     key.Char("?") ->

@@ -58,6 +58,11 @@ pub fn clue_count(current: Editor) -> Int {
 
 pub fn update(current: Editor, pressed: Key) -> Step {
   case pressed {
+    // Line mode sends a newline after every key, which the player did not
+    // press. Left to count as a keystroke it would close the help the moment
+    // it opened.
+    key.Unknown -> Continue(current)
+
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
     key.Char("?") -> Continue(Editor(..current, show_help: !current.show_help))
 

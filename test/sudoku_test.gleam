@@ -1511,6 +1511,11 @@ pub fn a_finished_puzzle_ignores_further_edits_test() {
   assert board.value(poked.board, 2) == 4
 }
 
+pub fn the_editor_help_survives_a_newline_test() {
+  let reading = edit(editor.new(), key.Char("?"))
+  assert edit(reading, key.Unknown).show_help
+}
+
 pub fn help_opens_and_any_key_closes_it_test() {
   let opened = step(fixture(), key.Char("?"))
   assert opened.help == option.Some(game.Keys)
@@ -1553,6 +1558,59 @@ pub fn paging_the_help_does_not_reach_the_board_test() {
 
   // Quitting still works from the help, though.
   assert game.update(opened, key.Char("q")) == game.Exit
+}
+
+pub fn giving_up_a_puzzle_under_way_is_asked_for_twice_test() {
+  // n is next to m on the keyboard, and giving up throws away the saved game
+  // as well as the one on screen.
+  let played = step(fixture(), key.Digit(4))
+  let asked = step(played, key.Char("n"))
+
+  assert string.contains(asked.message, "Press n again")
+  assert asked.board == played.board
+
+  assert game.update(asked, key.Char("n")) == game.Restart
+  assert game.update(asked, key.Char("N")) == game.Restart
+}
+
+pub fn a_newline_is_not_a_keystroke_test() {
+  // A terminal in line mode sends one after every key, and the player did
+  // not press it. Counting it would cancel an offer before it could be taken
+  // up, and close the help the moment it opened.
+  let asked =
+    fixture()
+    |> step(key.Digit(4))
+    |> step(key.Char("n"))
+    |> step(key.Unknown)
+
+  assert game.update(asked, key.Char("n")) == game.Restart
+
+  let reading = step(fixture(), key.Char("?"))
+  assert step(reading, key.Unknown).help == reading.help
+
+  // And it leaves what a hint is pointing at where it was.
+  let hinted = fixture() |> step(key.Char("H")) |> step(key.Char("H"))
+  assert step(hinted, key.Unknown).showing == hinted.showing
+}
+
+pub fn an_offer_to_give_up_does_not_keep_test() {
+  let asked =
+    fixture()
+    |> step(key.Digit(4))
+    |> step(key.Char("n"))
+    |> step(key.Right)
+
+  // A fresh question, answered the same way as the first.
+  assert string.contains(step(asked, key.Char("n")).message, "Press n again")
+}
+
+pub fn a_puzzle_with_nothing_in_it_is_given_up_at_once_test() {
+  // Nothing has been done to it, so there is nothing to lose by asking.
+  assert game.update(fixture(), key.Char("n")) == game.Restart
+
+  // And a puzzle already over is over.
+  let done = step(fixture(), key.Char("R"))
+  assert game.update(done, key.Char("n")) == game.Restart
 }
 
 pub fn quit_and_restart_leave_the_loop_test() {

@@ -328,7 +328,16 @@ game, and the menu simply does not offer one.
 
 Finishing a puzzle clears it, and so does asking for another with `n` — that
 abandons a puzzle rather than putting it down, and there is nothing to come
-back to.
+back to. Which is why `n` asks twice while a puzzle is under way:
+
+```
+ Press n again to give up this puzzle.
+ Nothing of it is kept.
+```
+
+`n` is next to `m` on the keyboard, and reaching for marking and missing
+should not cost an hour. A puzzle nothing has been done to, or one already
+over, is given up at once — there is nothing to lose by asking.
 
 On the way out the game prints the puzzle it was playing, as the same
 81-character line `Custom` takes:
