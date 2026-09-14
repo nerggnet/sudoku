@@ -44,6 +44,9 @@ pub type Game {
     offered: Option(Offer),
     /// What the record books made of this game, once it was over.
     verdict: Option(Verdict),
+    /// The step the last hint gave, until the next keystroke: what the board
+    /// marks out, and which page of the help `?` opens at.
+    showing: Option(logic.Step),
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -136,6 +139,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     resting_since: None,
     offered: None,
     verdict: None,
+    showing: None,
     hints: 0,
     mistakes: 0,
     ending: None,
@@ -181,6 +185,13 @@ pub fn update(game: Game, pressed: Key) -> Step {
 /// While the help is up it has the keyboard to itself: the arrows turn the
 /// pages and anything else puts it away. Nothing reaches the board, so there
 /// is no reading about a technique and moving the cursor by accident.
+fn asked_about(showing: Option(logic.Step)) -> Help {
+  case showing {
+    Some(step) -> About(step.technique)
+    None -> Keys
+  }
+}
+
 fn browse(game: Game, page: Help, pressed: Key) -> Step {
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
@@ -207,6 +218,7 @@ fn wake(game: Game) -> Game {
     resting_since: None,
     offered: None,
     verdict: None,
+    showing: None,
     started_ms: game.started_ms + rested,
   )
 }
@@ -229,18 +241,29 @@ fn turn(game: Game, page: Help, by: Int) -> Game {
 fn play(game: Game, pressed: Key) -> Step {
   // An offer only stands for the very next keystroke, and only for the key
   // that made it.
-  let game = case pressed, game.offered {
-    key.Char("H"), Some(LookElsewhere(_)) -> game
-    key.Char("f"), Some(RedoMarks) -> game
-    _, _ -> Game(..game, offered: None)
+  let offered = case pressed, game.offered {
+    key.Char("H"), Some(LookElsewhere(_)) -> game.offered
+    key.Char("f"), Some(RedoMarks) -> game.offered
+    _, _ -> None
   }
+
+  // What the last hint marked out on the board stands for one keystroke too,
+  // whatever that keystroke turns out to be.
+  let showing = game.showing
+  let game = Game(..game, offered: offered, showing: None)
 
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Exit
     key.Char("n") | key.Char("N") -> Restart
+    // Straight to the page for whatever the last hint was about, since that
+    // is what somebody who has just read one is asking after.
     key.Char("?") ->
       Continue(
-        Game(..game, help: Some(Keys), resting_since: Some(term.now_ms())),
+        Game(
+          ..game,
+          help: Some(asked_about(showing)),
+          resting_since: Some(term.now_ms()),
+        ),
       )
 
     _ if game.finished_ms != None ->
@@ -444,6 +467,7 @@ fn afresh(game: Game) -> Game {
     ..done,
     offered: None,
     verdict: None,
+    showing: None,
     message: "Marked all "
       <> int.to_string(list.length(empty))
       <> " empty cells afresh.\n"
@@ -739,7 +763,13 @@ fn take(game: Game, step: logic.Step) -> Game {
         |> remember
         |> with_board(board.place(game.board, index, digit))
 
-      Game(..filled, cursor: index, hints: filled.hints + 1, message: said)
+      Game(
+        ..filled,
+        cursor: index,
+        hints: filled.hints + 1,
+        message: said,
+        showing: Some(step),
+      )
       |> settle
     }
 
@@ -762,6 +792,7 @@ fn take(game: Game, step: logic.Step) -> Game {
         cursor: list.first(cells) |> result.unwrap(game.cursor),
         hints: told.hints + 1,
         message: said,
+        showing: Some(step),
       )
     }
   }

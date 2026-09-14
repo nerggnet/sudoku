@@ -61,6 +61,10 @@ const peer_background = "48;5;236"
 
 const match_background = "48;5;238"
 
+/// Behind the cells a hint is resting its argument on, so that it can point
+/// as well as talk.
+const hint_background = "48;5;22"
+
 const cursor_style = "7"
 
 /// Render the whole screen.
@@ -152,8 +156,9 @@ fn footer(current: Game) -> List(String) {
 /// marks. Keeping the two apart lets the board stay as compact and readable
 /// as it was before there were any marks to show.
 fn grids(current: Game, clashes: Set(Int)) -> List(String) {
-  let board_grid = grid(fn(index) { board_cell(current, clashes, index) })
-  let marks_grid = grid(fn(index) { mark_cell(current, index) })
+  let lit = pointed_at(current)
+  let board_grid = grid(fn(index) { board_cell(current, clashes, lit, index) })
+  let marks_grid = grid(fn(index) { mark_cell(current, lit, index) })
 
   [
     caption("board", "marks"),
@@ -242,7 +247,29 @@ fn row_line(cell: fn(Int) -> String, row: Int, label: String) -> String {
 }
 
 /// A cell of the board itself.
-fn board_cell(current: Game, clashes: Set(Int), index: Int) -> String {
+/// The cells the last hint was arguing from, if one is still up.
+///
+/// A hint that rests on a single cell is usually resting on the unit around
+/// it as well — the only cell in row C that can take a 4 is a claim about
+/// row C — so the unit comes with it. A hint about two or three cells has
+/// named them, and lighting up their whole unit would bury them.
+fn pointed_at(current: Game) -> Set(Int) {
+  case current.showing {
+    None -> set.new()
+    Some(step) ->
+      case step.evidence {
+        [_] -> set.from_list(list.append(step.evidence, step.unit))
+        cells -> set.from_list(cells)
+      }
+  }
+}
+
+fn board_cell(
+  current: Game,
+  clashes: Set(Int),
+  lit: Set(Int),
+  index: Int,
+) -> String {
   let digit = board.value(current.board, index)
   let glyph = case digit {
     0 -> empty_cell
@@ -252,32 +279,40 @@ fn board_cell(current: Game, clashes: Set(Int), index: Int) -> String {
   let focus = board.value(current.board, current.cursor)
   let colour = board_colour(current, clashes, index, digit)
 
-  painted(current.cursor, index, digit != 0 && digit == focus, glyph, colour)
+  painted(
+    current.cursor,
+    lit,
+    index,
+    digit != 0 && digit == focus,
+    glyph,
+    colour,
+  )
 }
 
 /// A cell of the grid of marks: the digit itself where a cell has been given
 /// exactly one reading, an asterisk where it has been given several.
-fn mark_cell(current: Game, index: Int) -> String {
+fn mark_cell(current: Game, lit: Set(Int), index: Int) -> String {
   let #(glyph, colour) = case board.sorted_marks(current.board, index) {
     [] -> #(empty_cell, empty_style)
     [only] -> #(int.to_string(only), mark_style)
     _ -> #(crowded_cell, mark_style)
   }
 
-  painted(current.cursor, index, False, glyph, colour)
+  painted(current.cursor, lit, index, False, glyph, colour)
 }
 
 /// Two columns: a leading space so that a highlight reads as a solid block,
 /// then the character itself.
 fn painted(
   cursor: Int,
+  lit: Set(Int),
   index: Int,
   matching: Bool,
   glyph: String,
   colour: String,
 ) -> String {
   let styles =
-    [background(cursor, index, matching), colour]
+    [background(cursor, lit, index, matching), colour]
     |> list.filter(fn(style) { style != "" })
     |> string.join(";")
 
@@ -306,12 +341,25 @@ fn board_colour(
 
 /// The cursor and the cells it can see are shaded the same way in both grids,
 /// which is what ties one to the other.
-fn background(cursor: Int, index: Int, matching: Bool) -> String {
-  case index == cursor, matching, shares_unit(index, cursor) {
-    True, _, _ -> cursor_style
-    _, True, _ -> match_background
-    _, _, True -> peer_background
-    _, _, _ -> ""
+fn background(
+  cursor: Int,
+  lit: Set(Int),
+  index: Int,
+  matching: Bool,
+) -> String {
+  case
+    index == cursor,
+    set.contains(lit, index),
+    matching,
+    shares_unit(index, cursor)
+  {
+    // The cursor stays visible through a hint: it is where the player is,
+    // and a hint is only passing.
+    True, _, _, _ -> cursor_style
+    _, True, _, _ -> hint_background
+    _, _, True, _ -> match_background
+    _, _, _, True -> peer_background
+    _, _, _, _ -> ""
   }
 }
 
@@ -874,7 +922,16 @@ fn clue_cell(current: Editor, clashes: Set(Int), index: Int) -> String {
   }
 
   let focus = editor.value(current, current.cursor)
-  painted(current.cursor, index, digit != 0 && digit == focus, glyph, colour)
+
+  // Nothing lit: a puzzle being typed in has no hints to point with.
+  painted(
+    current.cursor,
+    set.new(),
+    index,
+    digit != 0 && digit == focus,
+    glyph,
+    colour,
+  )
 }
 
 fn editor_status(current: Editor, clashes: Set(Int)) -> List(String) {

@@ -187,6 +187,13 @@ of coming round again. Marks that are wrong can lead the reasoning astray;
 they cannot lead you astray, because every step is still checked against the
 answer before a hint acts on it.
 
+A hint points as well as talks. The cells its argument rests on are lit up on
+the board until the next keystroke — the two cells of a pair, the four corners
+of an X-wing, the unit a hidden single is hidden in — so an elimination can be
+seen and not only read. And `?` after a hint opens the help at the technique
+it named, rather than at the keys, since that is what somebody who has just
+read one is asking after.
+
 A hint always moves something. Where the next step settles a digit it writes
 it in; where the step only rules candidates out it rubs them out of your
 marks, which is what you would do with it yourself. An elimination you have no

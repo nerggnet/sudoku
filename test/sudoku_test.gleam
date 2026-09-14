@@ -2458,6 +2458,52 @@ pub fn finishing_shows_a_result_test() {
   assert list.any(lines, string.contains(_, "n new puzzle"))
 }
 
+/// The wash behind the cells a hint is arguing from. Checking for it means
+/// reaching for the escape itself: a background leaves no mark on the text.
+const hint_wash = "48;5;22;"
+
+pub fn the_board_points_at_what_a_hint_rests_on_test() {
+  let assert Ok(row) = list.first(board.units())
+  let shown =
+    logic.Step(
+      technique: logic.HiddenSingle,
+      move: logic.Settle(2, 4),
+      evidence: [2],
+      about: [4],
+      unit: row,
+    )
+
+  assert string.contains(
+    render.frame(game.Game(..fixture(), showing: option.Some(shown))),
+    hint_wash,
+  )
+
+  // And nothing is lit up when nothing has been hinted.
+  assert !string.contains(render.frame(fixture()), hint_wash)
+}
+
+pub fn what_a_hint_points_at_goes_out_on_the_next_keystroke_test() {
+  // Twice: the cell it starts on may not be one that can be worked out yet,
+  // and being told so is not a hint.
+  let hinted = fixture() |> step(key.Char("H")) |> step(key.Char("H"))
+  assert hinted.showing != option.None
+
+  let moved = step(hinted, key.Down)
+  assert moved.showing == option.None
+  assert !string.contains(render.frame(moved), hint_wash)
+}
+
+pub fn the_help_opens_at_what_the_last_hint_was_about_test() {
+  let hinted = fixture() |> step(key.Char("H")) |> step(key.Char("H"))
+  let assert option.Some(shown) = hinted.showing
+
+  assert step(hinted, key.Char("?")).help
+    == option.Some(game.About(shown.technique))
+
+  // With no hint behind it, the help opens where it always did.
+  assert step(fixture(), key.Char("?")).help == option.Some(game.Keys)
+}
+
 pub fn the_cursor_is_highlighted_test() {
   // Reverse video, then the empty cell the cursor starts on.
   assert string.contains(render.frame(fixture()), "7;90m \u{b7}")
