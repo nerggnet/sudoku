@@ -8,9 +8,52 @@ import sudoku/board
 import sudoku/game
 import sudoku/key
 
+pub fn the_first_c_only_says_what_the_second_would_do_test() {
+  let asked = helper.step(helper.fixture(), key.Char("c"))
+
+  assert !asked.checking
+  assert game.unaided(asked)
+  assert string.contains(asked.message, "for good")
+  assert string.contains(asked.message, "not timed")
+  assert string.contains(asked.message, "Press c again")
+}
+
+pub fn a_warning_not_taken_up_does_not_keep_test() {
+  let wandered =
+    helper.fixture() |> helper.step(key.Char("c")) |> helper.step(key.Right)
+
+  // Moving off drops the offer, so c starts over rather than switching on.
+  let asked = helper.step(wandered, key.Char("c"))
+  assert !asked.checking
+  assert string.contains(asked.message, "Press c again")
+}
+
+pub fn the_warning_names_a_forfeit_where_one_is_waiting_test() {
+  let assert [a, b, c, d, e, ..] = helper.blanks()
+  let asked =
+    helper.blunder(helper.fixture(), [a, b, c, d, e])
+    |> helper.step(key.Char("c"))
+
+  assert !asked.checking
+  assert !game.is_finished(asked)
+  assert string.contains(asked.message, "5 wrong")
+  assert string.contains(asked.message, "forfeits")
+}
+
+pub fn a_puzzle_typed_in_is_warned_about_checking_too_test() {
+  // No time to lose, but checking still cannot be undone and can still end
+  // the puzzle, so it is worth hearing about first.
+  let asked = helper.step(helper.handwritten(), key.Char("c"))
+
+  assert !asked.checking
+  assert string.contains(asked.message, "for good")
+  assert !string.contains(asked.message, "not timed")
+  assert helper.checked(helper.handwritten()).checking
+}
+
 pub fn checking_allows_three_wrong_digits_test() {
   let assert [a, b, c, ..] = helper.blanks()
-  let checked = helper.step(helper.fixture(), key.Char("c"))
+  let checked = helper.checked(helper.fixture())
 
   let once = helper.blunder(checked, [a])
   assert once.mistakes == 1
@@ -30,8 +73,7 @@ pub fn checking_allows_three_wrong_digits_test() {
 pub fn a_fourth_wrong_digit_forfeits_the_puzzle_test() {
   let assert [a, b, c, d, ..] = helper.blanks()
 
-  let lost =
-    helper.blunder(helper.step(helper.fixture(), key.Char("c")), [a, b, c, d])
+  let lost = helper.blunder(helper.checked(helper.fixture()), [a, b, c, d])
 
   assert lost.mistakes == game.mistake_limit + 1
   assert game.is_finished(lost)
@@ -58,8 +100,7 @@ pub fn switching_checking_on_charges_for_what_it_finds_test() {
   // Free while the game was saying nothing about them; asking puts all three
   // on the tally at once, or they could be banked up and cashed in for one
   // keystroke's worth of answers.
-  let checked =
-    helper.step(helper.blunder(helper.fixture(), [a, b, c]), key.Char("c"))
+  let checked = helper.checked(helper.blunder(helper.fixture(), [a, b, c]))
 
   assert checked.mistakes == 3
   assert string.contains(checked.message, "3 digits are wrong")
@@ -71,11 +112,7 @@ pub fn switching_checking_on_charges_for_what_it_finds_test() {
 
 pub fn switching_checking_on_to_too_many_forfeits_test() {
   let assert [a, b, c, d, e, ..] = helper.blanks()
-  let lost =
-    helper.step(
-      helper.blunder(helper.fixture(), [a, b, c, d, e]),
-      key.Char("c"),
-    )
+  let lost = helper.checked(helper.blunder(helper.fixture(), [a, b, c, d, e]))
 
   // Five wrong digits is past the allowance, so asking ends it there.
   assert lost.mistakes == 5
@@ -89,8 +126,7 @@ pub fn switching_checking_on_to_too_many_forfeits_test() {
 
 pub fn spent_to_the_last_the_next_wrong_digit_ends_it_test() {
   let assert [a, b, c, d, ..] = helper.blanks()
-  let spent =
-    helper.step(helper.blunder(helper.fixture(), [a, b, c]), key.Char("c"))
+  let spent = helper.checked(helper.blunder(helper.fixture(), [a, b, c]))
 
   // Putting the three right again costs nothing, though the tally stands.
   let mended = {
@@ -108,7 +144,7 @@ pub fn spent_to_the_last_the_next_wrong_digit_ends_it_test() {
 }
 
 pub fn right_digits_cost_nothing_test() {
-  let checked = helper.step(helper.fixture(), key.Char("c"))
+  let checked = helper.checked(helper.fixture())
 
   let played = {
     use current, index <- list.fold(list.take(helper.blanks(), 5), checked)
@@ -122,7 +158,7 @@ pub fn right_digits_cost_nothing_test() {
 
 pub fn writing_the_same_wrong_digit_again_costs_nothing_test() {
   let assert [a, ..] = helper.blanks()
-  let once = helper.blunder(helper.step(helper.fixture(), key.Char("c")), [a])
+  let once = helper.blunder(helper.checked(helper.fixture()), [a])
 
   // The cell already holds it, so nothing has changed and nothing is owed.
   let again =
@@ -133,7 +169,7 @@ pub fn writing_the_same_wrong_digit_again_costs_nothing_test() {
 
 pub fn undo_takes_back_the_digit_but_not_the_mistake_test() {
   let assert [a, ..] = helper.blanks()
-  let once = helper.blunder(helper.step(helper.fixture(), key.Char("c")), [a])
+  let once = helper.blunder(helper.checked(helper.fixture()), [a])
   let undone = helper.step(once, key.Char("u"))
 
   assert board.value(undone.board, a) == 0
@@ -142,7 +178,7 @@ pub fn undo_takes_back_the_digit_but_not_the_mistake_test() {
 
 pub fn the_tally_shows_on_the_title_line_test() {
   let assert [a, ..] = helper.blanks()
-  let checked = helper.step(helper.fixture(), key.Char("c"))
+  let checked = helper.checked(helper.fixture())
 
   // It appears as soon as checking is on, before anything is spent.
   assert list.any(helper.visible_lines(checked), string.contains(
@@ -170,8 +206,7 @@ pub fn the_tally_shows_on_the_title_line_test() {
 
 pub fn forfeiting_says_so_test() {
   let assert [a, b, c, d, ..] = helper.blanks()
-  let lost =
-    helper.blunder(helper.step(helper.fixture(), key.Char("c")), [a, b, c, d])
+  let lost = helper.blunder(helper.checked(helper.fixture()), [a, b, c, d])
   let lines = helper.visible_lines(lost)
 
   assert list.any(lines, string.contains(_, "forfeited"))
@@ -187,7 +222,7 @@ pub fn checking_counts_wrong_digits_test() {
   let played = helper.step(helper.fixture(), key.Digit(1))
   assert game.is_wrong(played, 2)
 
-  let checked = helper.step(played, key.Char("c"))
+  let checked = helper.checked(played)
   assert checked.checking
   assert string.contains(checked.message, "1 digit is wrong")
 

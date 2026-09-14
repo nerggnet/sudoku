@@ -116,6 +116,14 @@ pub fn typed(text: String) -> editor.Editor {
   }
 }
 
+/// A game on a puzzle typed in by hand, which has no difficulty and so no
+/// time to lose.
+pub fn handwritten() -> game.Game {
+  let assert editor.Ready(puzzle) =
+    editor.update(typed(puzzle_text), key.Char("p"))
+  game.new(puzzle)
+}
+
 /// Decode a keystroke from a fixed run of bytes.
 pub fn press(bytes: List(Int)) -> key.Key {
   let #(pressed, _) = {
@@ -135,6 +143,12 @@ pub fn press_leaving(bytes: List(Int)) -> #(key.Key, List(Int)) {
     [] -> #(-1, [])
     [byte, ..rest] -> #(byte, rest)
   }
+}
+
+/// Checking switched on, which takes two asks: one to hear what it costs and
+/// one to go ahead.
+pub fn checked(current: game.Game) -> game.Game {
+  current |> step(key.Char("c")) |> step(key.Char("c"))
 }
 
 /// A game that has already agreed to being helped, so that a test about what

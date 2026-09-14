@@ -62,7 +62,7 @@ pub fn usage() -> String {
 
 /// Asking the game for something, and leaving.
 const asking_keys = [
-  #("c", "check for good; a fourth wrong digit forfeits"),
+  #("c c", "check for good; a fourth wrong digit forfeits"),
   #("H", "take the next step, and say why"),
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
@@ -72,6 +72,10 @@ const asking_keys = [
 ]
 
 const ask_notes = [
+  "Checking and a first hint both say what they will cost before they do it;",
+  "press the key again to go ahead. Either one makes the game an aided one,",
+  "which is not timed, and checking once on cannot be turned off again.",
+  "",
   "A hint takes the cell you are on whenever that cell can be worked out, and",
   "names the technique that settled it. The pages after this one are those",
   "techniques, one to a page, with a small board apiece showing them at work.",

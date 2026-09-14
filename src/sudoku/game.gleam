@@ -77,6 +77,9 @@ pub type Offer {
   /// The game is still the player's own work. Asking again takes a hint, and
   /// it stops being.
   TakeHint
+  /// Checking is off. Asking again switches it on, for good, and with
+  /// whatever that costs where it stands.
+  StartChecking
 }
 
 /// The key that made an offer is the key that takes it up. Anything else
@@ -87,6 +90,7 @@ fn asked_by(offer: Offer) -> List(Key) {
     RedoMarks -> [key.Char("f")]
     GiveUp -> [key.Char("n"), key.Char("N")]
     TakeHint -> [key.Char("H")]
+    StartChecking -> [key.Char("c")]
   }
 }
 
@@ -632,9 +636,16 @@ fn redo(game: Game) -> Game {
 /// state to go on playing in: the game would be asking the player to carry a
 /// debt it will never let them pay off.
 fn start_checking(game: Game) -> Game {
-  case game.checking {
-    True -> Game(..game, message: "Checking stays on now it is on.")
-    False -> {
+  case game.checking, game.offered == Some(StartChecking) {
+    True, _ -> Game(..game, message: "Checking stays on now it is on.")
+
+    // Checking cannot be undone, it costs the game its timing, and where
+    // there are wrong digits waiting it can end the puzzle on the spot. All
+    // of that is worth hearing before it happens rather than after.
+    False, False ->
+      Game(..game, offered: Some(StartChecking), message: about_to_check(game))
+
+    False, True -> {
       let found = list.count(board.indices(), is_wrong(game, _))
       let mistakes = game.mistakes + found
       let checking =
@@ -652,6 +663,26 @@ fn start_checking(game: Game) -> Game {
           )
       }
     }
+  }
+}
+
+/// What switching checking on would do from here, said before it is done.
+fn about_to_check(game: Game) -> String {
+  let found = list.count(board.indices(), is_wrong(game, _))
+  let timed = case game.puzzle.origin {
+    generator.Dealt(_) -> unaided(game)
+    generator.Handwritten -> False
+  }
+
+  case game.mistakes + found > mistake_limit, timed {
+    True, _ ->
+      "Checking would find "
+      <> int.to_string(found)
+      <> " wrong, which forfeits the puzzle.\nPress c again if you mean it."
+    False, True ->
+      "Checking stays on for good, and an aided game is not timed.\nPress c again to switch it on."
+    False, False ->
+      "Checking stays on for good once it is on.\nPress c again to switch it on."
   }
 }
 

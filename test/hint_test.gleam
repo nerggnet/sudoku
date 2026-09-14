@@ -4,7 +4,6 @@ import gleam/list
 import gleam/string
 import helper
 import sudoku/board
-import sudoku/editor
 import sudoku/game
 import sudoku/key
 import sudoku/logic
@@ -55,7 +54,7 @@ pub fn a_warning_not_taken_up_does_not_keep_test() {
 pub fn checking_makes_a_game_aided_too_test() {
   // Checking works from the answer just as a hint does, so it costs the same
   // thing, and says so in the same place.
-  let checked = helper.step(helper.fixture(), key.Char("c"))
+  let checked = helper.checked(helper.fixture())
 
   assert !game.unaided(checked)
   assert list.any(helper.visible_lines(checked), string.contains(_, "(aided)"))
@@ -69,9 +68,7 @@ pub fn checking_makes_a_game_aided_too_test() {
 
 pub fn a_puzzle_typed_in_is_not_warned_about_test() {
   // It was never going to be timed, so a hint costs it nothing.
-  let assert editor.Ready(puzzle) =
-    editor.update(helper.typed(helper.puzzle_text), key.Char("p"))
-  let hinted = helper.step(game.new(puzzle), key.Char("H"))
+  let hinted = helper.step(helper.handwritten(), key.Char("H"))
 
   assert !string.contains(hinted.message, "not timed")
 }

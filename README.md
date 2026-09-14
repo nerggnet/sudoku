@@ -49,7 +49,7 @@ newspaper.
 | `m` | switch between writing and marking |
 | `u` | undo |
 | `r` | do it again |
-| `c` | check what is filled in from here on, at a price |
+| `c` | check what is filled in from here on, at a price (press twice) |
 | `H` | take the next step, and say why |
 | `R` | reveal the whole solution |
 | `n` | start a new puzzle |
@@ -180,8 +180,10 @@ difficulty for the rest of the puzzle — `Hard (aided)` — since that is what
 the difficulty no longer quite means. The asking comes once: after that, hints
 are given as soon as they are asked for. Checking makes a game aided in the
 same way and by the same reasoning, so a game that has already been checked
-is not asked twice about a hint. A puzzle typed in is never warned about at
-all, having no time to lose.
+is not asked twice about a hint. A puzzle typed in is never warned about a
+hint at all, having no time to lose — though it is still warned about
+checking, which is irreversible and can forfeit whatever the puzzle came
+from.
 
 A hint answers the cell you are on. You asked while looking at it, so that is
 the cell it takes first — and only two techniques settle a cell rather than
@@ -281,6 +283,25 @@ more about one elsewhere.
 `c` calls out the digits that disagree with the answer. It turns a guess into
 a free question, so it is not free, and it is not a switch either: checking
 goes on and stays on for the rest of the puzzle.
+
+Because of that, the first `c` only says what the second one would do:
+
+```
+ Checking stays on for good, and an aided game is not timed.
+ Press c again to switch it on.
+```
+
+Where there are already more wrong digits than the allowance covers, it says
+so plainly instead, since the second `c` would end the puzzle rather than
+start anything:
+
+```
+ Checking would find 5 wrong, which forfeits the puzzle.
+ Press c again if you mean it.
+```
+
+Unlike the warning about hints, this one comes every time checking is asked
+for, which is once: it is the last chance to not do it.
 
 ```
  S U D O K U    Hard    checking 2/3

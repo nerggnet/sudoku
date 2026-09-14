@@ -220,7 +220,7 @@ pub fn a_wrong_digit_while_checking_leaves_marks_alone_test() {
   // A3 is a 4 in the solution, so a 1 there is wrong and checking says so.
   let played =
     helper.marked_around_a3()
-    |> helper.step(key.Char("c"))
+    |> helper.checked
     |> helper.step(key.Digit(1))
 
   assert board.value(played.board, 2) == 1
@@ -234,7 +234,7 @@ pub fn a_wrong_digit_while_checking_leaves_marks_alone_test() {
 pub fn a_right_digit_while_checking_still_tidies_up_test() {
   let played =
     helper.marked_around_a3()
-    |> helper.step(key.Char("c"))
+    |> helper.checked
     |> helper.step(key.Digit(4))
 
   assert board.sorted_marks(played.board, 2) == []
@@ -255,7 +255,7 @@ pub fn a_wrong_digit_tidies_up_as_usual_when_not_checking_test() {
 pub fn correcting_a_wrong_digit_tidies_up_after_it_test() {
   let corrected =
     helper.marked_around_a3()
-    |> helper.step(key.Char("c"))
+    |> helper.checked
     |> helper.step(key.Digit(1))
     |> helper.step(key.Digit(4))
 

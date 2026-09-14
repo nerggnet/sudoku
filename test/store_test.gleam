@@ -18,7 +18,7 @@ pub fn a_game_survives_being_written_out_and_read_back_test() {
     helper.fixture()
     |> helper.step(key.Digit(4))
     |> helper.step(key.Char("f"))
-    |> helper.step(key.Char("c"))
+    |> helper.checked
     |> helper.step(key.Char("H"))
     |> helper.step(key.Right)
 
@@ -56,8 +56,7 @@ pub fn what_a_game_cost_survives_too_test() {
     board.value(helper.fixture().board, index) == 0
   }
 
-  let costly =
-    helper.step(helper.fixture(), key.Char("c")) |> helper.blunder([a, b])
+  let costly = helper.checked(helper.fixture()) |> helper.blunder([a, b])
   let assert Ok(again) = store.decode(store.encode(costly))
 
   assert again.mistakes == 2
@@ -118,7 +117,7 @@ pub fn an_unaided_solve_is_timed_test() {
 pub fn a_solve_with_help_is_not_timed_test() {
   // Checking is asked for, and never switched off again, so it is still the
   // record that the game was asked when the puzzle is done.
-  let checked = helper.solved(helper.step(helper.fixture(), key.Char("c")))
+  let checked = helper.solved(helper.checked(helper.fixture()))
   assert !game.unaided(checked)
   assert store.judge(checked, dict.new()) == game.Aided
 
