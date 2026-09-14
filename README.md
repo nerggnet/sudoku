@@ -244,6 +244,61 @@ the digit was wrong, and undo cannot untell you. A wrong digit caught this way
 also keeps the marks around it, which is the other half of the same bargain —
 see below.
 
+## Putting a puzzle down
+
+Quitting an unfinished game keeps it. The menu offers it back next time:
+
+```
+    r  Resume    Hard, 24 to go, 12:04
+```
+
+Everything that cannot be worked out again goes into the file: the clues, the
+answer, what has been written and pencilled in since, where the cursor was,
+how long it has taken, and what the game has cost in mistakes and hints. The
+undo history does not — it is the longest thing in a game by far and the least
+missed, and nobody picks up a day-old puzzle in order to walk it backwards.
+
+The file is a few lines of text under `XDG_DATA_HOME`, or `~/.local/share` if
+the environment does not name one, and it is meant to be readable:
+
+```
+sudoku 1
+origin medium
+clues ...5....3.4..6.82.75...86...3...5...8956.1374...4...9...69...38.28.1..6.3....6...
+answer 682549713943167825751238649134795286895621374267483591476952138528314967319876452
+board ...5....3.4..6.82.75...86...3...5...8956.1374...4...9...69...38.28.1..6.3....6...
+marks 0:1269 1:168 2:129 4:2479 5:2479 6:1479 7:14 9:19 11:139
+cursor 19
+clock 4
+checking yes
+wrong 0
+hints 0
+```
+
+Being readable cuts both ways, so a file is checked before it is trusted: the
+answer has to be an answer, the clues have to be that answer's clues, and what
+has been written in has to agree with them. A file that fails is not a saved
+game, and the menu simply does not offer one.
+
+Finishing a puzzle clears it, and so does asking for another with `n` — that
+abandons a puzzle rather than putting it down, and there is nothing to come
+back to.
+
+On the way out the game prints the puzzle it was playing, as the same
+81-character line `Custom` takes:
+
+```
+Thanks for playing.
+
+Saved in /Users/you/.local/share/sudoku/game
+
+This puzzle:
+...5....3.4..6.82.75...86...3...5...8956.1374...4...9...69...38.28.1..6.3....6...
+```
+
+That is the line to send someone when you want them to try the grid that beat
+you.
+
 ## Typing a puzzle in
 
 `Custom` on the menu opens an empty grid to type a puzzle into instead of
@@ -335,6 +390,7 @@ well as digits.
 | `sudoku/logic` | solving the way a person does, and rating a puzzle by it |
 | `sudoku/game` | game state and what each key does to it |
 | `sudoku/editor` | typing a puzzle in by hand |
+| `sudoku/store` | writing a game down and reading it back |
 | `sudoku/render` | drawing a frame |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |

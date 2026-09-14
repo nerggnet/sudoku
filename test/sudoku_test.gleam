@@ -13,6 +13,8 @@ import sudoku/key
 import sudoku/logic
 import sudoku/render
 import sudoku/solver
+import sudoku/store
+import sudoku/term
 
 pub fn main() -> Nil {
   gleeunit.main()
@@ -1681,6 +1683,94 @@ pub fn a_hint_tidies_up_the_marks_where_it_settles_test() {
 
   assert board.sorted_marks(marked.board, settles) == [1]
   assert board.sorted_marks(step(marked, key.Char("H")).board, settles) == []
+}
+
+// ---------------------------------------------------------------------------
+// Putting a game down and picking it up
+// ---------------------------------------------------------------------------
+
+pub fn a_game_survives_being_written_out_and_read_back_test() {
+  let played =
+    fixture()
+    |> step(key.Digit(4))
+    |> step(key.Char("f"))
+    |> step(key.Char("c"))
+    |> step(key.Char("H"))
+    |> step(key.Right)
+
+  let assert Ok(again) = store.decode(store.encode(played))
+
+  // The puzzle, and everything done to it since.
+  assert again.puzzle.solution == played.puzzle.solution
+  assert again.puzzle.origin == played.puzzle.origin
+  assert again.board.values == played.board.values
+  assert again.board.givens == played.board.givens
+  assert again.board.marks == played.board.marks
+  assert again.cursor == played.cursor
+
+  // And what the game has cost so far.
+  assert again.checking == played.checking
+  assert again.mistakes == played.mistakes
+  assert again.hints == played.hints
+
+  // The undo history is not kept: nobody walks a day-old puzzle backwards.
+  assert again.history == []
+}
+
+pub fn the_clock_picks_up_where_it_left_off_test() {
+  // A game an hour and a half old, put down and taken up again.
+  let long = game.Game(..fixture(), started_ms: term.now_ms() - 90_000)
+  let assert Ok(again) = store.decode(store.encode(long))
+
+  assert game.elapsed_ms(again) >= 89_000
+  assert game.elapsed_ms(again) <= 91_000
+}
+
+pub fn what_a_game_cost_survives_too_test() {
+  let assert [a, b, ..] = {
+    use index <- list.filter(board.indices())
+    board.value(fixture().board, index) == 0
+  }
+
+  let costly = step(fixture(), key.Char("c")) |> blunder([a, b])
+  let assert Ok(again) = store.decode(store.encode(costly))
+
+  assert again.mistakes == 2
+  assert again.checking
+}
+
+pub fn a_custom_puzzle_is_saved_as_one_test() {
+  let assert editor.Ready(puzzle) =
+    editor.update(typed(puzzle_text), key.Char("p"))
+
+  let assert Ok(again) = store.decode(store.encode(game.new(puzzle)))
+  assert again.puzzle.origin == generator.Handwritten
+}
+
+pub fn a_file_that_is_not_a_saved_game_is_refused_test() {
+  assert store.decode("") == Error(Nil)
+  assert store.decode("hello") == Error(Nil)
+
+  // A file from a version this cannot read.
+  let written = store.encode(fixture())
+  assert store.decode(string.replace(written, "sudoku 1", "sudoku 2"))
+    == Error(Nil)
+}
+
+pub fn a_saved_game_that_does_not_hold_together_is_refused_test() {
+  let written = store.encode(fixture())
+
+  // An answer that is not an answer.
+  assert store.decode(string.replace(written, "answer 534", "answer 634"))
+    == Error(Nil)
+
+  // Clues that are not that answer's clues.
+  assert store.decode(string.replace(written, "clues 53", "clues 13"))
+    == Error(Nil)
+
+  // A board that disagrees with its own clues.
+  assert store.decode(string.replace(written, "board 53", "board 13"))
+    == Error(Nil)
 }
 
 // ---------------------------------------------------------------------------

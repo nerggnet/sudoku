@@ -365,7 +365,8 @@ fn cursor_marks(current: Game) -> String {
   }
 }
 
-fn clock(milliseconds: Int) -> String {
+/// Milliseconds as `mm:ss`.
+pub fn clock(milliseconds: Int) -> String {
   let seconds = milliseconds / 1000
   pad(seconds / 60) <> ":" <> pad(seconds % 60)
 }
@@ -410,7 +411,7 @@ const key_reference = [
   #("R", "reveal the whole solution"),
   #("n", "start a new puzzle"),
   #("?", "close this help"),
-  #("q", "quit"),
+  #("q", "quit, keeping a game in progress"),
 ]
 
 const mark_notes = [
