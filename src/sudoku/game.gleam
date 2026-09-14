@@ -37,9 +37,8 @@ pub type Game {
     /// When the help went up, while it is up. Reading is not playing, so the
     /// clock waits for it.
     resting_since: Option(Int),
-    /// The cell the player has already been told nothing settles yet. Asking
-    /// again there is what sends a hint looking elsewhere.
-    stuck: Option(Int),
+    /// What the game has offered to do if asked a second time.
+    offered: Option(Offer),
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -48,6 +47,20 @@ pub type Game {
     started_ms: Int,
     finished_ms: Option(Int),
   )
+}
+
+/// Something the game will do if asked again, having declined to do it
+/// unasked.
+///
+/// An offer stands only until the next keystroke. Asking again means asking
+/// again straight away, so that a key pressed a minute later cannot turn out
+/// to have meant something the player has long since forgotten offering.
+pub type Offer {
+  /// Nothing settles this cell yet. Asking again looks elsewhere.
+  LookElsewhere(Int)
+  /// Every empty cell is marked up. Asking again marks them all afresh,
+  /// which is the only way to be rid of marks made wrongly by hand.
+  RedoMarks
 }
 
 /// The help, a page at a time: the keys, and then a page on each way of
@@ -89,7 +102,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     marking: False,
     help: None,
     resting_since: None,
-    stuck: None,
+    offered: None,
     hints: 0,
     mistakes: 0,
     ending: None,
@@ -159,7 +172,7 @@ fn wake(game: Game) -> Game {
     ..game,
     help: None,
     resting_since: None,
-    stuck: None,
+    offered: None,
     started_ms: game.started_ms + rested,
   )
 }
@@ -180,11 +193,12 @@ fn turn(game: Game, page: Help, by: Int) -> Game {
 }
 
 fn play(game: Game, pressed: Key) -> Step {
-  // Asking for a hint twice over at one cell is what moves it along, so
-  // anything else done in between forgets that the first one was asked.
-  let game = case pressed {
-    key.Char("H") -> game
-    _ -> Game(..game, stuck: None)
+  // An offer only stands for the very next keystroke, and only for the key
+  // that made it.
+  let game = case pressed, game.offered {
+    key.Char("H"), Some(LookElsewhere(_)) -> game
+    key.Char("f"), Some(RedoMarks) -> game
+    _, _ -> Game(..game, offered: None)
   }
 
   case pressed {
@@ -315,9 +329,19 @@ fn fill(game: Game) -> Game {
     && set.is_empty(board.marks_at(game.board, index))
   }
 
-  case bare {
-    [] -> Game(..game, message: "Every empty cell is marked up already.")
-    _ -> {
+  case bare, game.offered == Some(RedoMarks) {
+    // Asked a second time with nothing bare left: mark the lot afresh, which
+    // is the only way to be rid of marks made wrongly by hand.
+    [], True -> afresh(game)
+
+    [], False ->
+      Game(
+        ..game,
+        offered: Some(RedoMarks),
+        message: "Every empty cell is marked up already.\nPress f again to mark them all afresh.",
+      )
+
+    _, _ -> {
       let pencilled = {
         use current, index <- list.fold(bare, game.board)
         use current, digit <- list.fold(
@@ -346,6 +370,43 @@ fn fill(game: Game) -> Game {
       )
     }
   }
+}
+
+/// Mark every empty cell afresh, whatever was there before.
+///
+/// Marks made by hand are left alone by filling, which is the right way round
+/// while they are being reasoned with. But a mark made wrongly, or made and
+/// forgotten, then sits there looking as settled as any other, and nothing
+/// else will shift it. This is the way out, and it takes asking twice because
+/// what it throws away is the player's own work.
+fn afresh(game: Game) -> Game {
+  let peers = board.peers_table()
+  let grid = game.board.values
+
+  let empty = {
+    use index <- list.filter(board.indices())
+    board.value(game.board, index) == 0
+  }
+
+  let marked = {
+    use so_far, index <- list.fold(empty, game.board)
+    use marked, digit <- list.fold(
+      board.candidates(grid, peers, index),
+      board.clear_marks(so_far, index),
+    )
+    board.toggle_mark(marked, index, digit)
+  }
+
+  let done = game |> remember |> with_board(marked)
+
+  Game(
+    ..done,
+    offered: None,
+    message: "Marked all "
+      <> int.to_string(list.length(empty))
+      <> " empty cells afresh.\n"
+      <> "What you had pencilled in yourself is gone.",
+  )
 }
 
 fn toggle_marking(game: Game) -> Game {
@@ -467,7 +528,7 @@ fn hint(game: Game) -> Game {
     _ ->
       case here(game) {
         // The cell being looked at is the cell being asked about.
-        Ok(step) -> take(Game(..game, stuck: None), step)
+        Ok(step) -> take(Game(..game, offered: None), step)
 
         Error(_) ->
           case waiting(game) {
@@ -476,7 +537,7 @@ fn hint(game: Game) -> Game {
             // reason, and an answer three rows away is not one they asked
             // for.
             True -> hold(game)
-            False -> elsewhere(Game(..game, stuck: None))
+            False -> elsewhere(Game(..game, offered: None))
           }
       }
   }
@@ -485,13 +546,14 @@ fn hint(game: Game) -> Game {
 /// Whether this cell is worth waiting at: an empty one the player has not
 /// already been told about.
 fn waiting(game: Game) -> Bool {
-  board.value(game.board, game.cursor) == 0 && game.stuck != Some(game.cursor)
+  board.value(game.board, game.cursor) == 0
+  && game.offered != Some(LookElsewhere(game.cursor))
 }
 
 fn hold(game: Game) -> Game {
   Game(
     ..game,
-    stuck: Some(game.cursor),
+    offered: Some(LookElsewhere(game.cursor)),
     message: "Nothing settles "
       <> board.name(game.cursor)
       <> " yet.\nPress H again to look elsewhere.",

@@ -102,6 +102,26 @@ thinking, and this is not the place to rub it out. Writing a digit keeps the
 rest tidy on its own, retracting that digit from every cell that can see it,
 so `f` is usually a thing you press once.
 
+Which leaves the marks you made wrongly. A cell you pencilled a single digit
+into looks as settled as any other, and nothing will shift it — filling steps
+around it by design. So when `f` finds nothing bare left to do, it offers:
+
+```
+ Every empty cell is marked up already.
+ Press f again to mark them all afresh.
+```
+
+Ask again and every empty cell is marked over from the grid, your own
+pencilling included. It takes two asks because what it throws away is your
+work, and the offer does not keep: do anything in between and the next `f` is
+a fresh question.
+
+Marks made wrongly cannot make the game lie to you in the meantime. A mark
+too wide — a digit that cannot go there — leaves the reasoning with more to
+choose from, so the hints go quieter rather than wrong. A mark too narrow can
+lead the reasoning somewhere the answer does not go, and there the hint checks
+itself, declines, and says that nothing settles the cell yet.
+
 ## Hints that explain themselves
 
 `H` used to name a digit and leave it at that, which answers the cell and

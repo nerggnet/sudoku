@@ -1521,12 +1521,66 @@ pub fn filling_leaves_the_cells_you_have_marked_alone_test() {
   assert string.contains(filled.message, "left as")
 }
 
-pub fn filling_twice_over_says_there_is_nothing_to_do_test() {
+pub fn filling_twice_over_offers_to_start_the_marks_again_test() {
   let filled = fixture() |> step(key.Char("f"))
   let again = step(filled, key.Char("f"))
 
+  // Nothing bare left, so nothing done — but an offer made.
   assert string.contains(again.message, "already")
+  assert string.contains(again.message, "Press f again")
   assert again.board == filled.board
+}
+
+/// Marks made by hand are the one thing filling will not touch, so a mark
+/// made wrongly needs a way out. This is it, and it takes asking twice.
+pub fn asking_a_third_time_marks_every_cell_afresh_test() {
+  let peers = board.peers_table()
+  let start = fixture()
+  let assert Ok(empty) =
+    list.find(board.indices(), fn(index) {
+      board.value(start.board, index) == 0
+    })
+
+  // A cell marked wrongly by hand: one candidate, and the wrong one.
+  let wrong = { game.answer(start, empty) % 9 } + 1
+  let misled =
+    game.Game(..start, cursor: empty)
+    |> step(key.Char("m"))
+    |> step(key.Digit(wrong))
+    |> step(key.Char("m"))
+
+  let afresh =
+    misled
+    |> step(key.Char("f"))
+    |> step(key.Char("f"))
+    |> step(key.Char("f"))
+
+  assert board.sorted_marks(afresh.board, empty)
+    == board.candidates(start.board.values, peers, empty)
+  assert string.contains(afresh.message, "afresh")
+
+  // Every other empty cell says what it could still take, as before.
+  use index <- list.each(board.indices())
+  case board.value(afresh.board, index) {
+    0 -> {
+      assert board.sorted_marks(afresh.board, index)
+        == board.candidates(start.board.values, peers, index)
+    }
+    _ -> Nil
+  }
+}
+
+pub fn an_offer_to_start_the_marks_again_does_not_keep_test() {
+  // Anything done in between makes the next ask a fresh one, so marks are
+  // never thrown away by a keystroke the player has forgotten the reason for.
+  let held =
+    fixture()
+    |> step(key.Char("f"))
+    |> step(key.Char("f"))
+    |> step(key.Right)
+    |> step(key.Char("f"))
+
+  assert string.contains(held.message, "Press f again")
 }
 
 pub fn filling_is_one_undo_away_test() {
