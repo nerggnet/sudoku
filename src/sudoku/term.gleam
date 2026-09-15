@@ -108,6 +108,21 @@ pub const clear_below = "\u{1b}[J"
 /// being cleared up after was not put there by us.
 pub const blank = "\u{1b}[2J"
 
+/// Take the screen over for the length of this, and give it back at the end
+/// of it — whether that end is the game finishing or the game falling over.
+///
+/// The screen being given back matters most in the case nobody plans for. A
+/// crash on the alternate screen leaves the terminal hidden, unechoed and
+/// showing the shell as it was an hour ago, with the report saying what
+/// happened printed underneath where none of it can be read.
+pub fn taking_over(play: fn() -> a) -> a {
+  enter()
+  protected(play, leave)
+}
+
+@external(erlang, "sudoku_ffi", "protected")
+fn protected(play: fn() -> a, restore: fn() -> Nil) -> a
+
 pub fn enter() -> Nil {
   // Alternate screen buffer, cursor hidden.
   write(esc <> "[?1049h" <> esc <> "[?25l" <> esc <> "[2J")

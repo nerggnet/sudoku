@@ -29,12 +29,13 @@ pub fn main() -> Nil {
 
       let raw = term.enable_raw()
 
-      term.enter()
-      let played = case opening {
-        None -> run(raw)
-        Some(chosen) -> follow(raw, chosen)
+      let played = {
+        use <- term.taking_over
+        case opening {
+          None -> run(raw)
+          Some(chosen) -> follow(raw, chosen)
+        }
       }
-      term.leave()
 
       io.println("Thanks for playing.")
       parting(played)

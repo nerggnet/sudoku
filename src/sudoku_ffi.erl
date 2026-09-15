@@ -6,6 +6,7 @@
 -export([file_path/1, write_file/2, read_file/1, forget_file/1]).
 -export([arguments/0, columns/0, rows/0]).
 -export([plain/0, set_plain/1]).
+-export([protected/2]).
 
 %% Put the terminal into raw mode: one byte at a time, no echo, no line
 %% editing. Requires OTP 26 or later; returns false when unavailable (for
@@ -17,6 +18,24 @@ enable_raw() ->
         _ -> false
     catch
         _:_ -> false
+    end.
+
+%% Run the game, and give the terminal back however it ends.
+%%
+%% Without this, anything the game falls over on leaves a terminal on the
+%% alternate screen, in raw mode, with the cursor hidden — which is where
+%% the report saying what went wrong would then be printed, for nobody. The
+%% error goes on to be reported as it always would, on a screen that can
+%% show it.
+%%
+%% Whatever goes wrong while giving the screen back is let go: it is almost
+%% certainly the same thing that went wrong in the first place, and the
+%% first thing to go wrong is the one worth reporting.
+protected(Play, Restore) ->
+    try
+        Play()
+    after
+        catch Restore()
     end.
 
 %% Read a single byte, or -1 on end of input.

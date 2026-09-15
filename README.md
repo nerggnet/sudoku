@@ -870,6 +870,14 @@ has to be followed by Enter, and it says so on the menu. The clock holds
 still there, since a frame landing on a half-typed line would rub out what
 was being typed before Enter handed it over.
 
+The screen is given back whatever happens, the crash included. A game that
+falls over on the alternate screen, in raw mode with the cursor hidden,
+would otherwise print the report saying what went wrong onto a terminal
+that cannot show it, over a shell that looks an hour out of date. The error
+is still an error and still reported; it is only reported somewhere it can
+be read. Whatever goes wrong while giving the screen back is let go, being
+most likely the same thing that went wrong in the first place.
+
 Bytes are read by a process of their own that does nothing else, and posts
 each one to the game as it arrives. That is what lets a read give up: the
 game waits on its mailbox rather than on the terminal, and a wait on a
