@@ -35,7 +35,7 @@ protected(Play, Restore) ->
     try
         Play()
     after
-        catch Restore()
+        try Restore() catch _:_ -> nil end
     end.
 
 %% Read a single byte, or -1 on end of input.
