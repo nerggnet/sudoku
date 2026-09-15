@@ -106,6 +106,18 @@ fn press(frame: String) -> key.Key {
   }
 }
 
+/// The same, for a screen that will not look the same for long: `Error` is
+/// nobody having pressed anything by the time it wanted drawing again.
+fn press_within(frame: String, milliseconds: Int) -> Result(key.Key, Nil) {
+  case key.read_within(milliseconds) {
+    Ok(key.Redraw) -> {
+      term.write(term.blank <> frame)
+      press_within(frame, milliseconds)
+    }
+    pressed -> pressed
+  }
+}
+
 /// What the opening menu offers, and what the command line can ask for
 /// instead. Only the command line asks to play a particular puzzle.
 type Choice {
@@ -149,7 +161,7 @@ fn compose(raw: Bool, current: editor.Editor) -> Option(game.Game) {
 }
 
 fn start(raw: Bool, current: game.Game) -> Option(game.Game) {
-  let #(step, ended) = play(current)
+  let #(step, ended) = play(raw, current)
 
   case step {
     // Asking for another puzzle abandons this one rather than putting it
@@ -164,14 +176,48 @@ fn start(raw: Bool, current: game.Game) -> Option(game.Game) {
   }
 }
 
-fn play(current: game.Game) -> #(game.Step, game.Game) {
+fn play(raw: Bool, current: game.Game) -> #(game.Step, game.Game) {
   let frame = render.frame(current)
   term.write(frame)
 
-  case rules.update(current, press(frame)) {
-    game.Continue(next) -> play(judged(current, next))
-    step -> #(step, current)
+  case waited(raw, current, frame) {
+    // Nothing pressed, and the clock has moved: the same game again, with
+    // the time it now says. Nothing reaches the rules, which is the point
+    // of answering the wait rather than inventing a keystroke for it — a
+    // key nobody pressed would put away every offer standing at the time.
+    Error(Nil) -> play(raw, current)
+
+    Ok(pressed) ->
+      case rules.update(current, pressed) {
+        game.Continue(next) -> play(raw, judged(current, next))
+        step -> #(step, current)
+      }
   }
+}
+
+/// Wait for a key, and only for as long as the screen in front of the player
+/// goes on being true.
+fn waited(
+  raw: Bool,
+  current: game.Game,
+  frame: String,
+) -> Result(key.Key, Nil) {
+  case counting(raw, current) {
+    False -> Ok(press(frame))
+    True ->
+      press_within(frame, render.until_clock_moves(game.elapsed_ms(current)))
+  }
+}
+
+/// Whether there is a clock running on the screen to be kept up with.
+///
+/// A pause and the help have stopped theirs and put the board away besides,
+/// and a game that is over has a time rather than a clock. Nor in a terminal
+/// that is still in line mode: what is typed there is echoed where it is
+/// typed and not handed over until Enter, and a frame landing on top of it
+/// would rub out a keystroke halfway through being made.
+fn counting(raw: Bool, current: game.Game) -> Bool {
+  raw && !current.paused && current.help == None && !game.is_finished(current)
 }
 
 /// The moment a puzzle is solved is the moment to see what the record books

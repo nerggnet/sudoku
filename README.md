@@ -434,6 +434,19 @@ The time shown on the paused screen is the time at the moment you pressed
 `p`, and it stays there. Nothing is drawn again until a key arrives, and by
 then the waiting has already been given back.
 
+The clock on the board does move, on its own, once a second. It used to sit
+still between keystrokes — the game drew a frame when it was given a key and
+at no other time, so a player sitting and thinking watched a clock that had
+stopped at whatever second they last typed in. The time was right all along,
+being counted from when the puzzle was dealt; it was only the reading of it
+that was old, which is the one way for a clock to be wrong that nobody
+forgives.
+
+It waits for whatever is left of the second and then draws, so the frame is
+new exactly when the time on it would be. Nothing else about the game moves
+in the meantime: no key is invented to go with the frame, so an offer made a
+moment ago is still standing when you answer it.
+
 ## Putting a puzzle down
 
 Quitting an unfinished game keeps it. The menu offers it back next time:
@@ -556,9 +569,10 @@ and accounted for — comes to seventy-nine.
 
 The size is asked for afresh every frame, so a window resized in the middle
 of a puzzle is noticed, and the line goes again when the room comes back.
-That happens on the next keystroke rather than the moment you let go of the
-window edge: the game is sitting waiting for a key, and a frame is what it
-draws when it gets one. `Ctrl-L` counts as one.
+Within a second of letting go of the window edge, that being how often a
+frame lands while the clock is running. On a screen with no clock on it —
+the menu, the editor, a pause — it waits for a keystroke, and `Ctrl-L`
+counts as one.
 
 A terminal that will not say how much room it has is taken at its word and
 left alone. One that answers about its width but not its height is half
@@ -831,7 +845,17 @@ arrives at once.
 Keyboard input needs OTP 26 or later, which is where
 `shell:start_interactive({noshell, raw})` arrived. Without it — on older OTP,
 or when input is piped rather than typed — the game still runs, but each key
-has to be followed by Enter, and it says so on the menu.
+has to be followed by Enter, and it says so on the menu. The clock holds
+still there, since a frame landing on a half-typed line would rub out what
+was being typed before Enter handed it over.
+
+Bytes are read by a process of their own that does nothing else, and posts
+each one to the game as it arrives. That is what lets a read give up: the
+game waits on its mailbox rather than on the terminal, and a wait on a
+mailbox can be given a deadline where `io:get_chars` cannot. A key pressed
+while the screen is being drawn waits in the mailbox rather than being lost,
+and every read goes through the one reader — two of them on one terminal
+would take a byte each in whatever order they happened to be waiting.
 
 ## Development
 

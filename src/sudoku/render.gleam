@@ -472,6 +472,20 @@ pub fn clock(milliseconds: Int) -> String {
   }
 }
 
+/// How long until the clock would say something else, in milliseconds.
+///
+/// The frame is drawn again when the time on it changes and not otherwise,
+/// so a player sitting still watching the seconds go by costs one frame a
+/// second rather than as many as the loop can manage. On the second, too:
+/// what is left of this one is what there is to wait.
+///
+/// Never nothing, whatever the moment: a wait of nothing at all is a loop
+/// that draws as fast as it can, which is a busy terminal and a clock no
+/// more right for it.
+pub fn until_clock_moves(milliseconds: Int) -> Int {
+  1000 - milliseconds % 1000
+}
+
 fn pad(value: Int) -> String {
   int.to_string(value) |> string.pad_start(2, "0")
 }

@@ -33,6 +33,28 @@ pub fn read() -> Key {
   pressed
 }
 
+/// The same, given up on if nothing is pressed within so many milliseconds.
+///
+/// Only the wait for the first byte is given up on. Once a key has started
+/// arriving the rest of it is read the ordinary way: an arrow is three bytes
+/// and a clock going off between two of them would tear the keystroke in
+/// half, leaving a `[` to be read as a keystroke of its own.
+pub fn read_within(milliseconds: Int) -> Result(Key, Nil) {
+  case term.read_byte_after(milliseconds) {
+    -2 -> Error(Nil)
+    first -> {
+      let #(pressed, _) = {
+        use waiting <- decode(True)
+        case waiting {
+          True -> #(first, False)
+          False -> #(term.read_byte(), False)
+        }
+      }
+      Ok(pressed)
+    }
+  }
+}
+
 /// Decode one keystroke, pulling bytes from `next` as the sequence demands.
 ///
 /// The byte source is threaded through as a value rather than read straight

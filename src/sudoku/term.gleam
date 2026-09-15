@@ -17,6 +17,12 @@ pub fn enable_raw() -> Bool
 @external(erlang, "sudoku_ffi", "read_byte")
 pub fn read_byte() -> Int
 
+/// The same, waiting no longer than this for one to arrive. Answers -2
+/// where none did, which is not the same as -1: nothing has been typed yet,
+/// and there may be plenty still to come.
+@external(erlang, "sudoku_ffi", "read_byte_after")
+pub fn read_byte_after(milliseconds: Int) -> Int
+
 @external(erlang, "sudoku_ffi", "now_ms")
 pub fn now_ms() -> Int
 

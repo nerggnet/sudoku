@@ -555,3 +555,23 @@ pub fn a_puzzle_being_dealt_is_named_with_the_right_article_test() {
   assert string.contains(said(generator.Hard), "a Hard puzzle")
   assert string.contains(said(generator.Medium), "a Medium puzzle")
 }
+
+pub fn the_frame_waits_only_as_long_as_the_clock_holds_still_test() {
+  // What is left of the second being counted, so the time is drawn again as
+  // it changes rather than a moment either side of it.
+  assert render.until_clock_moves(0) == 1000
+  assert render.until_clock_moves(1) == 999
+  assert render.until_clock_moves(999) == 1
+  assert render.until_clock_moves(1000) == 1000
+  assert render.until_clock_moves(90_400) == 600
+
+  // Never nothing, whenever it is asked: a wait of nothing would be a loop
+  // drawing as fast as the terminal could take it.
+  use elapsed <- list.each([0, 1, 250, 499, 500, 999, 1000, 60_000, 3_600_001])
+  assert render.until_clock_moves(elapsed) > 0
+  assert render.until_clock_moves(elapsed) <= 1000
+
+  // And the clock really does say something else by the end of the wait.
+  assert render.clock(elapsed)
+    != render.clock(elapsed + render.until_clock_moves(elapsed))
+}
