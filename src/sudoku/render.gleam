@@ -21,8 +21,17 @@ import sudoku/palette
 import sudoku/store
 import sudoku/term
 
-/// How much room a frame needs: the widest line it draws, and the most rows.
-pub const columns = 78
+/// How much room a frame needs: a window this wide and this tall, which is
+/// the eighty by twenty-four a terminal has been by default since before any
+/// of them had a screen.
+///
+/// Every line drawn has to be shorter than this rather than as long, on two
+/// counts. A frame's lines are written with a leading space, so a line of
+/// eighty characters would be eighty-one columns and wrap. And a line that
+/// fills the last column leaves a terminal in a wrapping-any-moment-now
+/// state, which the escape that ends the line happens to settle — a thing to
+/// be right about on purpose rather than by luck.
+pub const columns = 80
 
 pub const rows = 24
 

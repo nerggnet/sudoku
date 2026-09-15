@@ -241,9 +241,9 @@ pub fn every_help_page_fits_the_screen_test() {
   let showing = game.Game(..helper.fixture(), help: option.Some(page))
   let lines = helper.visible_lines(showing)
 
-  assert list.length(lines) <= 24
+  assert list.length(lines) <= render.rows
   use line <- list.each(lines)
-  assert string.length(line) <= 78
+  assert string.length(line) < render.columns
 }
 
 pub fn the_help_says_how_to_start_the_game_test() {
@@ -291,10 +291,35 @@ pub fn every_frame_fits_a_short_terminal_test() {
     helper.step(start, key.Char("?")),
     helper.step(start, key.Char("R")),
     helper.with_marks(start, [1, 2, 3, 4, 5]),
+    // The longest thing a hint can say, on the row where it is said.
+    game.Game(..start, message: longest_hint()),
   ]
 
   use current <- list.each(frames)
-  assert list.length(helper.visible_lines(current)) <= render.rows
+  let lines = helper.visible_lines(current)
+
+  assert list.length(lines) <= render.rows
+  use line <- list.each(lines)
+  assert string.length(line) < render.columns
+}
+
+/// The wordiest hint there is: a hidden single, which names its cell, its
+/// unit and its digit, argued in the box with the longest name.
+fn longest_hint() -> String {
+  let assert Ok(box) = list.drop(board.boxes(), 7) |> list.first
+  let assert Ok(index) = list.first(box)
+
+  let #(what, why) =
+    logic.explain(logic.Step(
+      technique: logic.HiddenSingle,
+      move: logic.Settle(index, 1),
+      evidence: [index],
+      about: [1],
+      unit: box,
+    ))
+
+  assert string.contains(what, "bottom-centre box")
+  what <> "\n" <> why
 }
 
 pub fn the_title_line_fits_with_everything_on_it_test() {
@@ -312,7 +337,7 @@ pub fn the_title_line_fits_with_everything_on_it_test() {
   assert string.contains(title, "marking")
   assert string.contains(title, "looking for 7")
   assert string.contains(title, "checking 3/3")
-  assert string.length(title) <= render.columns
+  assert string.length(title) < render.columns
 }
 
 pub fn finishing_shows_a_result_test() {
@@ -420,7 +445,7 @@ pub fn the_frame_starts_at_the_top_of_the_screen_test() {
 pub fn a_window_with_no_room_is_complained_about_test() {
   // Both ways of being short, and either one on its own.
   assert string.contains(render.cramped_at(60, 20), "60 by 20")
-  assert string.contains(render.cramped_at(60, 20), "78 by 24")
+  assert string.contains(render.cramped_at(60, 20), "80 by 24")
   assert render.cramped_at(60, 40) != ""
   assert render.cramped_at(100, 20) != ""
 
@@ -517,7 +542,7 @@ pub fn the_menu_fits_the_screen_test() {
 
   assert list.length(lines) <= render.rows
   use line <- list.each(lines)
-  assert string.length(line) <= render.columns
+  assert string.length(line) < render.columns
 }
 
 pub fn a_puzzle_being_dealt_is_named_with_the_right_article_test() {

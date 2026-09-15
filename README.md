@@ -541,12 +541,18 @@ explanation. On the menu it goes under the choices; on the board and in the
 editor it takes the bottom line, the one the keys are usually on:
 
 ```
- This window is 60 by 20, and the game wants 78 by 24.
+ This window is 60 by 20, and the game wants 80 by 24.
 ```
 
 The keys are a reminder, and the least missed line on the screen. A board
 wrapped into nonsense is a puzzle about the terminal rather than about
 Sudoku, and worth saying out loud.
+
+Eighty by twenty-four is what a terminal has been by default since before
+any of them had a screen, and the game keeps every line it draws inside it
+with a column to spare. A frame's lines are written with a leading space, so
+the longest of them — the wordiest a hint has: a hidden single named, argued
+and accounted for — comes to seventy-nine.
 
 The size is asked for afresh every frame, so a window resized in the middle
 of a puzzle is noticed, and the line goes again when the room comes back.
