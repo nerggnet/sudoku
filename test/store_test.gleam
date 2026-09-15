@@ -192,3 +192,38 @@ pub fn the_verdict_outlives_a_look_at_the_help_test() {
     "Your best yet",
   ))
 }
+
+pub fn a_game_is_written_down_again_only_when_it_has_moved_on_test() {
+  let start = helper.fixture()
+  let written = store.written(start)
+
+  // Nothing has happened since, so the file already says all of this.
+  assert !store.moved_on(start, written)
+  // Except the first time, when there is no file to say anything.
+  assert store.moved_on(start, store.Unwritten)
+
+  // Everything the file holds counts: the board, where the cursor was, the
+  // marks, and what the game has been asked for.
+  assert store.moved_on(helper.step(start, key.Digit(4)), written)
+  assert store.moved_on(helper.step(start, key.Down), written)
+  assert store.moved_on(helper.step(start, key.Char("f")), written)
+  assert store.moved_on(helper.checked(start), written)
+
+  // What it does not hold does not: a message is said once and gone.
+  assert !store.moved_on(game.Game(..start, message: "anything"), written)
+}
+
+pub fn the_clock_alone_is_worth_a_write_once_it_runs_away_test() {
+  let start = helper.fixture()
+  let written = store.written(start)
+
+  // Twenty seconds of staring at a grid is not worth a write of its own.
+  let thinking = game.Game(..start, started_ms: start.started_ms - 20_000)
+  assert !store.moved_on(thinking, written)
+
+  // Longer than that and it is: a terminal that dies must not be a way of
+  // stopping the clock, so what a crash can hand back is held to half a
+  // minute whether anything was played in it or not.
+  let away = game.Game(..start, started_ms: start.started_ms - 40_000)
+  assert store.moved_on(away, written)
+}

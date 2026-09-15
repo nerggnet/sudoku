@@ -38,7 +38,7 @@ pub fn encode(current: Game) -> String {
     "board " <> board.to_string(current.board.values),
     "marks " <> pencilled(current.board),
     "cursor " <> int.to_string(current.cursor),
-    "clock " <> int.to_string(game.elapsed_ms(current)),
+    clock_field <> int.to_string(game.elapsed_ms(current)),
     "checking " <> yes_no(current.checking),
     "aided " <> yes_no(current.aided),
     "wrong " <> int.to_string(current.mistakes),
@@ -144,6 +144,57 @@ pub type Kept {
   /// hour of somebody's puzzle and a confident sentence about where it went
   /// is worse than no sentence at all.
   Lost(where: String)
+}
+
+/// The one line of the file that moves on its own.
+const clock_field = "clock "
+
+/// How far behind the file's clock is allowed to fall.
+///
+/// A game is written down when something happens to it, and nothing happens
+/// while somebody sits and thinks. That thinking is time spent on the puzzle
+/// all the same, so a file left at the last move would hand it back to
+/// anybody whose terminal died — a way of stopping the clock without
+/// pressing `p`, and the one thing a best time must not be open to. Half a
+/// minute is what a crash can forgive.
+const keep_within_ms = 30_000
+
+/// What has been written down, so far as the game needs to know: enough to
+/// tell whether writing it again would say anything worth saying.
+pub type Written {
+  /// Nothing yet, which is always worth writing.
+  Unwritten
+  Written(shape: String, clock: Int)
+}
+
+/// Mark this game as the one now written down.
+pub fn written(current: Game) -> Written {
+  Written(shape: shape(current), clock: game.elapsed_ms(current))
+}
+
+/// Whether the game has moved on from what is written down.
+///
+/// Two ways it can have. Something the file holds is different, which is
+/// somebody having played; or the clock has run on far enough that the file
+/// would give time back.
+pub fn moved_on(current: Game, written: Written) -> Bool {
+  case written {
+    Unwritten -> True
+    Written(shape: was, clock: then) ->
+      shape(current) != was || game.elapsed_ms(current) - then > keep_within_ms
+  }
+}
+
+/// What would be written down, apart from how long it has taken.
+///
+/// Compared as the text itself rather than as a list of fields to check, so
+/// that a field added to the file cannot be left out of this by forgetting
+/// to add it twice.
+fn shape(current: Game) -> String {
+  encode(current)
+  |> string.split("\n")
+  |> list.filter(fn(line) { !string.starts_with(line, clock_field) })
+  |> string.join("\n")
 }
 
 /// Keep this game to come back to. A game already over is not kept: there is

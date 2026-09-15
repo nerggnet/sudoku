@@ -161,7 +161,7 @@ fn compose(raw: Bool, current: editor.Editor) -> Option(game.Game) {
 }
 
 fn start(raw: Bool, current: game.Game) -> Option(game.Game) {
-  let #(step, ended) = play(raw, current)
+  let #(step, ended) = play(raw, store.Unwritten, current)
 
   case step {
     // Asking for another puzzle abandons this one rather than putting it
@@ -176,7 +176,11 @@ fn start(raw: Bool, current: game.Game) -> Option(game.Game) {
   }
 }
 
-fn play(raw: Bool, current: game.Game) -> #(game.Step, game.Game) {
+fn play(
+  raw: Bool,
+  written: store.Written,
+  current: game.Game,
+) -> #(game.Step, game.Game) {
   let frame = render.frame(current)
   term.write(frame)
 
@@ -185,12 +189,35 @@ fn play(raw: Bool, current: game.Game) -> #(game.Step, game.Game) {
     // the time it now says. Nothing reaches the rules, which is the point
     // of answering the wait rather than inventing a keystroke for it — a
     // key nobody pressed would put away every offer standing at the time.
-    Error(Nil) -> play(raw, current)
+    Error(Nil) -> play(raw, kept(current, written), current)
 
     Ok(pressed) ->
       case rules.update(current, pressed) {
-        game.Continue(next) -> play(raw, judged(current, next))
+        game.Continue(next) -> {
+          let next = judged(current, next)
+          play(raw, kept(next, written), next)
+        }
         step -> #(step, current)
+      }
+  }
+}
+
+/// Write the game down as it is played, so that a terminal closed, a laptop
+/// shut or a fault in here costs half a minute of somebody's puzzle rather
+/// than all of it.
+///
+/// Quietly. A game put down on purpose is worth a sentence about where it
+/// went, and there is one on the way out; a game written down every time it
+/// changes is worth nothing being said at all. A write that fails is not
+/// marked as written, so the next change tries again — and the sentence on
+/// the way out still tells the truth about the last of them.
+fn kept(current: game.Game, written: store.Written) -> store.Written {
+  case store.moved_on(current, written) {
+    False -> written
+    True ->
+      case store.keep(current) {
+        store.Lost(_) -> written
+        _ -> store.written(current)
       }
   }
 }

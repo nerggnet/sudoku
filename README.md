@@ -449,7 +449,9 @@ moment ago is still standing when you answer it.
 
 ## Putting a puzzle down
 
-Quitting an unfinished game keeps it. The menu offers it back next time:
+Quitting an unfinished game keeps it, and so does playing one: the file is
+written as you go, whenever something has happened that it would say
+differently. The menu offers it back next time:
 
 ```
     r  Resume    Hard, 24 to go, 12:04
@@ -474,9 +476,28 @@ marks 0:1269 1:168 2:129 4:2479 5:2479 6:1479 7:14 9:19 11:139
 cursor 19
 clock 4
 checking yes
+aided yes
 wrong 0
 hints 0
 ```
+
+Writing it as the game goes is what makes the file worth anything when the
+game does not get to the end. A terminal closed on a whim, a laptop shut, a
+connection dropped, a fault in here — none of them come by on the way out to
+put the puzzle down, and an hour of somebody's work should not hang on the
+game being allowed to finish its sentence.
+
+Nothing is said about any of it while it happens. A game put down on purpose
+is worth a line saying where it went, and there is one; a game written down
+forty times an hour is worth nothing being said at all. A write that fails is
+simply not counted as written, so the next move tries again, and the line on
+the way out still answers for the last of them.
+
+The clock is the one thing in the file that moves on its own, and it is not
+worth a write by itself — except that leaving it would make a dead terminal
+into a way of stopping the clock without pressing `p`. So the file is brought
+up to date whenever it would otherwise hand back more than half a minute.
+What a crash costs is thirty seconds of the clock and nothing of the grid.
 
 Being readable cuts both ways, so a file is checked before it is trusted: the
 answer has to be an answer, the clues have to be that answer's clues, and what
