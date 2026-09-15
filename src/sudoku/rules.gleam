@@ -85,6 +85,11 @@ fn turn(current: game.Game, page: game.Help, by: Int) -> game.Game {
 ///
 /// Not once the game is over: the time then is a result, and a result does
 /// not move.
+///
+/// What the record books made of it does not move either. An offer and a
+/// hint's markings last until the next keystroke and are cleared here with
+/// everything else; a verdict is settled once, when the last digit goes in,
+/// and reading about a technique afterwards is no reason to take it back.
 fn wake(current: game.Game) -> game.Game {
   let rested = case current.resting_since, current.finished_ms {
     Some(since), None -> term.now_ms() - since
@@ -97,7 +102,6 @@ fn wake(current: game.Game) -> game.Game {
     paused: False,
     resting_since: None,
     offered: None,
-    verdict: None,
     showing: None,
     started_ms: current.started_ms + rested,
   )

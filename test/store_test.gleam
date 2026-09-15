@@ -173,3 +173,22 @@ pub fn the_finished_panel_says_what_the_books_made_of_it_test() {
   assert !list.any(said(game.Untimed), string.contains(_, "recorded"))
   assert !list.any(said(game.Untimed), string.contains(_, "best"))
 }
+
+pub fn the_verdict_outlives_a_look_at_the_help_test() {
+  // The techniques are worth reading about once the puzzle is done, and the
+  // page that explains the last hint is one keystroke away from the panel.
+  let judged =
+    game.Game(
+      ..helper.solved(helper.fixture()),
+      verdict: option.Some(game.BestYet),
+    )
+
+  let read_about_it =
+    judged |> helper.step(key.Char("?")) |> helper.step(key.Char("x"))
+
+  assert read_about_it.verdict == option.Some(game.BestYet)
+  assert list.any(helper.visible_lines(read_about_it), string.contains(
+    _,
+    "Your best yet",
+  ))
+}
