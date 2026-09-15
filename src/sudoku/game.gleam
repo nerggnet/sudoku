@@ -62,6 +62,8 @@ pub type Game {
     showing: Option(logic.Step),
     /// The digit being looked for, if any.
     scan: Scan,
+    /// A digit asked for and not yet given, until the next keystroke.
+    asking: Asking,
     hints: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
@@ -133,11 +135,26 @@ pub type Moment {
 /// nothing, the same as pencilling the candidates in costs nothing.
 pub type Scan {
   NotScanning
-  /// Asked for, and waiting to hear which digit.
-  Picking
   /// Every empty cell this digit could still go in is marked out, and stays
   /// marked out while the player moves about looking at them.
   ScanningFor(digit: Int)
+}
+
+/// A key that has asked for a digit and is waiting to hear which one.
+///
+/// Two keys ask, and a digit means whatever the one that asked meant it to.
+/// Only the very next keystroke: asking is not a mode to be in, and anything
+/// else means the player has gone back to playing, so that keystroke should
+/// do what it always does.
+///
+/// One question at a time, which is why this is one field rather than a flag
+/// apiece. Nothing can be waiting to hear two answers to the same digit.
+pub type Asking {
+  NotAsking
+  /// `S`: which digit to look for.
+  WhichToLookFor
+  /// `M`: which digit to pencil in, or rub out.
+  WhichToPencil
 }
 
 /// The help, a page at a time: the keys, and then a page on each way of
@@ -222,6 +239,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     verdict: None,
     showing: None,
     scan: NotScanning,
+    asking: NotAsking,
     hints: 0,
     mistakes: 0,
     aided: False,

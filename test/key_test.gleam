@@ -47,16 +47,21 @@ pub fn the_delete_key_decodes_test() {
 
 pub fn shifted_digits_decode_test() {
   // The number row with shift held. Both rows are read, so ! is a 1 either
-  // way and @ is a 2 on the keyboard that has one there.
+  // way, and @ and " are each a 2 on the keyboard that has one there.
   assert helper.press([0x21]) == key.Shifted(1)
   assert helper.press([0x22]) == key.Shifted(2)
   assert helper.press([0x40]) == key.Shifted(2)
+  assert helper.press([0x5e]) == key.Shifted(6)
+  assert helper.press([0x2f]) == key.Shifted(7)
+  assert helper.press([0x2a]) == key.Shifted(8)
   assert helper.press([0x29]) == key.Shifted(9)
 
-  // Where the two rows disagree the first of them wins: ( sits over 8 on one
-  // keyboard and 9 on another, and there is no telling which is in front of
-  // the player.
-  assert helper.press([0x28]) == key.Shifted(8)
+  // Where the two rows disagree nobody wins. & sits over 6 on one keyboard
+  // and 7 on another, and the byte says which character arrived rather than
+  // which key was pressed — so it stays a character, and M and a digit is
+  // the way in that no layout can get wrong.
+  assert helper.press([0x26]) == key.Char("&")
+  assert helper.press([0x28]) == key.Char("(")
 
   // A character over no digit at all is still itself.
   assert helper.press([0x3d]) == key.Char("=")

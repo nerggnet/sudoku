@@ -44,7 +44,7 @@ newspaper.
 | --- | --- |
 | `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
 | `1`–`9` | write a digit, or pencil one in while marking |
-| shift `1`–`9` | pencil a digit in either way round |
+| `M` then `1`–`9` | pencil one digit in, or rub it out |
 | `0`, space, backspace | clear the cell, or its marks while marking |
 | `f` | pencil the candidates into every bare cell |
 | `S` then `1`-`9` | mark out where that digit can still go |
@@ -716,14 +716,23 @@ Press `m` to switch to marking, then `1`–`9` to pencil candidates into a cell
 and the same key again to rub one out. `m` switches back to writing digits;
 the header and the key hints along the bottom say which mode you are in.
 
-Shift and a digit pencils one in without leaving writing, and rubs one out
+`M` and a digit pencils one in without leaving writing, and rubs one out
 without leaving marking, which saves a great deal of switching now that `f`
-fills the candidates in and marking is mostly rubbing them out again. What
-the shifted number row produces depends on the keyboard, so both the Swedish
-row and the American one are read: `!` is a 1 on either. Where the two
-disagree — `(` sits over 8 on one and 9 on the other — the Swedish reading
-wins, there being no way to tell which keyboard is in front of the player.
-Anyone whose row is neither still has `m`.
+fills the candidates in and marking is mostly rubbing them out again. It asks
+which digit and takes the next one as the answer, the way `S` does, and that
+is the whole of it: anything but a digit means you have gone back to playing,
+and `M` again takes the question back.
+
+Shift and a digit does the same in one keystroke, where the keyboard is one
+the game can read. What the shifted number row produces depends on the
+layout, so both the Swedish row and the American one are read, and `!` is a 1
+on either. Where the two disagree there is nothing in the byte that arrived to
+say which key was pressed — `&` sits over 6 in Stockholm and 7 in Seattle — so
+those are let go rather than guessed at. Guessing would be wrong for half the
+keyboards in the world and quietly wrong at that: a 6 pencilled in where a 7
+was asked for reads like a slip of the hand rather than a game that cannot
+tell. `M` is the way in that no layout can get wrong, and `m` is still there
+for a whole row of them at a time.
 
 Marks get a grid of their own beside the board rather than being squeezed into
 it, which leaves the board as compact and readable as it was without them. The

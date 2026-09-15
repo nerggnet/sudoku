@@ -127,8 +127,8 @@ fn from_byte(byte: Int) -> Key {
 }
 
 /// The number row with shift held, on two of the keyboards it is laid out
-/// differently on. A player whose keyboard is neither still has the mode
-/// switch, which is what everybody had before.
+/// differently on. A player whose keyboard is neither still has `M` and a
+/// digit, which no layout can get wrong.
 const shifted_rows = ["!\"#$%&/()", "!@#$%^&*("]
 
 fn printable(byte: Int) -> Key {
@@ -144,10 +144,25 @@ fn printable(byte: Int) -> Key {
   }
 }
 
-/// Which digit this character sits over, if it sits over one.
+/// Which digit this character sits over, where every layout agrees that it
+/// sits over the same one.
+///
+/// Some of them do not agree. `&` is shift-6 in Stockholm and shift-7 in
+/// Seattle, and the byte that arrives is the same either way, so there is
+/// nothing in it to say which key was pressed. A guess would be wrong for
+/// half the keyboards in the world and silently wrong at that — a 6
+/// pencilled in where a 7 was asked for reads like a slip of the hand. So a
+/// character the rows disagree about is let go rather than guessed at, and
+/// `M` and a digit is there for anybody it leaves out.
 fn shifted(character: String) -> Result(Int, Nil) {
-  use row <- list.find_map(shifted_rows)
+  case shifted_rows |> list.filter_map(over(_, character)) |> list.unique {
+    [digit] -> Ok(digit)
+    _ -> Error(Nil)
+  }
+}
 
+/// Which digit the character sits over on one keyboard.
+fn over(row: String, character: String) -> Result(Int, Nil) {
   row
   |> string.to_graphemes
   |> list.index_map(fn(over, index) { #(over, index + 1) })

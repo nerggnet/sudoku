@@ -124,6 +124,50 @@ pub fn shift_and_a_digit_marks_either_way_round_test() {
   assert while_marking.marking
 }
 
+pub fn capital_m_and_a_digit_marks_either_way_round_test() {
+  // The same as shift and a digit, in two keystrokes rather than one, and
+  // on every keyboard rather than the two the shifted row is known for.
+  let asked = helper.step(helper.fixture(), key.Char("M"))
+  assert asked.asking == game.WhichToPencil
+  assert string.contains(asked.message, "which digit")
+
+  let marked = helper.step(asked, key.Digit(4))
+  assert board.sorted_marks(marked.board, 2) == [4]
+  assert board.value(marked.board, 2) == 0
+  assert !marked.marking
+
+  // Asking again rubs it out again, and the question is over each time: the
+  // digit after it is written to the board as usual.
+  let rubbed = marked |> helper.step(key.Char("M")) |> helper.step(key.Digit(4))
+  assert board.sorted_marks(rubbed.board, 2) == []
+
+  let written = helper.step(rubbed, key.Digit(4))
+  assert board.value(written.board, 2) == 4
+}
+
+pub fn a_pencilling_asked_for_and_not_answered_lapses_test() {
+  // Anything but a digit means the player has gone back to playing, and that
+  // keystroke does what it always does rather than being swallowed.
+  let moved =
+    helper.fixture() |> helper.step(key.Char("M")) |> helper.step(key.Down)
+
+  assert moved.asking == game.NotAsking
+  assert moved.cursor != helper.fixture().cursor
+
+  // And M itself takes the question back.
+  let forgotten =
+    helper.fixture() |> helper.step(key.Char("M")) |> helper.step(key.Char("M"))
+  assert forgotten.asking == game.NotAsking
+  assert forgotten.message == ""
+}
+
+pub fn a_digit_asked_for_by_m_is_undone_in_one_test() {
+  let marked =
+    helper.fixture() |> helper.step(key.Char("M")) |> helper.step(key.Digit(4))
+
+  assert helper.step(marked, key.Char("u")).board == helper.fixture().board
+}
+
 pub fn m_switches_between_writing_and_marking_test() {
   let start = helper.fixture()
   assert !start.marking

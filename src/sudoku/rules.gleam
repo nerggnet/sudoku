@@ -138,7 +138,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
       ..current,
       offered: offered,
       showing: None,
-      scan: still_asking(current.scan, pressed),
+      asking: still_asking(current.asking, pressed),
     )
 
   case pressed {
@@ -169,19 +169,22 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Right | key.Char("l") | key.Char("d") ->
       game.Continue(move(current, 0, 1))
 
-    // A digit straight after S says which digit to look for, rather than
-    // writing anything. Only that one: a scan is a way of looking at the
-    // board, not a mode to be in.
-    key.Digit(digit) if current.scan == game.Picking ->
-      game.Continue(scan_for(current, digit))
+    // A digit straight after S or M answers the question that key asked,
+    // rather than writing anything. Only that one: asking is a thing done
+    // once, not a mode to be in.
+    key.Digit(digit) if current.asking == game.WhichToLookFor ->
+      game.Continue(scan_for(answered(current), digit))
+
+    key.Digit(digit) if current.asking == game.WhichToPencil ->
+      game.Continue(mark(answered(current), digit))
 
     key.Digit(digit) if current.marking -> game.Continue(mark(current, digit))
     key.Digit(digit) -> game.Continue(place(current, digit))
 
-    // Shift and a digit pencils one in without leaving writing, and rubs one
-    // out without leaving marking. Now that the candidates can be filled in
-    // wholesale, marking is mostly rubbing out, and a mode switch each way
-    // round for every one of them is a great deal of switching.
+    // Shift and a digit does the same as M and a digit, in one keystroke
+    // instead of two, wherever the keyboard and the game agree about which
+    // digit sits over which key. Where they do not agree `key` hands over
+    // nothing at all, and M is the way in that no layout can get wrong.
     key.Shifted(digit) -> game.Continue(mark(current, digit))
 
     key.Erase if current.marking -> game.Continue(unmark(current))
@@ -190,6 +193,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Char("p") -> game.Continue(pause(current))
     key.Char("f") -> game.Continue(fill(current))
     key.Char("m") -> game.Continue(toggle_marking(current))
+    key.Char("M") -> game.Continue(pencilling(current))
     key.Char("u") -> game.Continue(undo(current))
     key.Char("r") -> game.Continue(redo(current))
     key.Char("S") -> game.Continue(scanning(current))
@@ -371,6 +375,26 @@ fn toggle_marking(current: game.Game) -> game.Game {
   }
 }
 
+/// Ask which digit to pencil in, or take the question back.
+///
+/// One mark, and then writing carries on as it was. Marking is mostly rubbing
+/// out now that the candidates can be filled in wholesale, and switching mode
+/// each way round for every one of them is a great deal of switching — this
+/// is the way to pencil a single digit without it. Shift and a digit does the
+/// same in one keystroke, where the keyboard is one this can read.
+fn pencilling(current: game.Game) -> game.Game {
+  case current.asking {
+    game.WhichToPencil ->
+      game.Game(..current, asking: game.NotAsking, message: "")
+    _ ->
+      ask(
+        current,
+        game.WhichToPencil,
+        "Pencil which digit in?\nPress 1 to 9, or anything else to forget it.",
+      )
+  }
+}
+
 /// Pencil every candidate into the empty cells that have none.
 ///
 /// This is bookkeeping rather than insight — what a cell could still take is
@@ -518,16 +542,23 @@ fn afresh(current: game.Game) -> game.Game {
 // Looking for somewhere a digit can go
 // --------------------------------------------------------------------------
 
-/// Ask which digit to look for, or put away the scan already up.
+/// Ask which digit to look for, or put away the scan already up — and the
+/// question itself, where it is the question that is up.
 fn scanning(current: game.Game) -> game.Game {
-  case current.scan {
-    game.NotScanning ->
+  case current.scan, current.asking {
+    game.NotScanning, game.NotAsking ->
+      ask(
+        current,
+        game.WhichToLookFor,
+        "Look for which digit?\nPress 1 to 9, or anything else to forget it.",
+      )
+    _, _ ->
       game.Game(
         ..current,
-        scan: game.Picking,
-        message: "Look for which digit?\nPress 1 to 9, or anything else to forget it.",
+        scan: game.NotScanning,
+        asking: game.NotAsking,
+        message: "",
       )
-    _ -> game.Game(..current, scan: game.NotScanning, message: "")
   }
 }
 
@@ -553,14 +584,31 @@ fn room_for(cells: Int, digit: Int) -> String {
   }
 }
 
-/// A scan asked for and not answered lapses on the next keystroke, the same
+// --------------------------------------------------------------------------
+// Asking for a digit
+// --------------------------------------------------------------------------
+
+/// Put the question, whichever of the two it is.
+fn ask(current: game.Game, question: game.Asking, said: String) -> game.Game {
+  game.Game(..current, asking: question, message: said)
+}
+
+/// The question has been answered, and is no longer being asked.
+fn answered(current: game.Game) -> game.Game {
+  game.Game(..current, asking: game.NotAsking)
+}
+
+/// A question asked and not answered lapses on the next keystroke, the same
 /// way an offer does. Anything but a digit means the player has gone back to
-/// playing, and that keystroke should do what it always does.
-fn still_asking(scan: game.Scan, pressed: Key) -> game.Scan {
-  case scan, pressed {
-    game.Picking, key.Digit(_) | game.Picking, key.Char("S") -> scan
-    game.Picking, _ -> game.NotScanning
-    _, _ -> scan
+/// playing, and that keystroke should do what it always does — including the
+/// key that asked, which takes its own question back.
+fn still_asking(question: game.Asking, pressed: Key) -> game.Asking {
+  case question, pressed {
+    game.NotAsking, _ -> game.NotAsking
+    _, key.Digit(_) -> question
+    game.WhichToLookFor, key.Char("S") -> question
+    game.WhichToPencil, key.Char("M") -> question
+    _, _ -> game.NotAsking
   }
 }
 

@@ -25,7 +25,7 @@ import sudoku/term
 const board_keys = [
   #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
   #("1 - 9", "write a digit, or pencil one in while marking"),
-  #("shift 1 - 9", "pencil a digit in either way round"),
+  #("M then 1 - 9", "pencil one digit in, or rub it out"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
   #("f", "pencil the candidates in; warns of a dead cell"),
   #("S then 1 - 9", "mark out where that digit can go; S again stops"),
@@ -88,13 +88,13 @@ const ask_notes = [
 ]
 
 const mark_notes = [
-  "Marks show in the grid beside the board: the digit itself where a cell",
-  "has one, an asterisk where it has several. Move onto a cell to read",
-  "all of its marks in the status line. Writing a digit rubs out the marks",
-  "it rules out, but not while checking is on and the digit is wrong.",
-  "",
-  "S and a digit shades every cell that digit could still go in. It reads",
-  "the grid, not your marks, so a mark made wrongly cannot mislead it.",
+  "Marks show in the grid beside the board: the digit itself where a cell has",
+  "one, an asterisk where it has several, and all of them in the status line.",
+  "Writing a digit rubs out the marks it rules out, unless checking is on and",
+  "the digit is wrong. M and a digit pencils one in without leaving writing,",
+  "and shift and a digit does the same in one keystroke, where the game can",
+  "read your number row. S and a digit shades every cell that digit could",
+  "still go in, read off the grid rather than your marks.",
 ]
 
 /// A key reference, with a paragraph under it. Used for both the game's help

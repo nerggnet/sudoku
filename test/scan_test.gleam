@@ -20,7 +20,8 @@ fn looking_for(digit: Int) -> game.Game {
 pub fn asking_for_a_scan_asks_which_digit_test() {
   let asked = helper.step(helper.fixture(), key.Char("S"))
 
-  assert asked.scan == game.Picking
+  assert asked.asking == game.WhichToLookFor
+  assert asked.scan == game.NotScanning
   assert string.contains(asked.message, "which digit")
   assert string.contains(asked.message, "1 to 9")
 
@@ -99,8 +100,34 @@ pub fn a_scan_asked_for_and_not_answered_lapses_test() {
   let moved =
     helper.fixture() |> helper.step(key.Char("S")) |> helper.step(key.Down)
 
+  assert moved.asking == game.NotAsking
   assert moved.scan == game.NotScanning
   assert moved.cursor != helper.fixture().cursor
+}
+
+pub fn asking_and_asking_again_takes_the_question_back_test() {
+  // S while it is still waiting to hear which digit, which is a player who
+  // has thought better of it rather than one asking twice.
+  let forgotten =
+    helper.fixture() |> helper.step(key.Char("S")) |> helper.step(key.Char("S"))
+
+  assert forgotten.asking == game.NotAsking
+  assert forgotten.scan == game.NotScanning
+  assert forgotten.message == ""
+}
+
+pub fn the_two_questions_do_not_overlap_test() {
+  // M while S is waiting puts S's question away and asks its own: a digit
+  // can only answer one of them.
+  let pencilling =
+    helper.fixture() |> helper.step(key.Char("S")) |> helper.step(key.Char("M"))
+
+  assert pencilling.asking == game.WhichToPencil
+  assert pencilling.scan == game.NotScanning
+
+  let marked = helper.step(pencilling, key.Digit(4))
+  assert board.sorted_marks(marked.board, marked.cursor) == [4]
+  assert marked.scan == game.NotScanning
 }
 
 pub fn a_digit_written_while_looking_is_still_written_test() {
