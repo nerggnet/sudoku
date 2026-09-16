@@ -206,6 +206,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Char("c") -> game.Continue(start_checking(current))
     key.Char("H") -> game.Continue(hint.hint(current))
     key.Char("R") -> game.Continue(revealing(current))
+    key.Char("X") -> game.Continue(starting_again(current))
 
     _ -> game.Continue(current)
   }
@@ -763,6 +764,45 @@ fn revealing(current: game.Game) -> game.Game {
         message: "Press R again to fill the answer in.\nThat is the end of this puzzle.",
       )
   }
+}
+
+/// Wipe the grid back to the clues and play the same puzzle again.
+///
+/// Asked for twice while there is work to lose, the same as giving up is —
+/// and for the same reason, since this throws away exactly as much of the
+/// grid. What it does not throw away is the puzzle, which is the whole
+/// difference between it and `n`.
+fn starting_again(current: game.Game) -> game.Game {
+  case under_way(current), current.offered == Some(game.StartAgain) {
+    False, _ | _, True -> start_again(current)
+    True, False ->
+      game.Game(
+        ..current,
+        offered: Some(game.StartAgain),
+        message: "Press X again to start this puzzle over.\nThe grid goes back to its clues. The clock does not go back.",
+      )
+  }
+}
+
+/// The clues, and nothing else that was on the grid.
+///
+/// What the game has cost stays where it is: the clock runs on, the mistakes
+/// stand, checking is still on if it was on, and a game helped along is still
+/// an aided one. Starting the grid again is not starting the game again, and
+/// a clock that could be wound back by pressing a key would be no clock —
+/// `p` is there for stopping it, and it puts the board away to do it.
+///
+/// One undo away all the same, the way marking everything afresh is. Asking
+/// twice is for meaning it; it is not a reason to make a slip final.
+fn start_again(current: game.Game) -> game.Game {
+  let fresh = current |> game.remember |> game.with_board(current.puzzle.board)
+
+  game.Game(
+    ..fresh,
+    cursor: game.first_empty(current.puzzle.board) |> option.unwrap(0),
+    offered: None,
+    message: "Back to the clues. The clock has not gone back with them.",
+  )
 }
 
 fn reveal(current: game.Game) -> game.Game {

@@ -55,6 +55,7 @@ newspaper.
 | `H` | take the next step, and say why |
 | `R` | reveal the whole solution (press twice) |
 | `p` | pause: put the board away and stop the clock |
+| `X` | start this puzzle again (press twice) |
 | `n` | start a new puzzle |
 | `?` | help, and the techniques a page at a time |
 | `q` | quit |
@@ -617,6 +618,25 @@ a game that is over cannot be walked back out of.
  Press R again to fill the answer in.
  That is the end of this puzzle.
 ```
+
+`X` starts the same puzzle again: the grid goes back to the clues it was
+dealt with, and the puzzle stays. It asks twice as well, since it throws away
+exactly as much of the grid as giving up does.
+
+```
+ Press X again to start this puzzle over.
+ The grid goes back to its clues. The clock does not go back.
+```
+
+That last line is the whole of the difference between starting the grid again
+and starting the game again. The clock runs on, the mistakes stand, checking
+is still on if it was on, and a game helped along is still an aided one — a
+grid that could be wiped for a fresh clock would be a way of stopping time
+without pressing `p`, and `p` puts the board away for a reason. What `X` gives
+you is the puzzle back, not the hour back.
+
+It is one `u` away all the same, the way marking everything afresh is. Asking
+twice is for meaning it; it is not a reason to make a slip final.
 
 On the way out the game prints the puzzle it was playing, as the same
 81-character line `Custom` takes:

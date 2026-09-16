@@ -72,6 +72,7 @@ const asking_keys = [
   #("H", "take the next step, and say why"),
   #("R", "reveal the whole solution, on a second R"),
   #("p", "pause: put the board away and stop the clock"),
+  #("X", "start this puzzle again, on a second X"),
   #("n", "start a new puzzle"),
   #("Ctrl-L", "draw the screen again"),
   #("?", "close this help"),

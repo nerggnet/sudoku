@@ -100,6 +100,8 @@ pub type Offer {
   /// There is a puzzle here to solve. Asking again fills the answer in and
   /// ends it.
   Reveal
+  /// There is work on the grid. Asking again wipes it back to the clues.
+  StartAgain
 }
 
 /// The key that made an offer is the key that takes it up. Anything else
@@ -112,6 +114,7 @@ pub fn asked_by(offer: Offer) -> List(Key) {
     TakeHint -> [key.Char("H")]
     StartChecking -> [key.Char("c")]
     Reveal -> [key.Char("R")]
+    StartAgain -> [key.Char("X")]
   }
 }
 
