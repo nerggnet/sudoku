@@ -26,6 +26,11 @@ pub fn read_byte_after(milliseconds: Int) -> Int
 @external(erlang, "sudoku_ffi", "now_ms")
 pub fn now_ms() -> Int
 
+/// Stop the game, saying how it went: 0 where nothing went wrong, and
+/// anything else where something did. Never returns.
+@external(erlang, "sudoku_ffi", "stop")
+pub fn stop(status: Int) -> Nil
+
 /// What was asked for on the command line.
 @external(erlang, "sudoku_ffi", "arguments")
 pub fn arguments() -> List(String)

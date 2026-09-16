@@ -9,6 +9,7 @@ gleam run -- custom           # type a puzzle in
 gleam run -- resume           # pick up the game you left
 gleam run -- 53..7....6..1..  # play that puzzle, dots for the blanks
 gleam run -- --plain          # draw without colour
+gleam run -- --help           # say all this and stop
 ```
 
 Pick a difficulty, then play. Puzzles are generated fresh each time, always
@@ -671,6 +672,28 @@ That is the line to send someone when you want them to try the grid that beat
 you — and `gleam run -- <the line>` is how they play it, rather than typing
 eighty-one characters into `Custom` by hand. A line that is not a puzzle with
 exactly one answer is refused with the same words the editor uses.
+
+## What the command line answers with
+
+`--help`, or `-h`, prints the ways to start the game — the block at the top
+of this page — and stops. It is a question rather than a mistake, so it goes
+to standard output and the game exits 0, and nothing typed beside it can turn
+it into a mistake: neither a puzzle, nor a flag that would have been one on
+its own.
+
+A command line the game cannot read is the other way round: the same usage,
+printed to standard error, and an exit code a shell can notice. Asking to
+resume with nothing to resume is a refusal of that kind too, since something
+was asked for and could not be given:
+
+```sh
+$ gleam run -- resume
+There is no game waiting to be picked up.    # on standard error, exit 1
+```
+
+That matters for the one way this game gets scripted: `gleam run -- <puzzle>`
+with a line somebody sent you. A puzzle that turns out not to be one now says
+so where a script can hear it.
 
 ## When the terminal gets in the way
 

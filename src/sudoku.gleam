@@ -3,11 +3,11 @@
 import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/result
 import sudoku/board
 import sudoku/editor
 import sudoku/game
 import sudoku/generator.{type Difficulty}
+import sudoku/help
 import sudoku/invocation
 import sudoku/key
 import sudoku/practice
@@ -18,9 +18,17 @@ import sudoku/term
 
 pub fn main() -> Nil {
   case opening(term.arguments()) {
-    // Said before the screen is taken over, where it can be read afterwards.
-    Error(complaint) -> io.println(complaint)
-    Ok(#(opening, plain)) -> {
+    // Both said before the screen is taken over, where they can be read
+    // afterwards. A question answered goes out the ordinary way; a command
+    // line that could not be read goes out the way a shell can notice,
+    // which is what a script piping this about has to go on.
+    Say(said, True) -> io.println(said)
+    Say(said, False) -> {
+      io.println_error(said)
+      term.stop(1)
+    }
+
+    Start(opening, plain) -> {
       // Only ever switched on here: without the flag the environment has the
       // say, and NO_COLOR is not something to talk anybody out of.
       case plain {
@@ -44,25 +52,37 @@ pub fn main() -> Nil {
   }
 }
 
+/// What the words the game was started with leave it to do.
+type Opening {
+  /// Play: this, or the menu where nothing was named.
+  Start(chosen: Option(Choice), plain: Bool)
+  /// Say this and stop, the screen never having been taken over. Whether it
+  /// was asked for decides the way out: a question answered is not a
+  /// failure, and a line nobody could read is not a success.
+  Say(said: String, asked_for: Bool)
+}
+
 /// What the command line leaves the game to do, which is what it asked for
 /// with the one thing added that reading words cannot settle: whether there
 /// is in fact a game waiting to be picked up.
-fn opening(arguments: List(String)) -> Result(#(Option(Choice), Bool), String) {
-  use asked <- result.try(invocation.read(arguments))
-
-  let chosen = case asked.asked {
-    invocation.Menu -> Ok(None)
-    invocation.Compose -> Ok(Some(Compose))
-    invocation.Deal(difficulty) -> Ok(Some(Deal(difficulty)))
-    invocation.Play(puzzle) -> Ok(Some(Play(puzzle)))
-    invocation.Resume ->
-      case store.saved() {
-        Ok(current) -> Ok(Some(Resume(current)))
-        Error(_) -> Error("There is no game waiting to be picked up.")
+fn opening(arguments: List(String)) -> Opening {
+  case invocation.read(arguments) {
+    Error(complaint) -> Say(complaint, False)
+    Ok(asked) ->
+      case asked.asked {
+        invocation.Explain -> Say(help.usage(), True)
+        invocation.Menu -> Start(None, asked.plain)
+        invocation.Compose -> Start(Some(Compose), asked.plain)
+        invocation.Deal(difficulty) ->
+          Start(Some(Deal(difficulty)), asked.plain)
+        invocation.Play(puzzle) -> Start(Some(Play(puzzle)), asked.plain)
+        invocation.Resume ->
+          case store.saved() {
+            Ok(current) -> Start(Some(Resume(current)), asked.plain)
+            Error(_) -> Say("There is no game waiting to be picked up.", False)
+          }
       }
   }
-
-  chosen |> result.map(fn(choice) { #(choice, asked.plain) })
 }
 
 /// Put the game down and say what happened to it: where it went, or that it

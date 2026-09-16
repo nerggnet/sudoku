@@ -6,7 +6,7 @@
 -export([file_path/1, write_file/2, read_file/1, forget_file/1]).
 -export([arguments/0, columns/0, rows/0]).
 -export([plain/0, set_plain/1]).
--export([protected/2]).
+-export([protected/2, stop/1]).
 
 %% Put the terminal into raw mode: one byte at a time, no echo, no line
 %% editing. Requires OTP 26 or later; returns false when unavailable (for
@@ -19,6 +19,12 @@ enable_raw() ->
     catch
         _:_ -> false
     end.
+
+%% Stop, with something to say about how it went: nothing wrong is 0, and
+%% a command line that could not be read is 1. Output written first still
+%% arrives, halt/1 flushing on its way out.
+stop(Status) ->
+    erlang:halt(Status).
 
 %% Run the game, and give the terminal back however it ends.
 %%

@@ -86,3 +86,29 @@ pub fn the_usage_names_every_way_in_test() {
     string.contains(entry.0, invocation.plain_flag)
   })
 }
+
+pub fn asking_what_the_command_line_takes_is_not_a_mistake_test() {
+  use flag <- list.each(invocation.help_flags)
+  let assert Ok(asked) = invocation.read([flag])
+  assert asked.asked == invocation.Explain
+
+  // Nothing beside it can turn the question into a mistake: not a puzzle,
+  // not a difficulty, and not a flag that would have been one on its own.
+  let assert Ok(beside) = invocation.read(["hard", flag])
+  assert beside.asked == invocation.Explain
+
+  let assert Ok(muddled) = invocation.read([flag, "--nonsense"])
+  assert muddled.asked == invocation.Explain
+
+  // And a flag that says how the game should look is still read.
+  let assert Ok(plainly) = invocation.read([flag, invocation.plain_flag])
+  assert plainly.asked == invocation.Explain
+  assert plainly.plain
+}
+
+pub fn the_usage_says_how_to_ask_for_it_test() {
+  // One row for the two spellings, since -h is the same question in fewer
+  // letters and a second row saying so would be a row about nothing.
+  assert string.contains(help.usage(), "--help")
+  assert invocation.help_flags == ["--help", "-h"]
+}

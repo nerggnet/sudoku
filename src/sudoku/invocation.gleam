@@ -26,6 +26,9 @@ pub type Asked {
   Resume
   /// This puzzle, given as its 81 characters.
   Play(puzzle: Puzzle)
+  /// Nothing to play: what the command line takes, which is a question
+  /// about the game rather than a game.
+  Explain
 }
 
 /// That, and how the game should look while it does it.
@@ -33,8 +36,11 @@ pub type Invocation {
   Invocation(asked: Asked, plain: Bool)
 }
 
-/// The one flag there is. Everything else on the command line names a puzzle.
+/// The flags there are. Everything else on the command line names a puzzle.
 pub const plain_flag = "--plain"
+
+/// Both spellings of asking what any of this takes.
+pub const help_flags = ["--help", "-h"]
 
 /// Read a command line, or refuse it with something worth reading.
 ///
@@ -43,13 +49,29 @@ pub const plain_flag = "--plain"
 /// is left over is read as though they had never been there.
 pub fn read(arguments: List(String)) -> Result(Invocation, String) {
   let #(flags, rest) = list.partition(arguments, string.starts_with(_, "-"))
+  let plain = list.contains(flags, plain_flag)
 
+  // Asked for outright, and answered before anything else is read. Somebody
+  // who types --help wants to be told what the words mean, and nothing else
+  // on the line can turn that into a mistake — not a puzzle beside it, and
+  // not another flag that would have been one on its own.
+  case list.any(flags, fn(flag) { list.contains(help_flags, flag) }) {
+    True -> Ok(Invocation(Explain, plain))
+    False -> played(flags, rest, plain)
+  }
+}
+
+/// What the line asks to be played, once it is known that it asks for that
+/// rather than for an explanation.
+fn played(
+  flags: List(String),
+  rest: List(String),
+  plain: Bool,
+) -> Result(Invocation, String) {
   use _ <- result.try(case list.all(flags, fn(flag) { flag == plain_flag }) {
     True -> Ok(Nil)
     False -> Error(help.usage())
   })
-
-  let plain = list.contains(flags, plain_flag)
 
   case rest {
     [] -> Ok(Invocation(Menu, plain))

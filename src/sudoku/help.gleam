@@ -45,6 +45,7 @@ pub const invocations = [
   #("gleam run -- resume", "pick up the game you left"),
   #("gleam run -- <puzzle>", "play that puzzle"),
   #("gleam run -- --plain", "draw without colour"),
+  #("gleam run -- --help", "say all this and stop"),
 ]
 
 const starting_notes = [
