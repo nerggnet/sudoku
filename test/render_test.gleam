@@ -471,7 +471,7 @@ pub fn a_terminal_that_will_not_say_is_left_alone_test() {
 
 /// The menu as it is drawn with nothing saved and no times to beat.
 fn opening() -> List(String) {
-  helper.lines_of(render.menu_frame(True, Error(Nil), dict.new()))
+  helper.lines_of(render.menu_frame(True, [], dict.new()))
 }
 
 pub fn the_menu_offers_every_kind_of_puzzle_test() {
@@ -495,7 +495,7 @@ pub fn the_menu_says_what_each_level_asks_for_test() {
 
 pub fn the_menu_shows_a_time_to_beat_where_there_is_one_test() {
   let bests = dict.from_list([#(generator.Hard, 125_000)])
-  let lines = helper.lines_of(render.menu_frame(True, Error(Nil), bests))
+  let lines = helper.lines_of(render.menu_frame(True, [], bests))
 
   assert list.any(lines, fn(line) {
     string.contains(line, "Hard") && string.contains(line, "best 02:05")
@@ -507,7 +507,7 @@ pub fn the_menu_shows_a_time_to_beat_where_there_is_one_test() {
 
 pub fn the_menu_offers_a_saved_game_back_test() {
   let waiting = helper.step(helper.fixture(), key.Digit(4))
-  let lines = helper.lines_of(render.menu_frame(True, Ok(waiting), dict.new()))
+  let lines = helper.lines_of(render.menu_frame(True, [waiting], dict.new()))
 
   // What it was, how much is left of it, and how long it has taken.
   assert list.any(lines, fn(line) {
@@ -516,12 +516,23 @@ pub fn the_menu_offers_a_saved_game_back_test() {
     && string.contains(line, "to go")
   })
 
+  // Several, and the line says how many rather than picking one of them to
+  // describe: which is which is a question for the screen r opens.
+  let two =
+    helper.lines_of(render.menu_frame(
+      True,
+      [waiting, helper.fixture()],
+      dict.new(),
+    ))
+  assert list.any(two, string.contains(_, "one of 2 games put down"))
+  assert !list.any(two, string.contains(_, "to go"))
+
   // With nothing put down, there is nothing to pick up.
   assert !list.any(opening(), string.contains(_, "Resume"))
 }
 
 pub fn the_menu_says_when_the_terminal_is_in_line_mode_test() {
-  let lines = helper.lines_of(render.menu_frame(False, Error(Nil), dict.new()))
+  let lines = helper.lines_of(render.menu_frame(False, [], dict.new()))
 
   assert list.any(lines, string.contains(_, "press Enter after each key"))
   assert !list.any(opening(), string.contains(_, "press Enter"))
@@ -552,7 +563,7 @@ pub fn the_menu_fits_the_screen_test() {
   let lines =
     helper.lines_of(render.menu_frame(
       False,
-      Ok(helper.fixture()),
+      [helper.fixture()],
       dict.from_list([
         #(generator.Easy, 1),
         #(generator.Medium, 2),

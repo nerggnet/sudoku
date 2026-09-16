@@ -28,6 +28,9 @@ pub const mistake_limit = 3
 
 pub type Game {
   Game(
+    /// Which saved game this is, so that two being played at once do not
+    /// write over one another. It names the file and nothing else.
+    id: String,
     puzzle: Puzzle,
     board: Board,
     cursor: Int,
@@ -227,6 +230,7 @@ pub type Step {
 
 pub fn new(puzzle: Puzzle) -> Game {
   Game(
+    id: term.new_id(),
     puzzle: puzzle,
     board: puzzle.board,
     cursor: first_empty(puzzle.board) |> option.unwrap(0),

@@ -31,6 +31,13 @@ pub fn now_ms() -> Int
 @external(erlang, "sudoku_ffi", "stop")
 pub fn stop(status: Int) -> Nil
 
+/// A name for a game's save file, unique among the games that could be being
+/// played at one time. Minted when a puzzle starts and kept for as long as
+/// the game lasts, so that a game put down and picked up again goes back
+/// into the file it came out of rather than forking into a second one.
+@external(erlang, "sudoku_ffi", "new_id")
+pub fn new_id() -> String
+
 /// What was asked for on the command line.
 @external(erlang, "sudoku_ffi", "arguments")
 pub fn arguments() -> List(String)

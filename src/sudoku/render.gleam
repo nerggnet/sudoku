@@ -623,7 +623,7 @@ fn summary(current: game.Game) -> String {
 
 pub fn menu_frame(
   raw: Bool,
-  saved: Result(game.Game, Nil),
+  saved: List(game.Game),
   bests: store.Bests,
 ) -> String {
   let options = {
@@ -673,19 +673,71 @@ pub fn menu_frame(
         ),
       ],
       case saved {
-        Error(_) -> []
-        Ok(current) -> [
-          "",
-          "   "
-            <> term.styled(palette.key, "r")
-            <> "  "
-            <> string.pad_end("Resume", 10, " ")
-            <> term.styled(palette.dim, summary(current)),
+        [] -> []
+        // One is no question and is offered as itself. Several is a
+        // question, and the answer to it does not fit on this line.
+        [only] -> [resuming(summary(only))]
+        several -> [
+          resuming(
+            "one of "
+            <> int.to_string(list.length(several))
+            <> " games put down",
+          ),
         ]
       },
       ["", "   " <> term.styled(palette.key, "q") <> "  quit"],
       room,
       note,
+    ]),
+  )
+}
+
+fn resuming(said: String) -> String {
+  "\n   "
+  <> term.styled(palette.key, "r")
+  <> "  "
+  <> string.pad_end("Resume", 10, " ")
+  <> term.styled(palette.dim, said)
+}
+
+/// The games put down, to pick one of them back up.
+///
+/// Reached only where there is more than one, which is what two terminals
+/// with a puzzle each leaves behind. They are told apart by what they are —
+/// which puzzle, how much of it is left, how long it has taken — rather than
+/// by which file they landed in, a file being the game's business and not
+/// the player's.
+pub fn saved_frame(saved: List(game.Game)) -> String {
+  let options = {
+    use current, index <- list.index_map(saved)
+    "   "
+    <> term.styled(palette.key, int.to_string(index + 1))
+    <> "  "
+    <> term.styled(palette.dim, summary(current))
+  }
+
+  term.screen(
+    list.flatten([
+      [
+        term.styled(palette.title, "S U D O K U"),
+        "",
+        "Which game do you want back?",
+        "",
+      ],
+      options,
+      [
+        "",
+        "   "
+          <> term.styled(
+          palette.dim,
+          "The one put down most recently is first.",
+        ),
+        "",
+        "   "
+          <> term.styled(palette.key, "q")
+          <> "  quit"
+          <> term.styled(palette.dim, "        any other key goes back"),
+      ],
     ]),
   )
 }

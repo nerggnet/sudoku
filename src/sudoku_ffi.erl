@@ -3,7 +3,8 @@
 -module(sudoku_ffi).
 
 -export([enable_raw/0, read_byte/0, read_byte_after/1, now_ms/0, shuffle/1]).
--export([file_path/1, write_file/2, read_file/1, forget_file/1]).
+-export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
+-export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
 -export([plain/0, set_plain/1]).
 -export([protected/2, stop/1]).
@@ -141,6 +142,34 @@ read_file(Name) ->
         {ok, Text} -> {ok, Text};
         _ -> {error, nil}
     end.
+
+%% Every file kept under this prefix, with when it was last written, so
+%% that games put down can be offered back newest first. The time comes from
+%% the file rather than from its name: a name is a guess about what happened
+%% and a timestamp is what did.
+kept_files(Prefix) ->
+    Pattern = filename:join(filename:dirname(kept(Prefix)),
+                            binary_to_list(Prefix) ++ "*"),
+    [{unicode:characters_to_binary(filename:basename(Path)), modified(Path)}
+     || Path <- filelib:wildcard(Pattern)].
+
+modified(Path) ->
+    case file:read_file_info(Path, [{time, posix}]) of
+        {ok, Info} -> element(6, Info);
+        _ -> 0
+    end.
+
+%% A name for a game's save file, unique among every game there could be.
+%%
+%% The second it started on the clock on the wall, which is the part worth
+%% reading; the process it is being played in, which separates two terminals;
+%% and a count, which separates two games in one terminal started inside the
+%% same second — n deals another puzzle faster than that.
+new_id() ->
+    Parts = [integer_to_list(erlang:system_time(second)),
+             os:getpid(),
+             integer_to_list(erlang:unique_integer([positive, monotonic]))],
+    unicode:characters_to_binary(lists:join("-", Parts)).
 
 forget_file(Name) ->
     _ = file:delete(kept(Name)),

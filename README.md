@@ -550,6 +550,27 @@ differently. The menu offers it back next time:
     r  Resume    Hard, 24 to go, 12:04
 ```
 
+Each game gets a file of its own, named for the second it started, the
+process it was played in and a count — enough that two games being played in
+two terminals cannot write over one another. A game picked up again goes back
+into the file it came out of rather than forking into a second one.
+
+Where there is more than one to come back to, `r` asks which:
+
+```
+ Which game do you want back?
+
+    1  Hard, 24 to go, 12:04
+    2  Easy, 40 to go, 03:20
+
+    The one put down most recently is first.
+```
+
+The menu says `Resume    one of 2 games put down` rather than picking one of
+them to describe. Nine are kept, that being how many a screen can put a digit
+in front of; starting a tenth forgets the oldest. `gleam run -- resume` cannot
+be asked which and takes the most recent.
+
 Everything that cannot be worked out again goes into the file: the clues, the
 answer, what has been written and pencilled in since, where the cursor was,
 how long it has taken, and what the game has cost in mistakes and hints. The

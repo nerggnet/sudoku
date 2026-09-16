@@ -151,7 +151,7 @@ type Choice {
 }
 
 fn run(raw: Bool) -> Option(game.Game) {
-  follow(raw, choose(raw, store.saved()))
+  follow(raw, choose(raw, store.saved_games()))
 }
 
 fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
@@ -195,7 +195,7 @@ fn start(raw: Bool, current: game.Game) -> Option(game.Game) {
     // Asking for another puzzle abandons this one rather than putting it
     // down, so there is nothing to come back to.
     game.Restart -> {
-      store.forget()
+      store.forget(ended.id)
       run(raw)
     }
     // Not kept here: the parting message does that, so that the saving and
@@ -242,11 +242,20 @@ fn play(
 fn kept(current: game.Game, written: store.Written) -> store.Written {
   case store.moved_on(current, written) {
     False -> written
-    True ->
+    True -> {
+      // The first time this game is written down is the moment to see
+      // whether there is room for it, since a game left behind is never
+      // going to end and tidy up after itself.
+      case written {
+        store.Unwritten -> store.make_room()
+        _ -> Nil
+      }
+
       case store.keep(current) {
         store.Lost(_) -> written
         _ -> store.written(current)
       }
+    }
   }
 }
 
@@ -291,7 +300,7 @@ fn judged(before: game.Game, after: game.Game) -> game.Game {
 /// Show what is on offer and take the answer. The drawing is next door in
 /// `render`, so what is on the screen and what a keystroke means are the same
 /// list read twice rather than two lists that have to agree.
-fn choose(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
+fn choose(raw: Bool, saved: List(game.Game)) -> Choice {
   let frame = render.menu_frame(raw, saved, store.bests())
   term.write(frame)
 
@@ -301,7 +310,14 @@ fn choose(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
 
   case press(frame), saved {
     key.Quit, _ | key.Char("q"), _ | key.Char("Q"), _ -> Stop
-    key.Char("r"), Ok(current) | key.Char("R"), Ok(current) -> Resume(current)
+
+    // One game waiting is no question: r has it back. Several is a question,
+    // and it is asked on a screen of its own rather than by making the menu
+    // guess which of them was meant.
+    key.Char("r"), [only] | key.Char("R"), [only] -> Resume(only)
+    key.Char("r"), [_, _, ..] | key.Char("R"), [_, _, ..] ->
+      picking_up(raw, saved)
+
     key.Digit(picked), _ if picked == practice_at -> practising(raw, saved)
 
     key.Digit(picked), _ ->
@@ -314,12 +330,35 @@ fn choose(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
   }
 }
 
+/// Pick which game left behind to have back.
+///
+/// Only ever reached with more than one waiting. Two terminals with a puzzle
+/// each is the way that happens, and each keeps its own file so that neither
+/// writes over the other; this is where they are told apart again, by what
+/// they are rather than by which file they landed in.
+fn picking_up(raw: Bool, saved: List(game.Game)) -> Choice {
+  let frame = render.saved_frame(saved)
+  term.write(frame)
+
+  case press(frame) {
+    key.Quit | key.Char("q") | key.Char("Q") -> Stop
+    key.Digit(picked) ->
+      case list.drop(saved, picked - 1) {
+        [current, ..] -> Resume(current)
+        [] -> picking_up(raw, saved)
+      }
+    // Anything else is somebody who has thought better of it, the same as on
+    // the screen offering techniques to practise.
+    _ -> choose(raw, saved)
+  }
+}
+
 /// Pick a technique to practise, on the one grid kept for it.
 ///
 /// A screen of its own rather than seven more lines on the menu: the menu is
 /// a choice of how hard a puzzle should be, and this is a choice of what to
 /// work on, which is a different question asked less often.
-fn practising(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
+fn practising(raw: Bool, saved: List(game.Game)) -> Choice {
   let frame = render.practice_frame()
   term.write(frame)
 

@@ -242,3 +242,38 @@ pub fn a_practice_game_survives_being_written_out_and_read_back_test() {
   assert read_back.puzzle.origin == generator.Practising(logic.HiddenPair)
   assert read_back.board == played.board
 }
+
+pub fn a_game_is_named_so_that_two_do_not_write_over_one_another_test() {
+  // Minted when the puzzle starts, and no two alike: two games being played
+  // at once are two files, which is the whole point of the name.
+  let one = game.new(helper.fixture().puzzle)
+  let other = game.new(helper.fixture().puzzle)
+
+  assert one.id != ""
+  assert one.id != other.id
+}
+
+pub fn a_game_picked_up_goes_back_into_its_own_file_test() {
+  // Resuming must not fork: a game read out of a file and played on is the
+  // same game, and belongs in the file it came from rather than a new one.
+  let put_down = game.new(helper.fixture().puzzle)
+  let assert Ok(read_back) = store.decode(store.encode(put_down))
+
+  // The name comes from the file rather than from a line inside it, so what
+  // is decoded here carries whatever name the reader gives it.
+  let picked_up = game.Game(..read_back, id: put_down.id)
+  assert picked_up.id == put_down.id
+}
+
+pub fn a_game_finds_its_way_back_to_its_own_file_test() {
+  // Round trip: a game put down in the file its name asks for is the game
+  // that comes back out of it. Without that a game picked up and played on
+  // would fork into a second file the next time it was written.
+  use id <- list.each(["1789564491-12254-1", "0-0-0"])
+  assert store.id_of(store.file_of(id)) == id
+
+  // A file from before games had names of their own answers to no name, and
+  // keeps the name it had.
+  assert store.file_of("") == "game"
+  assert store.id_of("game") == ""
+}

@@ -203,34 +203,93 @@ fn shape(current: Game) -> String {
 pub fn keep(current: Game) -> Kept {
   case game.is_finished(current) {
     True -> {
-      forget()
+      forget(current.id)
       NothingToKeep
     }
     False ->
-      case write_file(game_file, encode(current)) {
-        True -> PutDown(path())
-        False -> Lost(path())
+      case write_file(file_of(current.id), encode(current)) {
+        True -> PutDown(path(current.id))
+        False -> Lost(path(current.id))
       }
   }
 }
 
-/// The game left behind last time, if there is one and it can still be read.
-pub fn saved() -> Result(Game, Nil) {
-  read_file(game_file) |> result.try(decode)
+/// Every game left behind and still readable, the one put down most recently
+/// first.
+///
+/// Read from the files rather than from their names: a name is a guess about
+/// what a file holds and the thing inside it is what it holds. Anything that
+/// will not decode is simply not a saved game, as it always was.
+pub fn saved_games() -> List(Game) {
+  kept_files(game_file)
+  |> list.sort(fn(one, other) { int.compare(other.1, one.1) })
+  |> list.filter_map(fn(kept) {
+    let #(file, _) = kept
+    read_file(file)
+    |> result.try(decode)
+    |> result.map(fn(current) { game.Game(..current, id: id_of(file)) })
+  })
+  |> list.take(most_kept)
 }
 
-pub fn forget() -> Nil {
-  forget_file(game_file)
+/// The game put down most recently, where there is one at all.
+///
+/// What `resume` on the command line means. It cannot be asked which of
+/// several, so it takes the last one put down, which is the one somebody
+/// typing `resume` almost always means. The menu can ask, and does.
+pub fn saved() -> Result(Game, Nil) {
+  saved_games() |> list.first
+}
+
+pub fn forget(id: String) -> Nil {
+  forget_file(file_of(id))
+}
+
+/// Forget the oldest games put down, so that no more are kept than can be
+/// offered back.
+///
+/// Done as a game is first written down rather than as one ends, since
+/// ending is the one thing a game left behind never does.
+pub fn make_room() -> Nil {
+  kept_files(game_file)
+  |> list.sort(fn(one, other) { int.compare(other.1, one.1) })
+  |> list.drop(most_kept - 1)
+  |> list.each(fn(kept) { forget_file(kept.0) })
 }
 
 /// Where a game is kept. Handed out with the answer about whether one landed
 /// there, rather than on its own: a path is only worth printing alongside
 /// what did or did not happen at it.
-fn path() -> String {
-  file_path(game_file)
+fn path(id: String) -> String {
+  file_path(file_of(id))
+}
+
+/// The file a game of this name is kept in, and the name of the game kept in
+/// a file. Inverses, which is worth being able to say out loud in a test: a
+/// game that cannot find its way back to its own file forks into a second
+/// one the next time it is put down.
+///
+/// A game from before games had names of their own keeps the name the file
+/// had then, and answers to the empty name.
+pub fn file_of(id: String) -> String {
+  case id {
+    "" -> game_file
+    _ -> game_file <> "-" <> id
+  }
+}
+
+pub fn id_of(file: String) -> String {
+  case string.split_once(file, game_file <> "-") {
+    Ok(#("", id)) -> id
+    _ -> ""
+  }
 }
 
 const game_file = "game"
+
+/// How many games put down are kept, which is how many the screen offering
+/// them back can put a digit in front of.
+const most_kept = 9
 
 const bests_file = "bests"
 
@@ -245,6 +304,10 @@ fn read_file(name: String) -> Result(String, Nil)
 
 @external(erlang, "sudoku_ffi", "forget_file")
 fn forget_file(name: String) -> Nil
+
+/// Every file kept under this name, with when it was last written.
+@external(erlang, "sudoku_ffi", "kept_files")
+fn kept_files(prefix: String) -> List(#(String, Int))
 
 // ---------------------------------------------------------------------------
 // The record books
