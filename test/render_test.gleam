@@ -7,6 +7,7 @@ import gleam/option
 import gleam/string
 import helper
 import sudoku/board
+import sudoku/editor
 import sudoku/game
 import sudoku/generator
 import sudoku/help
@@ -664,4 +665,31 @@ pub fn a_finished_board_has_no_tally_test() {
 
   assert !list.any(lines, string.starts_with(_, " left"))
   assert list.length(lines) <= render.rows
+}
+
+pub fn no_frame_smuggles_a_newline_into_a_line_test() {
+  // A frame is painted a line at a time, each one clearing what the last
+  // frame left to its right, and the frame ends by clearing the rows below.
+  // A newline inside a line is neither: the row it lands on gets no erase,
+  // so it keeps whatever was drawn there before — and in raw mode the
+  // carriage is not returned either.
+  let frames = [
+    render.menu_frame(True, [], dict.new()),
+    render.menu_frame(True, [helper.fixture()], dict.new()),
+    render.menu_frame(False, [helper.fixture(), helper.fixture()], dict.new()),
+    render.saved_frame([helper.fixture(), helper.fixture()]),
+    render.practice_frame(),
+    render.generating(
+      generator.Easy,
+      generator.Carving(attempt: 1, of: 30, asks: Error(Nil)),
+    ),
+    render.frame(helper.fixture()),
+    render.frame(helper.revealed(helper.fixture())),
+    render.frame(helper.step(helper.fixture(), key.Char("?"))),
+    render.editor_frame(editor.new()),
+  ]
+
+  use frame <- list.each(frames)
+  use line <- list.each(helper.lines_of(frame))
+  assert !string.contains(line, "\n")
 }

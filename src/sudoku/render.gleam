@@ -676,14 +676,13 @@ pub fn menu_frame(
         [] -> []
         // One is no question and is offered as itself. Several is a
         // question, and the answer to it does not fit on this line.
-        [only] -> [resuming(summary(only))]
-        several -> [
+        [only] -> resuming(summary(only))
+        several ->
           resuming(
             "one of "
             <> int.to_string(list.length(several))
             <> " games put down",
-          ),
-        ]
+          )
       },
       ["", "   " <> term.styled(palette.key, "q") <> "  quit"],
       room,
@@ -692,12 +691,19 @@ pub fn menu_frame(
   )
 }
 
-fn resuming(said: String) -> String {
-  "\n   "
-  <> term.styled(palette.key, "r")
-  <> "  "
-  <> string.pad_end("Resume", 10, " ")
-  <> term.styled(palette.dim, said)
+/// The blank row above it and the row itself, as two lines rather than one
+/// with a newline in the middle. A frame is painted a line at a time, each
+/// clearing what the last frame left to its right; a newline inside a line
+/// lands on a row that is never cleared, and keeps whatever was there.
+fn resuming(said: String) -> List(String) {
+  [
+    "",
+    "   "
+      <> term.styled(palette.key, "r")
+      <> "  "
+      <> string.pad_end("Resume", 10, " ")
+      <> term.styled(palette.dim, said),
+  ]
 }
 
 /// The games put down, to pick one of them back up.
