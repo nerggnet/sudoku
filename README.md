@@ -208,6 +208,38 @@ a scan is a way of looking at the board, not a mode to be in. Digits written
 while one is up are written as normal, and the shading follows the grid as it
 changes.
 
+## What is left to place
+
+Under the board is a line saying how many of each digit are still to come:
+
+```
+ empty 41  │  clashes 0  │  time 00:01
+ left  1×5   2×5   3×3   4×6   5×1   6×5   7×5   8×7   9×4
+```
+
+`5×1` is the useful one there. A digit down to its last cell is the one to
+go hunting for, and the line puts that under your nose rather than leaving
+you to count the fives for the fourth time. Counting them is the commonest
+thing a player does that is not thinking, and counting them wrong sends you
+looking for a five that is already on the board.
+
+It is free by the same reckoning that makes `f` and `S` free: anybody can
+count the fives. What it counts is what is on the board rather than what is
+right about it — a wrong digit is still a digit somebody has to take back,
+and a tally that quietly ignored one would be checking, which is not free.
+
+Every digit keeps its place in the line whether it has any left or not, so
+the one you are looking for is where it was a minute ago. A digit with none
+left shows the dot an empty cell shows, which is the same thing said about a
+digit rather than about a square:
+
+```
+ left  1×6   2×7   3×6   4·   5×6   6×4   7×6   8×4   9×5
+```
+
+The line goes when the puzzle is over, there being nothing left to place and
+the panel saying how it went wanting the room.
+
 ## Filling the candidates in
 
 `f` pencils every candidate into every empty cell that has none: what that

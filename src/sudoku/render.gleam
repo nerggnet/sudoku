@@ -423,7 +423,51 @@ fn status(current: Game, clashes: Set(Int)) -> List(String) {
     text -> term.styled(palette.dim, "  \u{2502}  ") <> text
   }
 
-  ["", term.styled(palette.dim, facts) <> marks, ..said(current.message)]
+  // Nothing to place, or nothing more to be done about it: the row goes,
+  // and on a finished board it has to, the panel saying how it went being
+  // two rows where the key hints are one.
+  let tally = case
+    game.is_finished(current) || board.empty_count(current.board) == 0
+  {
+    True -> []
+    False -> [remaining(current)]
+  }
+
+  list.flatten([
+    ["", term.styled(palette.dim, facts) <> marks],
+    tally,
+    said(current.message),
+  ])
+}
+
+/// What is left to place, a digit at a time.
+///
+/// The commonest thing a player does that is not thinking is counting the
+/// sevens, and counting them wrong sends them hunting for a seven that is
+/// already on the board. It is free by this game's own reckoning — anybody
+/// can count them, the same as anybody can read off what a cell could still
+/// take — so the game counts them rather than leaving a chore of it.
+///
+/// Every digit keeps its place in the line whether it has any left or not,
+/// so the one being looked for is where it was a minute ago. A digit with
+/// none left shows the dot an empty cell shows, which is the same thing said
+/// about a digit rather than about a square: nothing here.
+fn remaining(current: Game) -> String {
+  let entries = {
+    use digit <- list.map(board.span(1, board.side))
+
+    let said = case board.left_to_place(current.board, digit) {
+      0 ->
+        term.styled(palette.empty, int.to_string(digit) <> palette.empty_cell)
+      left ->
+        term.styled(palette.entered, int.to_string(digit))
+        <> term.styled(palette.dim, "\u{00d7}" <> int.to_string(left))
+    }
+
+    said
+  }
+
+  term.styled(palette.dim, "left  ") <> string.join(entries, "   ")
 }
 
 /// What the message says, over two rows.

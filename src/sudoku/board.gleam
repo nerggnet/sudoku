@@ -414,6 +414,21 @@ pub fn empty_count(board: Board) -> Int {
   board.values |> dict.values |> list.count(fn(digit) { digit == 0 })
 }
 
+/// How many of a digit are still to be placed: nine less the ones already
+/// on the board, clues and answers counted alike.
+///
+/// A tally anybody can take by eye, which is why the game will take it for
+/// you: counting the sevens is the commonest thing a player does that is
+/// not thinking, and doing it wrong sends them hunting for a seven that is
+/// already there. Never less than nothing — a digit written ten times over
+/// is a clash, and the clash counter says so.
+pub fn left_to_place(board: Board, digit: Int) -> Int {
+  let placed =
+    board.values |> dict.values |> list.count(fn(other) { other == digit })
+
+  int.max(side - placed, 0)
+}
+
 /// Every cell holding a digit that appears twice in one of its units.
 pub fn conflicts(board: Board) -> Set(Int) {
   grid_conflicts(board.values)

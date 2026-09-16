@@ -597,3 +597,60 @@ pub fn the_frame_waits_only_as_long_as_the_clock_holds_still_test() {
   assert render.clock(elapsed)
     != render.clock(elapsed + render.until_clock_moves(elapsed))
 }
+
+pub fn the_tally_says_what_is_left_to_place_test() {
+  let start = helper.fixture()
+  let assert Ok(line) =
+    list.find(helper.visible_lines(start), string.starts_with(_, " left"))
+
+  // The fixture is dealt with three 5s, so six are still to come.
+  assert string.contains(line, "5×6")
+  // And every digit is there, in its own place, whatever it has left.
+  use digit <- list.each(board.span(1, board.side))
+  assert string.contains(line, int.to_string(digit) <> "×")
+}
+
+pub fn the_tally_counts_down_as_digits_are_placed_test() {
+  let written =
+    game.Game(..helper.fixture(), cursor: board.at(0, 2))
+    |> helper.step(key.Digit(5))
+
+  let assert Ok(line) =
+    list.find(helper.visible_lines(written), string.starts_with(_, " left"))
+  assert string.contains(line, "5×5")
+
+  // Counting what is on the board rather than what is right: a wrong digit
+  // is still a digit somebody has to take back, and a tally that quietly
+  // ignored it would be checking, which is not free.
+  assert game.is_wrong(written, board.at(0, 2))
+}
+
+pub fn a_digit_with_none_left_shows_a_dot_test() {
+  // Every 4 written in, so there are none left to place.
+  let all_fours = {
+    use current, index <- list.fold(board.indices(), helper.fixture())
+    case game.answer(current, index) == 4 {
+      False -> current
+      True -> game.Game(..current, cursor: index) |> helper.step(key.Digit(4))
+    }
+  }
+
+  let assert Ok(line) =
+    list.find(helper.visible_lines(all_fours), string.starts_with(_, " left"))
+
+  assert string.contains(line, "4" <> palette.empty_cell)
+  assert !string.contains(line, "4×")
+  // The others are untouched by it.
+  assert string.contains(line, "5×")
+}
+
+pub fn a_finished_board_has_no_tally_test() {
+  // The panel saying how it went is two rows where the key hints are one,
+  // and there is nothing left to place in any case.
+  let over =
+    helper.step(helper.fixture(), key.Char("R")) |> helper.step(key.Char("R"))
+  let lines = helper.visible_lines(over)
+
+  assert !list.any(lines, string.starts_with(_, " left"))
+  assert list.length(lines) <= render.rows
+}

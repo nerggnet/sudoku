@@ -209,3 +209,36 @@ pub fn peers_of_a_cell_are_its_twenty_neighbours_test() {
   let assert Ok(tabled) = dict.get(board.peers_table(), index)
   assert set.from_list(peers) == tabled
 }
+
+pub fn what_is_left_to_place_is_counted_off_the_board_test() {
+  let grid = helper.grid(helper.puzzle_text)
+  let dealt = board.from_grid(grid)
+
+  // Clues and answers count alike: it is a tally of what is on the board,
+  // not of what is right about it.
+  assert board.left_to_place(dealt, 5) == 6
+  assert board.left_to_place(dealt, 9) == 5
+
+  let written = board.place(dealt, 2, 5)
+  assert board.left_to_place(written, 5) == 5
+  assert board.left_to_place(board.erase(written, 2), 5) == 6
+
+  // A solved board has none of anything left.
+  let solved = board.from_grid(helper.grid(helper.solution_text))
+  use digit <- list.each(board.span(1, board.side))
+  assert board.left_to_place(solved, digit) == 0
+}
+
+pub fn a_digit_written_too_often_never_counts_below_nothing_test() {
+  // Ten 5s is a clash, and the clash counter is what says so. This one has
+  // no opinion about it beyond having nothing left to hand out.
+  let crowded = {
+    use current, index <- list.fold(
+      board.span(0, 9),
+      board.from_grid(board.empty_grid()),
+    )
+    board.place(current, index, 5)
+  }
+
+  assert board.left_to_place(crowded, 5) == 0
+}
