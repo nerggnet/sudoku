@@ -10,6 +10,7 @@ import sudoku/game
 import sudoku/generator.{type Difficulty}
 import sudoku/invocation
 import sudoku/key
+import sudoku/practice
 import sudoku/render
 import sudoku/rules
 import sudoku/store
@@ -268,15 +269,50 @@ fn choose(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
   let frame = render.menu_frame(raw, saved, store.bests())
   term.write(frame)
 
+  // Worked out rather than written down, so that adding a puzzle to the
+  // menu moves this along with it. A guard cannot call for it itself.
+  let practice_at = practice.choice()
+
   case press(frame), saved {
     key.Quit, _ | key.Char("q"), _ | key.Char("Q"), _ -> Stop
     key.Char("r"), Ok(current) | key.Char("R"), Ok(current) -> Resume(current)
+    key.Digit(picked), _ if picked == practice_at -> practising(raw, saved)
+
     key.Digit(picked), _ ->
       case list.drop(generator.origins(), picked - 1) {
         [generator.Dealt(difficulty), ..] -> Deal(difficulty)
         [generator.Handwritten, ..] -> Compose
-        [] -> choose(raw, saved)
+        _ -> choose(raw, saved)
       }
     _, _ -> choose(raw, saved)
+  }
+}
+
+/// Pick a technique to practise, on the one grid kept for it.
+///
+/// A screen of its own rather than seven more lines on the menu: the menu is
+/// a choice of how hard a puzzle should be, and this is a choice of what to
+/// work on, which is a different question asked less often.
+fn practising(raw: Bool, saved: Result(game.Game, Nil)) -> Choice {
+  let frame = render.practice_frame()
+  term.write(frame)
+
+  case press(frame) {
+    key.Quit | key.Char("q") | key.Char("Q") -> Stop
+    key.Digit(picked) ->
+      case list.drop(practice.techniques(), picked - 1) {
+        [technique, ..] ->
+          case practice.puzzle(technique) {
+            Ok(puzzle) -> Play(puzzle)
+            // Only reachable with a grid here that is not a puzzle, which
+            // is what the tests are for. Nothing to say about it that the
+            // player could act on, so the screen simply stands.
+            Error(_) -> practising(raw, saved)
+          }
+        [] -> practising(raw, saved)
+      }
+    // Anything else is somebody who opened this by accident, or has thought
+    // better of it: back to the menu, the way the help goes back to the board.
+    _ -> choose(raw, saved)
   }
 }

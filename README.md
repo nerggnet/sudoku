@@ -101,6 +101,46 @@ left can still be reasoned to the end, so a puzzle that could not be is never
 carved that far. That also does the work of checking the answer is unique:
 reasoning never guesses, so a grid it can finish has exactly one answer.
 
+## Practice
+
+The help explains every way of working a digit out and draws a small board
+showing each one happening. What it could not do was hand you one to try. An
+X-wing turns up in about one dealt Expert puzzle in fifteen, so reading the
+page and then waiting for one to come round is not a plan.
+
+```
+ Practise which technique?
+
+    1  Naked single        40 clues
+    2  Hidden single       32 clues
+    3  Locked candidates   48 clues
+    4  Naked pair          53 clues
+    5  Hidden pair         53 clues
+    6  Naked triple        44 clues
+    7  X-wing              57 clues
+```
+
+One grid apiece, the same one every time. Each was carved until the reasoning
+needed its technique and needed nothing harder, and then given back every
+clue it could take while that stayed true — so they are the gentlest grids
+that still force their lesson. The X-wing one has fifty-seven clues and wants
+its X-wing on the second step, rather than being a seventeen-clue monster
+that happens to contain one somewhere in the middle.
+
+Needing the technique is a guarantee rather than a hope. The reasoning always
+takes the easiest step going, so if it had to reach for an X-wing, nothing
+simpler was available at that moment, and you will have to reach for one too.
+
+The clue counts are there because they are the other half of how hard a grid
+is, and they are nothing to do with how hard its technique is: the X-wing
+grid is the fullest of the lot and the hidden-single grid the barest.
+
+Each technique page in the help ends with the two keys that reach its grid,
+and while you are playing one, `?` opens the page about the technique you
+picked rather than the key reference. Practice is not timed and no record is
+kept of it — it is the same grid every time, so a time on it would be a
+record of having seen it before.
+
 ## Looking for somewhere a digit can go
 
 Pick a digit and sweep the grid asking "where can a 7 still go in this box?"
@@ -816,6 +856,7 @@ pile is being walked.
 | `sudoku/store` | writing a game down, reading it back, and keeping times |
 | `sudoku/render` | drawing a screen: the menu, the board, the editor |
 | `sudoku/help` | the keys, the techniques, and the pages that explain them |
+| `sudoku/practice` | one grid per technique, kept to be practised on |
 | `sudoku/grids` | drawing a nine by nine, for the board and the help alike |
 | `sudoku/palette` | the colours it is all drawn in, and what each one means |
 | `sudoku/key` | decoding bytes into keystrokes |

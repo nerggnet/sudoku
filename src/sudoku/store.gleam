@@ -19,6 +19,7 @@ import gleam/string
 import sudoku/board.{type Board, type Grid}
 import sudoku/game.{type Game}
 import sudoku/generator.{type Origin}
+import sudoku/logic
 import sudoku/term
 
 /// The format, so that a file from an older game can be told apart from one
@@ -302,7 +303,7 @@ fn with_time(current: Game, books: Bests) -> Bests {
   case current.puzzle.origin {
     generator.Dealt(difficulty) ->
       dict.insert(books, difficulty, game.elapsed_ms(current))
-    generator.Handwritten -> books
+    generator.Handwritten | generator.Practising(_) -> books
   }
 }
 
@@ -343,14 +344,28 @@ fn write_bests(books: Bests) -> Bool {
 // Fields
 // ---------------------------------------------------------------------------
 
+/// A practice puzzle is named for the technique it was kept for, which takes
+/// two words where every other origin takes one. The file splits a line at
+/// its first space, so the rest of it can be as many words as it likes.
+const practising = "practice"
+
 fn named(origin: Origin) -> String {
-  string.lowercase(generator.origin_label(origin))
+  case origin {
+    generator.Practising(technique) ->
+      practising <> " " <> string.lowercase(logic.label(technique))
+    _ -> string.lowercase(generator.origin_label(origin))
+  }
 }
 
 fn origin_named(name: String) -> Result(Origin, Nil) {
-  case name == named(generator.Handwritten) {
-    True -> Ok(generator.Handwritten)
-    False -> generator.named(name) |> result.map(generator.Dealt)
+  case string.split_once(name, " ") {
+    Ok(#(first, rest)) if first == practising ->
+      logic.named(rest) |> result.map(generator.Practising)
+    _ ->
+      case name == named(generator.Handwritten) {
+        True -> Ok(generator.Handwritten)
+        False -> generator.named(name) |> result.map(generator.Dealt)
+      }
   }
 }
 

@@ -10,6 +10,8 @@ import sudoku/editor
 import sudoku/game
 import sudoku/generator
 import sudoku/key
+import sudoku/logic
+import sudoku/practice
 import sudoku/store
 import sudoku/term
 
@@ -226,4 +228,17 @@ pub fn the_clock_alone_is_worth_a_write_once_it_runs_away_test() {
   // minute whether anything was played in it or not.
   let away = game.Game(..start, started_ms: start.started_ms - 40_000)
   assert store.moved_on(away, written)
+}
+
+pub fn a_practice_game_survives_being_written_out_and_read_back_test() {
+  // The origin of a practice game carries which technique it was kept for,
+  // which is two words where every other origin is one. The file splits a
+  // line at its first space, so the rest of it can be as many as it likes.
+  let assert Ok(puzzle) = practice.puzzle(logic.HiddenPair)
+  let played = game.new(puzzle) |> helper.step(key.Digit(4))
+
+  let assert Ok(read_back) = store.decode(store.encode(played))
+
+  assert read_back.puzzle.origin == generator.Practising(logic.HiddenPair)
+  assert read_back.board == played.board
 }

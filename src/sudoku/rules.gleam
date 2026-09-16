@@ -107,10 +107,16 @@ fn wake(current: game.Game) -> game.Game {
   )
 }
 
-fn asked_about(showing: Option(logic.Step)) -> game.Help {
-  case showing {
-    Some(step) -> game.About(step.technique)
-    None -> game.Keys
+/// Which page `?` opens at: whatever the last hint was about, since that is
+/// what somebody who has just read one is asking after — and failing that,
+/// on a puzzle kept for practising a technique, the page about the technique
+/// it was kept for. That is the one question a practice grid raises, and it
+/// should not have to be paged to.
+fn asked_about(current: game.Game, showing: Option(logic.Step)) -> game.Help {
+  case showing, current.puzzle.origin {
+    Some(step), _ -> game.About(step.technique)
+    None, generator.Practising(technique) -> game.About(technique)
+    None, _ -> game.Keys
   }
 }
 
@@ -150,7 +156,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
       game.Continue(
         game.Game(
           ..current,
-          help: Some(asked_about(showing)),
+          help: Some(asked_about(current, showing)),
           resting_since: Some(term.now_ms()),
         ),
       )
@@ -718,7 +724,7 @@ fn about_to_check(current: game.Game) -> String {
   let found = list.count(board.indices(), game.is_wrong(current, _))
   let timed = case current.puzzle.origin {
     generator.Dealt(_) -> game.unaided(current)
-    generator.Handwritten -> False
+    generator.Handwritten | generator.Practising(_) -> False
   }
 
   case current.mistakes + found > game.mistake_limit, timed {

@@ -229,7 +229,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     cursor: first_empty(puzzle.board) |> option.unwrap(0),
     history: [],
     undone: [],
-    message: "Press ? for help.",
+    message: opening(puzzle.origin),
     checking: False,
     marking: False,
     help: None,
@@ -247,6 +247,22 @@ pub fn new(puzzle: Puzzle) -> Game {
     started_ms: term.now_ms(),
     finished_ms: None,
   )
+}
+
+/// What the game says as a puzzle opens.
+///
+/// A grid kept for practising says what it is for. Which technique is not
+/// something to work out by playing until something goes wrong: it was
+/// chosen a screen ago, and being told again is what makes the grid a
+/// lesson rather than a puzzle that happens to be hard in one place.
+fn opening(origin: generator.Origin) -> String {
+  case origin {
+    generator.Practising(technique) ->
+      "This grid cannot be finished without "
+      <> logic.labels(technique)
+      <> ".\nPress ? for the page explaining them."
+    _ -> "Press ? for help."
+  }
 }
 
 pub fn is_finished(game: Game) -> Bool {

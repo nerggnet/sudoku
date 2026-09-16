@@ -38,7 +38,7 @@ pub fn hint(current: game.Game) -> game.Game {
 /// going to be timed.
 fn warning_due(current: game.Game) -> Bool {
   case current.puzzle.origin {
-    generator.Handwritten -> False
+    generator.Handwritten | generator.Practising(_) -> False
     generator.Dealt(_) ->
       game.unaided(current) && current.offered != Some(game.TakeHint)
   }

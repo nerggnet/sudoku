@@ -17,7 +17,9 @@ import sudoku/game.{type Game}
 import sudoku/generator.{type Difficulty, type Origin}
 import sudoku/grids
 import sudoku/help
+import sudoku/logic
 import sudoku/palette
+import sudoku/practice
 import sudoku/store
 import sudoku/term
 
@@ -590,6 +592,13 @@ pub fn menu_frame(
     <> term.styled(palette.best, best(origin, bests))
   }
 
+  let practice =
+    "   "
+    <> term.styled(palette.key, int.to_string(practice.choice()))
+    <> "  "
+    <> string.pad_end("Practice", 10, " ")
+    <> term.styled(palette.dim, "one technique, on a grid that needs it")
+
   let room = case cramped() {
     "" -> []
     complaint -> ["", term.styled(palette.alarm, complaint)]
@@ -610,6 +619,7 @@ pub fn menu_frame(
     list.flatten([
       [term.styled(palette.title, "S U D O K U"), "", "Choose a puzzle:", ""],
       options,
+      [practice],
       [
         "",
         "   "
@@ -643,6 +653,7 @@ fn aside(origin: Origin) -> String {
   case origin {
     generator.Dealt(difficulty) -> generator.asks_for(difficulty)
     generator.Handwritten -> "type in a puzzle from a newspaper"
+    generator.Practising(technique) -> logic.labels(technique)
   }
 }
 
@@ -650,13 +661,68 @@ fn aside(origin: Origin) -> String {
 /// in has no difficulty to have a best at.
 fn best(origin: Origin, bests: store.Bests) -> String {
   case origin {
-    generator.Handwritten -> ""
+    generator.Handwritten | generator.Practising(_) -> ""
     generator.Dealt(difficulty) ->
       case dict.get(bests, difficulty) {
         Error(_) -> ""
         Ok(taken) -> "best " <> clock(taken)
       }
   }
+}
+
+/// The techniques there is a puzzle for, to pick one from.
+///
+/// In the order the help pages them, easiest first, which makes the list a
+/// ladder as well as a menu. Each says how many clues its grid is dealt
+/// with, since that is the difference between an afternoon and ten minutes
+/// and is nothing to do with how hard the technique itself is — the X-wing
+/// grid is the fullest of the lot.
+pub fn practice_frame() -> String {
+  let options = {
+    use technique, index <- list.index_map(practice.techniques())
+    let clues = practice.clue_count(technique)
+
+    "   "
+    <> term.styled(palette.key, int.to_string(index + 1))
+    <> "  "
+    <> string.pad_end(capitalised(logic.label(technique)), 20, " ")
+    <> term.styled(palette.dim, int.to_string(clues) <> " clues")
+  }
+
+  term.screen(
+    list.flatten([
+      [
+        term.styled(palette.title, "S U D O K U"),
+        "",
+        "Practise which technique?",
+        "",
+      ],
+      options,
+      [
+        "",
+        "   "
+          <> term.styled(
+          palette.dim,
+          "Each grid needs its technique and nothing harder. Press ? while",
+        ),
+        "   "
+          <> term.styled(
+          palette.dim,
+          "playing for the page explaining the one you picked.",
+        ),
+        "",
+        "   "
+          <> term.styled(palette.key, "q")
+          <> "  quit"
+          <> term.styled(palette.dim, "        any other key goes back"),
+      ],
+    ]),
+  )
+}
+
+fn capitalised(name: String) -> String {
+  string.uppercase(string.slice(name, 0, 1))
+  <> string.slice(name, 1, string.length(name) - 1)
 }
 
 pub fn generating(difficulty: Difficulty) -> String {

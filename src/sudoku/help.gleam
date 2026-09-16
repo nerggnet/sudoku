@@ -19,6 +19,7 @@ import sudoku/game
 import sudoku/grids
 import sudoku/logic
 import sudoku/palette
+import sudoku/practice
 import sudoku/term
 
 /// Getting about the board, and putting things on it.
@@ -145,13 +146,32 @@ pub fn page(page: game.Help) -> List(String) {
     game.About(technique) -> about(technique)
   }
 
-  list.append(body, [
-    "",
+  list.append(body, ["", getting_about(page)])
+}
+
+/// The line along the bottom of a page: how to turn them, how to leave, and
+/// on a page about a technique, where to go and meet one.
+///
+/// A page read and never used is a page wasted, and an X-wing turns up in
+/// about one dealt Expert puzzle in fifteen — waiting for one to come round
+/// is not a plan. There is a grid kept that cannot be finished without it,
+/// and this says which two keys reach it.
+fn getting_about(page: game.Help) -> String {
+  let turning =
     term.styled(
       palette.dim,
       "\u{2190} \u{2192}  " <> paging(page) <> "     any other key returns",
-    ),
-  ])
+    )
+
+  case page {
+    game.About(technique) ->
+      turning
+      <> term.styled(palette.dim, "     practise it: ")
+      <> term.styled(palette.key, int.to_string(practice.choice()))
+      <> term.styled(palette.dim, " then ")
+      <> term.styled(palette.key, int.to_string(at(technique)))
+    _ -> turning
+  }
 }
 
 fn paging(page: game.Help) -> String {
@@ -172,6 +192,13 @@ fn about(technique: logic.Technique) -> List(String) {
     [""],
     [term.styled(palette.entered, so)],
   ])
+}
+
+/// Where this technique sits on the screen that offers them.
+fn at(technique: logic.Technique) -> Int {
+  let before =
+    list.take_while(practice.techniques(), fn(other) { other != technique })
+  list.length(before) + 1
 }
 
 fn capitalised(name: String) -> String {

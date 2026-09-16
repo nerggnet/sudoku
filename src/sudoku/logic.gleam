@@ -72,6 +72,13 @@ pub fn labels(technique: Technique) -> String {
   }
 }
 
+/// The technique going by this name, however it is capitalised. The inverse
+/// of `label`, for a saved game to say which one it was kept for.
+pub fn named(name: String) -> Result(Technique, Nil) {
+  use technique <- list.find(techniques)
+  string.lowercase(label(technique)) == string.lowercase(name)
+}
+
 /// How hard a technique is, counting from nothing. Which of two techniques
 /// is the harder is which of these is the greater.
 pub fn rank(technique: Technique) -> Int {
@@ -391,7 +398,7 @@ fn lose(cells: List(Int)) -> String {
 /// count of them once there are not.
 fn these(cells: List(Int)) -> String {
   case list.length(cells) {
-    few if few <= 3 -> named(cells)
+    few if few <= 3 -> cell_names(cells)
     many -> int.to_string(many) <> " cells"
   }
 }
@@ -426,14 +433,14 @@ fn crux(step: Step) -> String {
       <> "."
 
     NakedPair, RuleOut(_, _) | NakedTriple, RuleOut(_, _) ->
-      named(step.evidence)
+      cell_names(step.evidence)
       <> " take "
       <> written(step.about)
       <> " between them."
 
     HiddenPair, RuleOut(_, _) ->
       "only "
-      <> named(step.evidence)
+      <> cell_names(step.evidence)
       <> " can take "
       <> either(step.about)
       <> " in their "
@@ -460,7 +467,7 @@ fn crux(step: Step) -> String {
     _, Settle(index, digit) ->
       board.name(index) <> " is a " <> int.to_string(digit) <> "."
     _, RuleOut(cells, digits) ->
-      "no " <> written(digits) <> " in " <> named(cells) <> "."
+      "no " <> written(digits) <> " in " <> cell_names(cells) <> "."
   }
 }
 
@@ -474,7 +481,7 @@ fn unit_name(cells: List(Int)) -> String {
     Ok(_), _, _ -> name_of(cells, board.row_name)
     _, Ok(_), _ -> name_of(cells, board.column_name)
     _, _, Ok(_) -> name_of(cells, board.box_name)
-    _, _, _ -> named(cells)
+    _, _, _ -> cell_names(cells)
   }
 }
 
@@ -534,7 +541,7 @@ fn plural(what: String, names: List(String)) -> String {
   }
 }
 
-fn named(cells: List(Int)) -> String {
+fn cell_names(cells: List(Int)) -> String {
   cells |> list.map(board.name) |> joined("and")
 }
 

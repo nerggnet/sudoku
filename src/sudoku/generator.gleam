@@ -22,10 +22,12 @@ pub type Difficulty {
 }
 
 /// Where a puzzle came from: carved out of a random grid at one of the
-/// difficulties, or typed in by hand from a newspaper.
+/// difficulties, typed in by hand from a newspaper, or kept to be practised
+/// on because of the one technique it cannot be finished without.
 pub type Origin {
   Dealt(Difficulty)
   Handwritten
+  Practising(technique: logic.Technique)
 }
 
 pub type Puzzle {
@@ -63,6 +65,10 @@ pub fn origin_label(origin: Origin) -> String {
   case origin {
     Dealt(difficulty) -> label(difficulty)
     Handwritten -> "Custom"
+    // Not the technique: which one it is was just chosen from a screen that
+    // said so, and is said again in the line under the board as the puzzle
+    // opens. What the header is for is which kind of puzzle this is.
+    Practising(_) -> "Practice"
   }
 }
 
@@ -192,6 +198,13 @@ pub type Rejection {
 /// mistyped digit leaves the grid unsolvable, and a missed one leaves it with
 /// several answers.
 pub fn from_clues(clues: Grid) -> Result(Puzzle, Rejection) {
+  made_of(clues, Handwritten)
+}
+
+/// The same, for clues that came from somewhere other than a player typing
+/// them in. They are checked exactly as sternly: a puzzle kept for practice
+/// is worth nothing if it turns out to have two answers.
+pub fn made_of(clues: Grid, origin: Origin) -> Result(Puzzle, Rejection) {
   case board.is_consistent(clues) {
     False -> Error(Clashes)
     True -> {
@@ -206,7 +219,7 @@ pub fn from_clues(clues: Grid) -> Result(Puzzle, Rejection) {
               Ok(Puzzle(
                 board: board.from_grid(clues),
                 solution: solution,
-                origin: Handwritten,
+                origin: origin,
               ))
             Error(_) -> Error(Unsolvable)
           }
