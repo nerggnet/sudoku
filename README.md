@@ -82,7 +82,7 @@ the same number of clues can be a minute apart or an hour.
 | Easy | naked singles | 39–40 | instant |
 | Medium | hidden singles | 31–32 | instant |
 | Hard | locked candidates | 26–27 | about a third of a second |
-| Expert | naked pairs and better | 22–27 | about a second |
+| Expert | naked pairs and better | 22–27 | a second or two, sometimes four |
 
 Each level is what it says: measured over twenty-five puzzles apiece, every
 Easy needed nothing but naked singles, every Medium wanted a hidden single
@@ -100,6 +100,25 @@ Nothing dealt ever needs a guess. Carving only takes a cell out if what is
 left can still be reasoned to the end, so a puzzle that could not be is never
 carved that far. That also does the work of checking the answer is unique:
 reasoning never guesses, so a grid it can finish has exactly one answer.
+
+Carving is greedy and takes what it is given, so a grid often lands easier
+than its level wants and the answer is to carve another and keep the harder
+of the two. Up to thirty of them, which is why an Expert deal can take a few
+seconds where an Easy one arrives at once. The screen says so while it
+happens, rather than sitting still and hoping you wait:
+
+```
+ Carving out an Expert puzzle...
+
+ Grid 7 of 30, and the best so far asks for hidden singles.
+ Each is carved as far as it will go, and the hardest of them kept.
+```
+
+The count moving says the game is working. What the best of them asks for so
+far says what it is working towards, and why it has not stopped yet: this one
+is still short of the naked pair an Expert puzzle promises. It stops the
+moment a grid is hard enough, so the count is rarely thirty — twenty-three
+was a bad day.
 
 ## Practice
 

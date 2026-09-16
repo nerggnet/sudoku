@@ -527,6 +527,27 @@ pub fn the_menu_says_when_the_terminal_is_in_line_mode_test() {
   assert !list.any(opening(), string.contains(_, "press Enter"))
 }
 
+pub fn carving_says_which_grid_it_is_on_test() {
+  let showing = fn(carving) {
+    helper.lines_of(render.generating(generator.Expert, carving))
+  }
+
+  // The first grid, before there is any best to be the best of.
+  let first = showing(generator.Carving(attempt: 1, of: 30, asks: Error(Nil)))
+  assert list.any(first, string.contains(_, "Grid 1 of 30."))
+  assert !list.any(first, string.contains(_, "best so far"))
+
+  // And afterwards, what the carving has to show for itself.
+  let later =
+    showing(generator.Carving(attempt: 7, of: 30, asks: Ok(logic.HiddenPair)))
+  assert list.any(later, string.contains(_, "Grid 7 of 30"))
+  assert list.any(later, string.contains(_, "hidden pairs"))
+
+  // A screen is still a screen, however much it has to say.
+  use line <- list.each(later)
+  assert string.length(line) < render.columns
+}
+
 pub fn the_menu_fits_the_screen_test() {
   let lines =
     helper.lines_of(render.menu_frame(
@@ -546,8 +567,9 @@ pub fn the_menu_fits_the_screen_test() {
 }
 
 pub fn a_puzzle_being_dealt_is_named_with_the_right_article_test() {
+  let first = generator.Carving(attempt: 1, of: 30, asks: Error(Nil))
   let said = fn(difficulty) {
-    helper.lines_of(render.generating(difficulty)) |> string.join(" ")
+    helper.lines_of(render.generating(difficulty, first)) |> string.join(" ")
   }
 
   assert string.contains(said(generator.Easy), "an Easy puzzle")

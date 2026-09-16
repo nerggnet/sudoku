@@ -141,8 +141,14 @@ fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
     Play(puzzle) -> start(raw, game.new(puzzle))
     Compose -> compose(raw, editor.new())
     Deal(difficulty) -> {
-      term.write(render.generating(difficulty))
-      start(raw, game.new(generator.generate(difficulty)))
+      // Drawn again as each grid is carved, so a deal that takes a few
+      // seconds is visibly a deal taking a few seconds.
+      let dealt =
+        generator.generate_telling(difficulty, fn(carving) {
+          term.write(render.generating(difficulty, carving))
+        })
+
+      start(raw, game.new(dealt))
     }
   }
 }

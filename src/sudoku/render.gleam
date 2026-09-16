@@ -725,7 +725,18 @@ fn capitalised(name: String) -> String {
   <> string.slice(name, 1, string.length(name) - 1)
 }
 
-pub fn generating(difficulty: Difficulty) -> String {
+/// The screen while a puzzle is being carved, which is a moment at the easy
+/// levels and can be a few seconds at Expert.
+///
+/// It says which grid is being cut and what the best of them asks for so
+/// far, because that is what the waiting is: carving is greedy and often
+/// lands easier than the level wants, so it carves another and keeps the
+/// harder. A count that moves says the game is working; saying what it has
+/// so far says what it is working towards.
+pub fn generating(
+  difficulty: Difficulty,
+  carving: generator.Carving,
+) -> String {
   term.screen([
     term.styled(palette.title, "S U D O K U"),
     "",
@@ -733,7 +744,31 @@ pub fn generating(difficulty: Difficulty) -> String {
       palette.dim,
       "Carving out " <> article(generator.label(difficulty)) <> " puzzle...",
     ),
+    "",
+    term.styled(palette.dim, counted(carving)),
+    term.styled(
+      palette.dim,
+      "Each is carved as far as it will go, and the hardest of them kept.",
+    ),
   ])
+}
+
+fn counted(carving: generator.Carving) -> String {
+  let so_far =
+    "Grid "
+    <> int.to_string(carving.attempt)
+    <> " of "
+    <> int.to_string(carving.of)
+
+  case carving.asks {
+    // The first grid, before there is any best to be the best of.
+    Error(_) -> so_far <> "."
+    Ok(technique) ->
+      so_far
+      <> ", and the best so far asks for "
+      <> logic.labels(technique)
+      <> "."
+  }
 }
 
 /// `a` or `an`, so that dealing an Expert puzzle does not read as dealing

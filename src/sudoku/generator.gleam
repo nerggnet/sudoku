@@ -122,26 +122,66 @@ pub fn asks_for(difficulty: Difficulty) -> String {
 /// promised beats one that never arrives.
 const attempts = 30
 
+/// A carved grid and what it turned out to ask for, kept together.
+///
+/// Rating a grid means reasoning it out to the end, which is the dearest
+/// thing here after the carving itself. It used to be worked out three times
+/// an attempt — once to ask whether the best so far was hard enough, and once
+/// for each side of the comparison that keeps the harder of two — and it is
+/// the same answer every time.
+type Cut {
+  Cut(puzzle: Puzzle, asks: Result(logic.Technique, Nil))
+}
+
+/// How a deal is going, for a screen to say so while it happens.
+pub type Carving {
+  Carving(attempt: Int, of: Int, asks: Result(logic.Technique, Nil))
+}
+
 pub fn generate(difficulty: Difficulty) -> Puzzle {
+  generate_telling(difficulty, fn(_) { Nil })
+}
+
+/// The same, saying how it is going as it goes.
+///
+/// Carving is greedy and takes what it is given, so a grid often comes out
+/// easier than its level wants and the answer is to carve another. Most
+/// deals are over in a moment; an Expert one can take four seconds, and four
+/// seconds of a screen that says the same thing throughout is the one place
+/// this game looks like it has stopped working.
+pub fn generate_telling(
+  difficulty: Difficulty,
+  telling: fn(Carving) -> Nil,
+) -> Puzzle {
   let peers = board.peers_table()
-  deal(difficulty, peers, attempts - 1, cut(difficulty, peers))
+  telling(Carving(attempt: 1, of: attempts, asks: Error(Nil)))
+  deal(difficulty, peers, telling, 1, cut(difficulty, peers))
 }
 
 fn deal(
   difficulty: Difficulty,
   peers: Peers,
-  left: Int,
-  best: Puzzle,
+  telling: fn(Carving) -> Nil,
+  taken: Int,
+  best: Cut,
 ) -> Puzzle {
-  case left <= 0 || asks_enough(band(difficulty), best) {
-    True -> best
-    False ->
-      deal(difficulty, peers, left - 1, harder_of(best, cut(difficulty, peers)))
+  case taken >= attempts || asks_enough(band(difficulty), best) {
+    True -> best.puzzle
+    False -> {
+      telling(Carving(attempt: taken + 1, of: attempts, asks: best.asks))
+      deal(
+        difficulty,
+        peers,
+        telling,
+        taken + 1,
+        harder_of(best, cut(difficulty, peers)),
+      )
+    }
   }
 }
 
-/// One grid, carved as far as its difficulty will let it go.
-fn cut(difficulty: Difficulty, peers: Peers) -> Puzzle {
+/// One grid, carved as far as its difficulty will let it go, and rated once.
+fn cut(difficulty: Difficulty, peers: Peers) -> Cut {
   let assert Ok(solution) = solver.search(peers, board.empty_grid(), True)
     as "an empty grid always has a solution"
 
@@ -151,26 +191,32 @@ fn cut(difficulty: Difficulty, peers: Peers) -> Puzzle {
     |> carve(band, symmetric_groups(), _)
     |> carve(band, single_groups(), _)
 
-  Puzzle(
-    board: board.from_grid(grid),
-    solution: solution,
-    origin: Dealt(difficulty),
+  Cut(
+    puzzle: Puzzle(
+      board: board.from_grid(grid),
+      solution: solution,
+      origin: Dealt(difficulty),
+    ),
+    asks: logic.rate(grid),
   )
 }
 
-fn asks_enough(band: Band, puzzle: Puzzle) -> Bool {
-  asks_for_rank(puzzle) >= logic.rank(band.floor)
+fn asks_enough(band: Band, cut: Cut) -> Bool {
+  asked_rank(cut.asks) >= logic.rank(band.floor)
 }
 
-fn harder_of(one: Puzzle, other: Puzzle) -> Puzzle {
-  case asks_for_rank(other) > asks_for_rank(one) {
+fn harder_of(one: Cut, other: Cut) -> Cut {
+  case asked_rank(other.asks) > asked_rank(one.asks) {
     True -> other
     False -> one
   }
 }
 
-fn asks_for_rank(puzzle: Puzzle) -> Int {
-  case logic.rate(puzzle.board.values) {
+/// How hard what a grid asks for is, with a grid that reasoning cannot
+/// finish at all counting as below everything: it is not a puzzle at this or
+/// any other difficulty.
+fn asked_rank(asks: Result(logic.Technique, Nil)) -> Int {
+  case asks {
     Ok(needed) -> logic.rank(needed)
     Error(_) -> -1
   }
