@@ -14,6 +14,7 @@ import sudoku/generator
 import sudoku/help
 import sudoku/key
 import sudoku/logic
+import sudoku/menu
 import sudoku/palette
 import sudoku/practice
 import sudoku/render
@@ -744,9 +745,9 @@ pub fn no_frame_smuggles_a_newline_into_a_line_test() {
 /// that reaches it is the one after Practice's.
 pub fn the_menu_offers_the_daily_test() {
   let lines = opening()
-  let wanted = int.to_string(render.daily_choice())
+  let wanted = int.to_string(menu.daily_choice())
 
-  assert render.daily_choice() == practice.choice() + 1
+  assert menu.daily_choice() == practice.choice() + 1
   assert list.any(lines, fn(line) {
     string.contains(line, wanted) && string.contains(line, "Daily")
   })
@@ -783,4 +784,26 @@ pub fn the_menu_says_when_the_day_is_already_done_test() {
     )),
     string.contains(_, "done in"),
   )
+}
+
+/// Whether a frame has to be drawn again before a key arrives, which is the
+/// other half of the question `until_clock_moves` answers.
+pub fn a_clock_runs_only_where_there_is_one_to_watch_test() {
+  let playing = helper.fixture()
+
+  assert render.clock_runs(True, playing)
+
+  // A pause and the help have stopped theirs and put the board away
+  // besides, and a game that is over has a time rather than a clock.
+  assert !render.clock_runs(True, game.Game(..playing, paused: True))
+  assert !render.clock_runs(
+    True,
+    game.Game(..playing, help: option.Some(game.Keys)),
+  )
+  assert !render.clock_runs(True, helper.solved(playing))
+
+  // Nor in a terminal still in line mode: what is typed there is echoed
+  // where it is typed, and a frame landing on top would rub out a keystroke
+  // halfway through being made.
+  assert !render.clock_runs(False, playing)
 }

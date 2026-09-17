@@ -2,17 +2,16 @@
 
 import gleam/int
 import gleam/io
-import gleam/list
 import gleam/option.{type Option, None, Some}
 import sudoku/board
-import sudoku/date.{type Date}
+import sudoku/date
 import sudoku/editor
 import sudoku/game
-import sudoku/generator.{type Difficulty}
+import sudoku/generator
 import sudoku/help
 import sudoku/invocation
 import sudoku/key
-import sudoku/practice
+import sudoku/menu
 import sudoku/random
 import sudoku/render
 import sudoku/rules
@@ -58,7 +57,7 @@ pub fn main() -> Nil {
 /// What the words the game was started with leave it to do.
 type Opening {
   /// Play: this, or the menu where nothing was named.
-  Start(chosen: Option(Choice), plain: Bool)
+  Start(chosen: Option(menu.Choice), plain: Bool)
   /// Say this and stop, the screen never having been taken over. Whether it
   /// was asked for decides the way out: a question answered is not a
   /// failure, and a line nobody could read is not a success.
@@ -75,15 +74,15 @@ fn opening(arguments: List(String)) -> Opening {
       case asked.asked {
         invocation.Explain -> Say(help.usage(), True)
         invocation.Menu -> Start(None, asked.plain)
-        invocation.Compose -> Start(Some(Compose), asked.plain)
+        invocation.Compose -> Start(Some(menu.Compose), asked.plain)
         invocation.Deal(difficulty) ->
-          Start(Some(Deal(difficulty, asked.seed)), asked.plain)
-        invocation.Today -> Start(Some(Day(date.today())), asked.plain)
-        invocation.Day(on) -> Start(Some(Day(on)), asked.plain)
-        invocation.Play(puzzle) -> Start(Some(Play(puzzle)), asked.plain)
+          Start(Some(menu.Deal(difficulty, asked.seed)), asked.plain)
+        invocation.Today -> Start(Some(menu.Day(date.today())), asked.plain)
+        invocation.Day(on) -> Start(Some(menu.Day(on)), asked.plain)
+        invocation.Play(puzzle) -> Start(Some(menu.Play(puzzle)), asked.plain)
         invocation.Resume ->
           case store.saved() {
-            Ok(current) -> Start(Some(Resume(current)), asked.plain)
+            Ok(current) -> Start(Some(menu.Resume(current)), asked.plain)
             Error(_) -> Say("There is no game waiting to be picked up.", False)
           }
       }
@@ -182,31 +181,50 @@ fn press_within(frame: String, milliseconds: Int) -> Result(key.Key, Nil) {
   }
 }
 
-/// What the opening menu offers, and what the command line can ask for
-/// instead. Only the command line asks to play a particular puzzle.
-type Choice {
-  /// A puzzle dealt at this difficulty, from the seed the command line named
-  /// or from one nobody chose.
-  Deal(Difficulty, Option(Int))
-  /// The puzzle belonging to a day, which everybody asking for that day gets.
-  Day(Date)
-  Compose
-  Resume(game.Game)
-  Play(generator.Puzzle)
-  Stop
-}
-
 fn run(raw: Bool) -> Option(game.Game) {
-  follow(raw, choose(raw, store.saved_games()))
+  follow(raw, showing(raw, menu.Choosing, store.saved_games()))
 }
 
-fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
+/// Put a screen up, read a key, and do as it says: open another screen, or
+/// hand back the choice it settled.
+///
+/// One function for the three of them, because the three are one thing done
+/// three times: draw, read, decide. What each of them draws is next door in
+/// `render` and what each of them decides is next door in `menu`, so the
+/// list on the screen and the keystrokes that read it are the same list read
+/// twice rather than two lists that have to agree.
+fn showing(
+  raw: Bool,
+  screen: menu.Screen,
+  saved: List(game.Game),
+) -> menu.Choice {
+  // Asked as the screen is drawn rather than as it is read, so that a menu
+  // sat in front of since before midnight goes on offering the day it says
+  // it is offering.
+  let today = date.today()
+
+  let frame = case screen {
+    menu.Choosing ->
+      render.menu_frame(raw, saved, store.bests(), today, store.dailies())
+    menu.PickingUp -> render.saved_frame(saved)
+    menu.Practising -> render.practice_frame()
+  }
+  term.write(frame)
+
+  case menu.answered(screen, press(frame), saved, today) {
+    menu.Picked(chosen) -> chosen
+    menu.Opens(next) -> showing(raw, next, saved)
+    menu.Stands -> showing(raw, screen, saved)
+  }
+}
+
+fn follow(raw: Bool, chosen: menu.Choice) -> Option(game.Game) {
   case chosen {
-    Stop -> None
-    Resume(current) -> start(raw, current)
-    Play(puzzle) -> start(raw, game.new(puzzle))
-    Compose -> compose(raw, editor.new())
-    Deal(difficulty, seed) -> {
+    menu.Stop -> None
+    menu.Resume(current) -> start(raw, current)
+    menu.Play(puzzle) -> start(raw, game.new(puzzle))
+    menu.Compose -> compose(raw, editor.new())
+    menu.Deal(difficulty, seed) -> {
       // Settled here rather than left to the generator, so that every deal
       // has a seed worth printing whether or not anybody asked for one.
       let seed = option.lazy_unwrap(seed, random.fresh_seed)
@@ -221,7 +239,7 @@ fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
       start(raw, game.new(dealt))
     }
 
-    Day(on) -> {
+    menu.Day(on) -> {
       let dealt =
         generator.deal_daily(on, fn(carving) {
           term.write(render.generating(generator.daily_difficulty(on), carving))
@@ -325,22 +343,11 @@ fn waited(
   current: game.Game,
   frame: String,
 ) -> Result(key.Key, Nil) {
-  case counting(raw, current) {
+  case render.clock_runs(raw, current) {
     False -> Ok(press(frame))
     True ->
       press_within(frame, render.until_clock_moves(game.elapsed_ms(current)))
   }
-}
-
-/// Whether there is a clock running on the screen to be kept up with.
-///
-/// A pause and the help have stopped theirs and put the board away besides,
-/// and a game that is over has a time rather than a clock. Nor in a terminal
-/// that is still in line mode: what is typed there is echoed where it is
-/// typed and not handed over until Enter, and a frame landing on top of it
-/// would rub out a keystroke halfway through being made.
-fn counting(raw: Bool, current: game.Game) -> Bool {
-  raw && !current.paused && current.help == None && !game.is_finished(current)
 }
 
 /// The moment a puzzle is solved is the moment to see what the record books
@@ -349,104 +356,5 @@ fn judged(before: game.Game, after: game.Game) -> game.Game {
   case game.is_finished(before), game.is_finished(after) {
     False, True -> game.Game(..after, verdict: Some(store.settle(after)))
     _, _ -> after
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Opening menu
-// ---------------------------------------------------------------------------
-
-/// Show what is on offer and take the answer. The drawing is next door in
-/// `render`, so what is on the screen and what a keystroke means are the same
-/// list read twice rather than two lists that have to agree.
-fn choose(raw: Bool, saved: List(game.Game)) -> Choice {
-  // Asked once, as the menu is drawn, rather than each time it is read: a
-  // menu that has been sat in front of since before midnight should go on
-  // offering the day it says it is offering.
-  let today = date.today()
-  let frame =
-    render.menu_frame(raw, saved, store.bests(), today, store.dailies())
-  term.write(frame)
-
-  // Worked out rather than written down, so that adding a puzzle to the
-  // menu moves this along with it. A guard cannot call for it itself.
-  let practice_at = practice.choice()
-  let daily_at = render.daily_choice()
-
-  case press(frame), saved {
-    key.Quit, _ | key.Char("q"), _ | key.Char("Q"), _ -> Stop
-
-    // One game waiting is no question: r has it back. Several is a question,
-    // and it is asked on a screen of its own rather than by making the menu
-    // guess which of them was meant.
-    key.Char("r"), [only] | key.Char("R"), [only] -> Resume(only)
-    key.Char("r"), [_, _, ..] | key.Char("R"), [_, _, ..] ->
-      picking_up(raw, saved)
-
-    key.Digit(picked), _ if picked == practice_at -> practising(raw, saved)
-    key.Digit(picked), _ if picked == daily_at -> Day(today)
-
-    key.Digit(picked), _ ->
-      case list.drop(generator.origins(), picked - 1) {
-        // Nothing chosen from the menu names a seed: the command line is
-        // where a deal is asked for by name, and the menu is where one is
-        // asked for by difficulty and left to chance.
-        [generator.Dealt(difficulty), ..] -> Deal(difficulty, None)
-        [generator.Handwritten, ..] -> Compose
-        _ -> choose(raw, saved)
-      }
-    _, _ -> choose(raw, saved)
-  }
-}
-
-/// Pick which game left behind to have back.
-///
-/// Only ever reached with more than one waiting. Two terminals with a puzzle
-/// each is the way that happens, and each keeps its own file so that neither
-/// writes over the other; this is where they are told apart again, by what
-/// they are rather than by which file they landed in.
-fn picking_up(raw: Bool, saved: List(game.Game)) -> Choice {
-  let frame = render.saved_frame(saved)
-  term.write(frame)
-
-  case press(frame) {
-    key.Quit | key.Char("q") | key.Char("Q") -> Stop
-    key.Digit(picked) ->
-      case list.drop(saved, picked - 1) {
-        [current, ..] -> Resume(current)
-        [] -> picking_up(raw, saved)
-      }
-    // Anything else is somebody who has thought better of it, the same as on
-    // the screen offering techniques to practise.
-    _ -> choose(raw, saved)
-  }
-}
-
-/// Pick a technique to practise, on the one grid kept for it.
-///
-/// A screen of its own rather than seven more lines on the menu: the menu is
-/// a choice of how hard a puzzle should be, and this is a choice of what to
-/// work on, which is a different question asked less often.
-fn practising(raw: Bool, saved: List(game.Game)) -> Choice {
-  let frame = render.practice_frame()
-  term.write(frame)
-
-  case press(frame) {
-    key.Quit | key.Char("q") | key.Char("Q") -> Stop
-    key.Digit(picked) ->
-      case list.drop(practice.techniques(), picked - 1) {
-        [technique, ..] ->
-          case practice.puzzle(technique) {
-            Ok(puzzle) -> Play(puzzle)
-            // Only reachable with a grid here that is not a puzzle, which
-            // is what the tests are for. Nothing to say about it that the
-            // player could act on, so the screen simply stands.
-            Error(_) -> practising(raw, saved)
-          }
-        [] -> practising(raw, saved)
-      }
-    // Anything else is somebody who opened this by accident, or has thought
-    // better of it: back to the menu, the way the help goes back to the board.
-    _ -> choose(raw, saved)
   }
 }

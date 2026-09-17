@@ -19,6 +19,7 @@ import sudoku/generator.{type Difficulty, type Origin}
 import sudoku/grids
 import sudoku/help
 import sudoku/logic
+import sudoku/menu
 import sudoku/palette
 import sudoku/practice
 import sudoku/store
@@ -529,6 +530,17 @@ pub fn clock(milliseconds: Int) -> String {
 /// Never nothing, whatever the moment: a wait of nothing at all is a loop
 /// that draws as fast as it can, which is a busy terminal and a clock no
 /// more right for it.
+/// Whether there is a clock running on the screen to be kept up with.
+///
+/// A pause and the help have stopped theirs and put the board away besides,
+/// and a game that is over has a time rather than a clock. Nor in a terminal
+/// that is still in line mode: what is typed there is echoed where it is
+/// typed and not handed over until Enter, and a frame landing on top of it
+/// would rub out a keystroke halfway through being made.
+pub fn clock_runs(raw: Bool, current: Game) -> Bool {
+  raw && !current.paused && current.help == None && !game.is_finished(current)
+}
+
 pub fn until_clock_moves(milliseconds: Int) -> Int {
   1000 - milliseconds % 1000
 }
@@ -656,7 +668,7 @@ pub fn menu_frame(
 
   let daily =
     "   "
-    <> term.styled(palette.key, int.to_string(daily_choice()))
+    <> term.styled(palette.key, int.to_string(menu.daily_choice()))
     <> "  "
     <> string.pad_end("Daily", 10, " ")
     <> term.styled(palette.dim, daily_aside(today))
@@ -796,15 +808,6 @@ fn best(origin: Origin, bests: store.Bests) -> String {
         Ok(taken) -> "best " <> clock(taken)
       }
   }
-}
-
-/// Which number on the menu reaches the daily puzzle.
-///
-/// After the techniques, which are after the levels: worked out rather than
-/// written down, so that a puzzle added to the menu moves this along with it
-/// instead of quietly landing on top of it.
-pub fn daily_choice() -> Int {
-  practice.choice() + 1
 }
 
 /// What the daily offers, which is a day and whatever that day asks for.
