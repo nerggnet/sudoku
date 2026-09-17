@@ -1,5 +1,6 @@
 //// A Sudoku game for the terminal.
 
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -11,6 +12,7 @@ import sudoku/help
 import sudoku/invocation
 import sudoku/key
 import sudoku/practice
+import sudoku/random
 import sudoku/render
 import sudoku/rules
 import sudoku/store
@@ -74,7 +76,7 @@ fn opening(arguments: List(String)) -> Opening {
         invocation.Menu -> Start(None, asked.plain)
         invocation.Compose -> Start(Some(Compose), asked.plain)
         invocation.Deal(difficulty) ->
-          Start(Some(Deal(difficulty)), asked.plain)
+          Start(Some(Deal(difficulty, asked.seed)), asked.plain)
         invocation.Play(puzzle) -> Start(Some(Play(puzzle)), asked.plain)
         invocation.Resume ->
           case store.saved() {
@@ -102,6 +104,23 @@ fn parting(played: Option(game.Game)) -> Nil {
 
   io.println("\nThis puzzle:")
   io.println(board.to_string(current.puzzle.board.values))
+
+  // And the shorter way to say the same thing, where there is one. Eighty-one
+  // characters are for handing a puzzle to somebody who has never run this;
+  // a seed is for handing this one back to the game that dealt it, which is
+  // what somebody wants who liked the puzzle, or who did not and would like
+  // to say why.
+  case current.puzzle.seed, current.puzzle.origin {
+    Some(seed), generator.Dealt(difficulty) ->
+      io.println(
+        "\nDealt at "
+        <> generator.label(difficulty)
+        <> " from seed "
+        <> int.to_string(seed)
+        <> ", which deals it again.",
+      )
+    _, _ -> Nil
+  }
 }
 
 fn option_each(value: Option(a), run: fn(a) -> Nil) -> Nil {
@@ -143,7 +162,9 @@ fn press_within(frame: String, milliseconds: Int) -> Result(key.Key, Nil) {
 /// What the opening menu offers, and what the command line can ask for
 /// instead. Only the command line asks to play a particular puzzle.
 type Choice {
-  Deal(Difficulty)
+  /// A puzzle dealt at this difficulty, from the seed the command line named
+  /// or from one nobody chose.
+  Deal(Difficulty, Option(Int))
   Compose
   Resume(game.Game)
   Play(generator.Puzzle)
@@ -160,11 +181,15 @@ fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
     Resume(current) -> start(raw, current)
     Play(puzzle) -> start(raw, game.new(puzzle))
     Compose -> compose(raw, editor.new())
-    Deal(difficulty) -> {
+    Deal(difficulty, seed) -> {
+      // Settled here rather than left to the generator, so that every deal
+      // has a seed worth printing whether or not anybody asked for one.
+      let seed = option.lazy_unwrap(seed, random.fresh_seed)
+
       // Drawn again as each grid is carved, so a deal that takes a few
       // seconds is visibly a deal taking a few seconds.
       let dealt =
-        generator.generate_telling(difficulty, fn(carving) {
+        generator.generate_telling(seed, difficulty, fn(carving) {
           term.write(render.generating(difficulty, carving))
         })
 
@@ -322,7 +347,10 @@ fn choose(raw: Bool, saved: List(game.Game)) -> Choice {
 
     key.Digit(picked), _ ->
       case list.drop(generator.origins(), picked - 1) {
-        [generator.Dealt(difficulty), ..] -> Deal(difficulty)
+        // Nothing chosen from the menu names a seed: the command line is
+        // where a deal is asked for by name, and the menu is where one is
+        // asked for by difficulty and left to chance.
+        [generator.Dealt(difficulty), ..] -> Deal(difficulty, None)
         [generator.Handwritten, ..] -> Compose
         _ -> choose(raw, saved)
       }

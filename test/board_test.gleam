@@ -50,6 +50,59 @@ pub fn every_cell_has_twenty_peers_test() {
   assert !set.contains(cells, index)
 }
 
+/// The geometry is worked out once and kept, so every one of these is
+/// answered from the same store under a key of its own. A key used twice
+/// would hand one of them the other's answer, and nothing in the types can
+/// say so: what is kept is kept as whatever it happens to be.
+///
+/// Asking each of them twice is what catches it. A clash shows up as the
+/// second answer disagreeing with the first, or as the wrong shape of thing
+/// coming back — a list of rows where a list of cells was asked for.
+pub fn the_geometry_is_remembered_not_confused_test() {
+  assert board.indices() == board.indices()
+  assert list.length(board.indices()) == 81
+
+  assert board.rows() == board.rows()
+  assert list.length(board.rows()) == 9
+
+  assert board.columns() == board.columns()
+  assert list.length(board.columns()) == 9
+
+  assert board.boxes() == board.boxes()
+  assert list.length(board.boxes()) == 9
+
+  assert board.units() == board.units()
+  assert list.length(board.units()) == 27
+
+  assert board.peers_table() == board.peers_table()
+  assert dict.size(board.peers_table()) == 81
+
+  // The four of them really are four different lists of cells, rather than
+  // one of them answered four times over.
+  assert board.rows() != board.columns()
+  assert board.rows() != board.boxes()
+  assert board.columns() != board.boxes()
+}
+
+/// Peers come out of a table now rather than being worked out on the spot,
+/// so a cell has to find its own row in it.
+pub fn peers_of_agrees_with_the_table_test() {
+  let peers = board.peers_table()
+
+  use index <- list.each(board.indices())
+  let assert Ok(cells) = dict.get(peers, index)
+  assert set.from_list(board.peers_of(index)) == cells
+  assert list.length(board.peers_of(index)) == 20
+}
+
+/// An index off the grid is not a cell with no peers, it is not a cell. The
+/// table has no row for it, and an empty list is the honest answer: nothing
+/// can see a cell that is not there.
+pub fn a_cell_off_the_grid_has_no_peers_test() {
+  assert board.peers_of(-1) == []
+  assert board.peers_of(81) == []
+}
+
 pub fn parse_ignores_layout_test() {
   let parsed = helper.grid(helper.puzzle_text)
   assert dict.get(parsed, 0) == Ok(5)

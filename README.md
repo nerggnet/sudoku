@@ -8,6 +8,7 @@ gleam run -- hard             # deal one at that difficulty
 gleam run -- custom           # type a puzzle in
 gleam run -- resume           # pick up the game you left
 gleam run -- 53..7....6..1..  # play that puzzle, dots for the blanks
+gleam run -- hard --seed 7    # deal the puzzle that seed deals
 gleam run -- --plain          # draw without colour
 gleam run -- --help           # say all this and stop
 ```
@@ -72,6 +73,42 @@ attributes, so clues stay bold, a wrong digit stays underlined, the cursor
 stays in reverse video — and a clash, which had only its redness to go on,
 would otherwise have looked exactly like a clue. There is a test that any two
 things the player must tell apart differ by more than their colour.
+
+## Dealing the same puzzle twice
+
+Every deal is carved from a seed, and the game says which as it leaves:
+
+```
+This puzzle:
+3.5.89.7.47..5.2.89.264...112.....46...5.6...56.....392...354.76.1.2..83.4.96.1.5
+
+Dealt at Easy from seed 42, which deals it again.
+```
+
+Hand the seed back beside a difficulty and the same puzzle comes out.
+`--seed=42` says it the other way round, and either can sit on either side of
+the difficulty, the way `--plain` can. A seed names a deal rather than a
+puzzle, so it wants a difficulty beside it to name the deal of; `--seed 42
+custom` is refused rather than quietly ignored, since the grid you then type
+in would be nothing to do with the number you asked for.
+
+Both halves of that line are worth having and they are for different people.
+The eighty-one characters go to somebody who has never run this and never
+will — they are a puzzle, and any program that takes one will take them. The
+seed goes back to this game: it is shorter, it survives being read out over a
+telephone, and it says what the puzzle *is for*, which is a deal at a
+difficulty rather than a grid that happens to be hard.
+
+It is also the only way to hand back a deal rather than its result. A deal
+that took eight seconds, or came out a shade easier than its level promised,
+cannot be looked into from the grid alone — the grid is what survived thirty
+carvings, and the question is about the other twenty-nine. The seed carves
+them again.
+
+The game remembers the seed of a game you put down, so a puzzle picked up a
+week later still knows how it was dealt. Nothing else has one: a grid typed
+in was not dealt from anything, and a practice grid is the same grid every
+time without any chance involved in it.
 
 ## Difficulty
 

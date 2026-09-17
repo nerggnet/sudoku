@@ -44,14 +44,17 @@ pub const invocations = [
   #("gleam run -- custom", "type a puzzle in"),
   #("gleam run -- resume", "pick up the game you left"),
   #("gleam run -- <puzzle>", "play that puzzle"),
+  #("gleam run -- hard --seed 7", "deal the puzzle that seed deals"),
   #("gleam run -- --plain", "draw without colour"),
   #("gleam run -- --help", "say all this and stop"),
 ]
 
 const starting_notes = [
-  "A puzzle is 81 characters, a digit for each clue and a dot for each blank.",
-  "The game prints the one it was playing as it leaves, which is the line to",
-  "hand to somebody else — and the line they hand to this.",
+  "A puzzle is 81 characters, a digit for each clue and a dot for each blank;",
+  "the game prints the one it was playing as it leaves, to hand on or hand back.",
+  "",
+  "It prints the seed beside it, and that seed given back beside a difficulty",
+  "deals the same puzzle again. --seed=7 says it the other way round.",
   "",
   "--plain drops the colours and keeps the shapes, and can be given alongside",
   "a puzzle. Setting NO_COLOR in the environment does the same thing.",
@@ -59,9 +62,16 @@ const starting_notes = [
 
 /// The same, for a terminal that has not been taken over.
 pub fn usage() -> String {
+  // Wide enough for the longest of them, worked out rather than written
+  // down: a line added here should not be able to run into its meaning.
+  let column =
+    list.fold(invocations, 24, fn(widest, entry) {
+      int.max(widest, string.length(entry.0) + 2)
+    })
+
   let lines = {
     use #(invocation, meaning) <- list.map(invocations)
-    "  " <> string.pad_end(invocation, 24, " ") <> meaning
+    "  " <> string.pad_end(invocation, column, " ") <> meaning
   }
 
   string.join(["Usage:", ..lines], "\n")

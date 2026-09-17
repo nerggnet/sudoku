@@ -8,6 +8,7 @@
 
 import gleam/dict
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import sudoku/board.{type Board, type Grid, type Peers}
 import sudoku/logic
@@ -31,7 +32,18 @@ pub type Origin {
 }
 
 pub type Puzzle {
-  Puzzle(board: Board, solution: Grid, origin: Origin)
+  Puzzle(
+    board: Board,
+    solution: Grid,
+    origin: Origin,
+    /// The seed the grid was carved from, where it was carved at all.
+    ///
+    /// Dealing at the same difficulty from the same seed deals this same
+    /// puzzle back. A puzzle typed in was not dealt and has none, and nor
+    /// has one kept for practising, which is the same grid every time
+    /// without any chance being involved in it.
+    seed: Option(Int),
+  )
 }
 
 /// The difficulties a puzzle can be dealt at, in menu order. A handwritten
@@ -138,8 +150,20 @@ pub type Carving {
   Carving(attempt: Int, of: Int, asks: Result(logic.Technique, Nil))
 }
 
+/// Deal a puzzle, from a seed nobody chose.
 pub fn generate(difficulty: Difficulty) -> Puzzle {
-  generate_telling(difficulty, fn(_) { Nil })
+  generate_from(random.fresh_seed(), difficulty)
+}
+
+/// Deal the puzzle a seed deals.
+///
+/// Every choice chance makes in carving a grid is drawn from the seed, so
+/// this is the same puzzle every time it is asked for — which is what makes
+/// a deal something that can be handed to somebody else, or handed back to
+/// the game that dealt it when it took four seconds over it and somebody
+/// wants to know why.
+pub fn generate_from(seed: Int, difficulty: Difficulty) -> Puzzle {
+  generate_telling(seed, difficulty, fn(_) { Nil })
 }
 
 /// The same, saying how it is going as it goes.
@@ -150,12 +174,20 @@ pub fn generate(difficulty: Difficulty) -> Puzzle {
 /// seconds of a screen that says the same thing throughout is the one place
 /// this game looks like it has stopped working.
 pub fn generate_telling(
+  seed: Int,
   difficulty: Difficulty,
   telling: fn(Carving) -> Nil,
 ) -> Puzzle {
+  random.seed(seed)
+
   let peers = board.peers_table()
   telling(Carving(attempt: 1, of: attempts, asks: Error(Nil)))
-  deal(difficulty, peers, telling, 1, cut(difficulty, peers))
+  let dealt = deal(difficulty, peers, telling, 1, cut(difficulty, peers))
+
+  // Stamped here rather than in the carving, where up to thirty grids are
+  // cut and thrown away: it is the deal that came of the seed, not each
+  // attempt at it.
+  Puzzle(..dealt, seed: Some(seed))
 }
 
 fn deal(
@@ -196,6 +228,7 @@ fn cut(difficulty: Difficulty, peers: Peers) -> Cut {
       board: board.from_grid(grid),
       solution: solution,
       origin: Dealt(difficulty),
+      seed: None,
     ),
     asks: logic.rate(grid),
   )
@@ -266,6 +299,7 @@ pub fn made_of(clues: Grid, origin: Origin) -> Result(Puzzle, Rejection) {
                 board: board.from_grid(clues),
                 solution: solution,
                 origin: origin,
+                seed: None,
               ))
             Error(_) -> Error(Unsolvable)
           }

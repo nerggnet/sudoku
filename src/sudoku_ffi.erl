@@ -3,6 +3,8 @@
 -module(sudoku_ffi).
 
 -export([enable_raw/0, read_byte/0, read_byte_after/1, now_ms/0, shuffle/1]).
+-export([remembered/2]).
+-export([seed/1, fresh_seed/0]).
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
@@ -106,8 +108,50 @@ lingering(Reader, Timeout) ->
         end
     end.
 
+%% Remember the answer to a question that always has the same answer.
+%%
+%% The shape of the grid is a fact about Sudoku rather than about any one
+%% puzzle: which cells make up a row, and which cells a given cell can see,
+%% are the same on an empty grid as on a finished one. Working them out
+%% afresh is what dealing a puzzle used to spend most of its time on —
+%% carving one Expert grid asked for the nine rows forty-five thousand times
+%% over and got the same nine rows back every time.
+%%
+%% persistent_term rather than a process dictionary or an ets table, because
+%% this is written once and then only ever read: a read costs nothing and
+%% hands back the term itself rather than a copy of it, which is exactly the
+%% bargain on offer. The write it makes in exchange is expensive, and there
+%% are a handful of them in the life of the game.
+remembered(Key, Work) ->
+    case persistent_term:get({sudoku_table, Key}, undefined) of
+        undefined ->
+            Value = Work(),
+            persistent_term:put({sudoku_table, Key}, Value),
+            Value;
+        Value ->
+            Value
+    end.
+
 now_ms() ->
     erlang:monotonic_time(millisecond).
+
+%% Start the chance in a deal at a named place.
+%%
+%% Everything chance decides while a puzzle is carved is drawn from here:
+%% the order the digits are tried in filling the grid, and the order the
+%% cells are taken back out of it. So the same seed carves the same puzzle,
+%% and a deal can be asked for a second time.
+seed(Seed) ->
+    _ = rand:seed(exsss, Seed),
+    nil.
+
+%% A seed nobody chose, short enough to read out over a telephone.
+%%
+%% Not drawn from rand itself, which is the thing being seeded: asked for
+%% twice in one run it would hand back the same number the second time, and
+%% two puzzles dealt in a sitting would be one puzzle dealt twice.
+fresh_seed() ->
+    erlang:phash2({erlang:monotonic_time(), erlang:unique_integer()}, 100000000).
 
 shuffle(List) ->
     [X || {_, X} <- lists:sort([{rand:uniform(), E} || E <- List])].

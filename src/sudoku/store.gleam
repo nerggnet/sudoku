@@ -12,7 +12,7 @@
 import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/set
 import gleam/string
@@ -45,7 +45,18 @@ pub fn encode(current: Game) -> String {
     "wrong " <> int.to_string(current.mistakes),
     "hints " <> int.to_string(current.hints),
   ]
+  |> list.append(seed_line(current.puzzle.seed))
   |> string.join("\n")
+}
+
+/// A puzzle carved from a seed says which, so that a game picked up a week
+/// later can still say how it was dealt. One typed in was not dealt from
+/// anything, and the file simply does not mention it.
+fn seed_line(seed: Option(Int)) -> List(String) {
+  case seed {
+    Some(seed) -> ["seed " <> int.to_string(seed)]
+    None -> []
+  }
 }
 
 /// Read a game back, or refuse the file.
@@ -82,6 +93,11 @@ pub fn decode(text: String) -> Result(Game, Nil) {
       board: board.from_grid(clues),
       solution: answer,
       origin: origin,
+      // Absent from a file written before a deal had a seed, and from one
+      // holding a puzzle that was typed in rather than dealt.
+      seed: dict.get(fields, "seed")
+        |> result.try(int.parse)
+        |> option.from_result,
     )
   let started = game.new(puzzle)
 

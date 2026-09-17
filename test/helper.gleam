@@ -6,6 +6,7 @@
 
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/string
 import sudoku/board
 import sudoku/editor
@@ -180,6 +181,7 @@ pub fn fixture() -> game.Game {
     board: board.from_grid(grid(puzzle_text)),
     solution: grid(solution_text),
     origin: generator.Dealt(generator.Medium),
+    seed: option.None,
   ))
 }
 
@@ -231,6 +233,7 @@ pub fn playing(text: String) -> game.Game {
     board: board.from_grid(grid(text)),
     solution: answer,
     origin: generator.Handwritten,
+    seed: option.None,
   ))
 }
 

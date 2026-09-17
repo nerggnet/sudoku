@@ -39,8 +39,23 @@ pub fn span(start: Int, stop: Int) -> List(Int) {
   int.range(from: stop, to: start - 1, with: [], run: list.prepend)
 }
 
+/// Remember the answer to a question that always has the same answer.
+///
+/// The shape of the grid is a fact about Sudoku rather than about any one
+/// puzzle: which cells make up a row, and which cells a given cell can see,
+/// are the same on an empty grid as on a finished one. So they are worked
+/// out once and kept, and every call after the first is a lookup.
+///
+/// Worth keeping because the reasoning asks constantly and asks in the
+/// middle of everything else. Carving one Expert puzzle used to build the
+/// nine rows forty-five thousand times over, and the peer table nine
+/// hundred and eighty-five times, and got the same answer back every time.
+@external(erlang, "sudoku_ffi", "remembered")
+fn remembered(question: String, answer: fn() -> a) -> a
+
 /// Every cell index, in reading order.
 pub fn indices() -> List(Int) {
+  use <- remembered("indices")
   span(0, cell_count - 1)
 }
 
@@ -113,18 +128,21 @@ pub fn at(row: Int, col: Int) -> Int {
 
 /// The nine rows, top to bottom.
 pub fn rows() -> List(List(Int)) {
+  use <- remembered("rows")
   let digits = span(0, side - 1)
   list.map(digits, fn(row) { list.map(digits, fn(col) { at(row, col) }) })
 }
 
 /// The nine columns, left to right.
 pub fn columns() -> List(List(Int)) {
+  use <- remembered("columns")
   let digits = span(0, side - 1)
   list.map(digits, fn(col) { list.map(digits, fn(row) { at(row, col) }) })
 }
 
 /// The nine boxes, in reading order.
 pub fn boxes() -> List(List(Int)) {
+  use <- remembered("boxes")
   use box <- list.map(span(0, side - 1))
   let top = box / 3 * 3
   let left = box % 3 * 3
@@ -136,11 +154,30 @@ pub fn boxes() -> List(List(Int)) {
 /// The 27 groups of nine cells that must each hold the digits 1-9 exactly
 /// once: nine rows, nine columns and nine boxes.
 pub fn units() -> List(List(Int)) {
+  use <- remembered("units")
   list.flatten([rows(), columns(), boxes()])
 }
 
 /// The 20 cells that share a row, column or box with this one.
 pub fn peers_of(index: Int) -> List(Int) {
+  case dict.get(peer_lists(), index) {
+    Ok(cells) -> cells
+    // No cell, so nothing can see it. Only reachable with an index off the
+    // grid, which is not a cell that has peers so much as not a cell.
+    Error(_) -> []
+  }
+}
+
+/// Every cell's peers, worked out once.
+fn peer_lists() -> Dict(Int, List(Int)) {
+  use <- remembered("peer_lists")
+  indices()
+  |> list.map(fn(index) { #(index, peers_around(index)) })
+  |> dict.from_list
+}
+
+/// Which cells those are, for one cell, from first principles.
+fn peers_around(index: Int) -> List(Int) {
   let row = row_of(index)
   let col = col_of(index)
   let top = row / 3 * 3
@@ -157,15 +194,16 @@ pub fn peers_of(index: Int) -> List(Int) {
   |> list.unique
 }
 
-/// Build the peer lookup table. This is mildly expensive, so solvers take it
-/// as an argument and reuse a single table across a whole search.
+/// The same again as sets, for the solver, which asks whether a cell is a
+/// peer rather than which cells are.
 ///
-/// Writing a digit works out the one cell's peers instead, which looks like
-/// an oversight and is not: one cell's peers cost a microsecond and a half
-/// and the whole table costs a hundred times that. A table is worth building
-/// where it will be read eighty times over, and not where it will be read
-/// once.
+/// Solvers still take this as an argument and pass it down a whole search.
+/// That is no longer about what it costs to build — it is built once and
+/// kept, like everything else here — but about being handed the thing you
+/// are reading rather than going and asking for it again at every level of
+/// the recursion.
 pub fn peers_table() -> Peers {
+  use <- remembered("peers_table")
   indices()
   |> list.map(fn(index) { #(index, set.from_list(peers_of(index))) })
   |> dict.from_list
