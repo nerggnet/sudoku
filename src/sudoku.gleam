@@ -142,19 +142,29 @@ fn option_each(value: Option(a), run: fn(a) -> Nil) -> Nil {
   }
 }
 
-/// Read a key, drawing the screen again for as long as that is what is
-/// asked for.
+/// Read a key the player actually pressed, drawing the screen again for as
+/// long as that is what is asked for.
 ///
 /// Every screen is drawn the same way, so this can answer Ctrl-L wherever it
 /// is pressed without any of them knowing about it. Wiping first is the point
 /// of it: an ordinary frame clears each line as it lands, which is no use
 /// against a mess made by something other than the game.
+///
+/// A newline is swallowed here for the same reason and in the same place. A
+/// terminal in line mode echoes one after every key, and Enter in raw mode
+/// arrives as one too; neither is a keystroke anybody made. The board and
+/// the editor each knew that and said so themselves, and the screens that
+/// pick a puzzle did not — they read it as "anything else", which on those
+/// screens means "go back". So picking a technique to practise, or which
+/// game to pick up, was answered and then undone by the Enter that answered
+/// it, and in line mode there was no way to reach either screen at all.
 fn press(frame: String) -> key.Key {
   case key.read() {
     key.Redraw -> {
       term.write(term.blank <> frame)
       press(frame)
     }
+    key.Unknown -> press(frame)
     pressed -> pressed
   }
 }
@@ -167,6 +177,7 @@ fn press_within(frame: String, milliseconds: Int) -> Result(key.Key, Nil) {
       term.write(term.blank <> frame)
       press_within(frame, milliseconds)
     }
+    Ok(key.Unknown) -> press_within(frame, milliseconds)
     pressed -> pressed
   }
 }
