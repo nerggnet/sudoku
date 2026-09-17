@@ -21,6 +21,7 @@ pub type Difficulty {
   Medium
   Hard
   Expert
+  Master
 }
 
 /// Where a puzzle came from: carved out of a random grid at one of the
@@ -57,7 +58,7 @@ pub type Puzzle {
 /// The difficulties a puzzle can be dealt at, in menu order. A handwritten
 /// puzzle is not among them: its clues are typed in rather than carved out,
 /// so how hard it is was settled by whoever wrote it.
-pub const difficulties = [Easy, Medium, Hard, Expert]
+pub const difficulties = [Easy, Medium, Hard, Expert, Master]
 
 /// Every kind of puzzle there is, in the order they are offered: dealt at
 /// each difficulty, easiest first, and then one typed in by hand.
@@ -71,6 +72,7 @@ pub fn label(difficulty: Difficulty) -> String {
     Medium -> "Medium"
     Hard -> "Hard"
     Expert -> "Expert"
+    Master -> "Master"
   }
 }
 
@@ -113,9 +115,10 @@ fn band(difficulty: Difficulty) -> Band {
     Easy -> Band(40, logic.NakedSingle, logic.NakedSingle)
     Medium -> Band(32, logic.HiddenSingle, logic.HiddenSingle)
     Hard -> Band(26, logic.LockedCandidates, logic.LockedCandidates)
-    // The floor for the hardest puzzles, and the ceiling of what the
-    // reasoning knows how to do.
     Expert -> Band(17, logic.NakedPair, logic.XWing)
+    // The floor is the first technique that is not read off a single unit,
+    // and the ceiling is the hardest the reasoning knows how to do.
+    Master -> Band(17, logic.XYWing, logic.Swordfish)
   }
 }
 
@@ -178,8 +181,9 @@ pub fn daily_difficulty(on: Date) -> Difficulty {
   case date.weekday(on) {
     date.Monday | date.Tuesday -> Easy
     date.Wednesday | date.Thursday -> Medium
-    date.Friday | date.Saturday -> Hard
-    date.Sunday -> Expert
+    date.Friday -> Hard
+    date.Saturday -> Expert
+    date.Sunday -> Master
   }
 }
 
@@ -222,8 +226,8 @@ pub fn generate(difficulty: Difficulty) -> Puzzle {
 /// Every choice chance makes in carving a grid is drawn from the seed, so
 /// this is the same puzzle every time it is asked for — which is what makes
 /// a deal something that can be handed to somebody else, or handed back to
-/// the game that dealt it when it took four seconds over it and somebody
-/// wants to know why.
+/// the game that dealt it when it took longer than it should have and
+/// somebody wants to know why.
 pub fn generate_from(seed: Int, difficulty: Difficulty) -> Puzzle {
   generate_telling(seed, difficulty, fn(_) { Nil })
 }
@@ -232,9 +236,9 @@ pub fn generate_from(seed: Int, difficulty: Difficulty) -> Puzzle {
 ///
 /// Carving is greedy and takes what it is given, so a grid often comes out
 /// easier than its level wants and the answer is to carve another. Most
-/// deals are over in a moment; an Expert one can take four seconds, and four
-/// seconds of a screen that says the same thing throughout is the one place
-/// this game looks like it has stopped working.
+/// deals are over in a moment; a Master one takes a second or two, and a
+/// second or two of a screen that says the same thing throughout is the one
+/// place this game looks like it has stopped working.
 pub fn generate_telling(
   seed: Int,
   difficulty: Difficulty,

@@ -89,11 +89,15 @@ fancied, so it ramps through the week the way a newspaper's does:
 
 | | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| | Easy | Easy | Medium | Medium | Hard | Hard | Expert |
+| | Easy | Easy | Medium | Medium | Hard | Expert | Master |
 
 An easy Monday for somebody on a train, and a Sunday that is an afternoon.
 Every level turns up in a week, so playing nothing but the daily is not a way
 of never meeting an X-wing.
+
+The nine techniques fill the practice screen's digits exactly, which is the
+ceiling on that screen rather than on the reasoning: a tenth would be one
+nobody could press a key for.
 
 Naming the date plays that day's, which is what two people use when their
 calendars have already disagreed about what day it is — the day is taken from
@@ -161,12 +165,15 @@ the same number of clues can be a minute apart or an hour.
 | Easy | naked singles | 39–40 | instant |
 | Medium | hidden singles | 31–32 | instant |
 | Hard | locked candidates | 26–27 | about a third of a second |
-| Expert | naked pairs and better | 22–27 | a second or two, sometimes four |
+| Expert | naked pairs and better | 22–27 | half a second or so |
+| Master | XY-wings and better | 22–27 | a second or two |
 
 Each level is what it says: measured over twenty-five puzzles apiece, every
 Easy needed nothing but naked singles, every Medium wanted a hidden single
 somewhere, every Hard a locked candidate, and every Expert a pair or better,
-up to the occasional X-wing.
+up to the occasional X-wing. Every Master wanted an XY-wing at least — the
+first technique here that is not read off a single unit — and one of the
+twenty-five wanted a swordfish.
 
 Clues still come into it, because two different things make a puzzle hard.
 The reasoning is one — a grid that never asks for more than a naked single is
@@ -182,8 +189,8 @@ reasoning never guesses, so a grid it can finish has exactly one answer.
 
 Carving is greedy and takes what it is given, so a grid often lands easier
 than its level wants and the answer is to carve another and keep the harder
-of the two. Up to thirty of them, which is why an Expert deal can take a few
-seconds where an Easy one arrives at once. The screen says so while it
+of the two. Up to thirty of them, which is why a Master deal takes a second
+or two where an Easy one arrives at once. The screen says so while it
 happens, rather than sitting still and hoping you wait:
 
 ```
@@ -216,6 +223,8 @@ page and then waiting for one to come round is not a plan.
     5  Hidden pair         53 clues
     6  Naked triple        44 clues
     7  X-wing              57 clues
+    8  XY-wing             51 clues
+    9  Swordfish           60 clues
 ```
 
 One grid apiece, the same one every time. Each was carved until the reasoning

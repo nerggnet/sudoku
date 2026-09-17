@@ -101,6 +101,8 @@ pub fn an_explanation_names_what_it_is_about_test() {
     #(helper.needs_hidden_pair, logic.HiddenPair),
     #(helper.needs_naked_triple, logic.NakedTriple),
     #(helper.needs_x_wing, logic.XWing),
+    #(helper.needs_xy_wing, logic.XYWing),
+    #(helper.needs_swordfish, logic.Swordfish),
     #(helper.puzzle_text, logic.NakedSingle),
   ]
 
@@ -137,7 +139,7 @@ pub fn techniques_are_listed_easiest_first_test() {
   assert ranks == list.sort(ranks, by: int.compare)
   assert list.unique(ranks) == ranks
   // Every technique is listed, and every one has a name.
-  assert list.length(logic.techniques) == 7
+  assert list.length(logic.techniques) == 9
   assert list.all(logic.techniques, fn(t) { logic.label(t) != "" })
 }
 
@@ -147,6 +149,8 @@ pub fn the_rarer_techniques_are_used_where_they_are_needed_test() {
     #(helper.needs_hidden_pair, logic.HiddenPair),
     #(helper.needs_naked_triple, logic.NakedTriple),
     #(helper.needs_x_wing, logic.XWing),
+    #(helper.needs_xy_wing, logic.XYWing),
+    #(helper.needs_swordfish, logic.Swordfish),
   ]
 
   use #(text, technique) <- list.each(hard_cases)

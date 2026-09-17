@@ -350,7 +350,101 @@ fn teaching(
       ),
       "The 9s in rows B and F keep to columns 2 and 9, so four others go.",
     )
+
+    logic.XYWing -> #(
+      [
+        "A cell of two candidates, and two more it can see holding one of",
+        "those apiece alongside a third: the third has nowhere left to hide.",
+      ],
+      // B2 is a 2 or a 7. If it is the 2, E2 has to be the 9; if it is the
+      // 7, B7 has to be. Either way one of the wings is a 9, and E7 can see
+      // them both.
+      wings([#("B2", "27"), #("B7", "79"), #("E2", "29")], ["E7"], "9"),
+      "One of B7 and E2 is a 9 whichever way B2 falls, so E7 loses its 9.",
+    )
+
+    logic.Swordfish -> #(
+      [
+        "The same argument as an X-wing over three lines instead of two: a",
+        "digit down to three columns in three rows takes one in each.",
+      ],
+      // Rows A, D and G can only take their 7 in columns 1, 4 and 8 — two
+      // of the three apiece, and not the same two. The three columns are
+      // spoken for all the same.
+      map(
+        "7",
+        [
+          "#..#.....", "!........", "...!.....", "...#...#.", ".......!.",
+          ".........", "#......#.", "!........", ".........",
+        ],
+        False,
+      ),
+      "The 7s in rows A, D and G keep to columns 1, 4 and 8, so four go.",
+    )
   }
+}
+
+/// A board with a few cells' candidates written into them, for a technique
+/// whose argument is not read off one unit and so cannot be drawn as a
+/// strip.
+///
+/// Cells are three columns wide rather than two, a pair of candidates
+/// needing the room. Everything not named is a dot, the same as everywhere
+/// else: the whole point of a page is the one thing it is about, and a board
+/// with sixty other cells filled in is a board to look past.
+fn wings(
+  held: List(#(String, String)),
+  out: List(String),
+  digit: String,
+) -> List(String) {
+  let width = 3
+
+  let ruler =
+    "    "
+    <> term.styled(
+      palette.dim,
+      grids.chunked(
+        list.map(board.span(1, 9), fn(column) { "  " <> int.to_string(column) }),
+        9,
+        " ",
+      ),
+    )
+
+  let lines = {
+    use row <- list.map(board.span(0, 8))
+    let cells = {
+      use column <- list.map(board.span(0, 8))
+      let name = board.name(board.at(row, column))
+
+      case list.key_find(held, name), list.contains(out, name) {
+        Ok(pair), _ -> term.styled(palette.given, " " <> pair)
+        _, True -> term.styled(palette.conflict, "  " <> digit)
+        _, False -> term.styled(palette.empty, "  \u{b7}")
+      }
+    }
+
+    "  "
+    <> term.styled(palette.dim, board.row_letter(row))
+    <> " "
+    <> grids.chunked(cells, 9, term.styled(palette.dim, "\u{2502}"))
+  }
+
+  // Not `banded_rule`, which measures itself for cells two columns wide.
+  // One band of nine cells of `width`, and the space that closes the row.
+  let rules = fn(left, right) {
+    "    "
+    <> term.styled(
+      palette.dim,
+      left <> string.repeat("\u{2500}", 9 * width + 1) <> right,
+    )
+  }
+
+  list.flatten([
+    [ruler],
+    [rules("\u{250c}", "\u{2510}")],
+    lines,
+    [rules("\u{2514}", "\u{2518}")],
+  ])
 }
 
 /// One unit's worth of cells and what each of them has left in it.

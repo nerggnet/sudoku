@@ -82,8 +82,8 @@ pub fn the_week_ramps_from_monday_test() {
     #("2026-09-16", generator.Medium),
     #("2026-09-17", generator.Medium),
     #("2026-09-18", generator.Hard),
-    #("2026-09-19", generator.Hard),
-    #("2026-09-20", generator.Expert),
+    #("2026-09-19", generator.Expert),
+    #("2026-09-20", generator.Master),
   ]
 
   use #(written, difficulty) <- list.each(week)
@@ -229,7 +229,7 @@ pub fn a_saved_daily_keeps_only_the_day_test() {
 
   assert list.contains(string.split(written, "\n"), "origin daily 2026-09-20")
   assert generator.origin_label(generator.Daily(on("2026-09-20")))
-    == "Daily Expert"
+    == "Daily Master"
 }
 
 // ---------------------------------------------------------------------------

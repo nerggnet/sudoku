@@ -88,3 +88,13 @@ pub fn the_opening_line_says_what_is_being_practised_test() {
   // And the header says it is practice rather than naming a difficulty.
   assert generator.origin_label(puzzle.origin) == "Practice"
 }
+
+/// The screen offering them puts a digit in front of each, so there is room
+/// for nine and no more. A tenth technique would be one nobody could pick.
+pub fn every_technique_can_be_picked_by_a_digit_test() {
+  assert list.length(practice.techniques()) <= 9
+
+  // And the same list, in the order the help pages them, so the screen is a
+  // ladder as well as a menu.
+  assert practice.techniques() == logic.techniques
+}

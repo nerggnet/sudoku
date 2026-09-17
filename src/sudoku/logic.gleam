@@ -34,6 +34,11 @@ pub type Technique {
   /// A digit down to the same two columns in two rows, or the other way
   /// about.
   XWing
+  /// Three cells of two candidates apiece, hinged on one that sees the other
+  /// two, which between them leave a digit nowhere to hide.
+  XYWing
+  /// The same argument as an X-wing over three lines instead of two.
+  Swordfish
 }
 
 /// Every technique, easiest first.
@@ -45,6 +50,8 @@ pub const techniques = [
   HiddenPair,
   NakedTriple,
   XWing,
+  XYWing,
+  Swordfish,
 ]
 
 pub fn label(technique: Technique) -> String {
@@ -56,6 +63,8 @@ pub fn label(technique: Technique) -> String {
     HiddenPair -> "hidden pair"
     NakedTriple -> "naked triple"
     XWing -> "X-wing"
+    XYWing -> "XY-wing"
+    Swordfish -> "swordfish"
   }
 }
 
@@ -69,6 +78,8 @@ pub fn labels(technique: Technique) -> String {
     HiddenPair -> "hidden pairs"
     NakedTriple -> "naked triples"
     XWing -> "X-wings"
+    XYWing -> "XY-wings"
+    Swordfish -> "swordfish"
   }
 }
 
@@ -90,6 +101,8 @@ pub fn rank(technique: Technique) -> Int {
     HiddenPair -> 4
     NakedTriple -> 5
     XWing -> 6
+    XYWing -> 7
+    Swordfish -> 8
   }
 }
 
@@ -252,6 +265,8 @@ fn step(grid: Grid, marks: Pencil) -> Result(Step, Nil) {
       hidden_pair,
       naked_triple,
       x_wing,
+      xy_wing,
+      swordfish,
     ],
     grid,
     marks,
@@ -354,7 +369,7 @@ fn because(step: Step) -> String {
     HiddenPair, RuleOut(_, _) ->
       "One each, so nothing else fits in either of them."
 
-    XWing, RuleOut(cells, _) -> {
+    XWing, RuleOut(cells, _) | Swordfish, RuleOut(cells, _) -> {
       let #(base, cover) = case reads_across(step) {
         True -> #("row", "column")
         False -> #("column", "row")
@@ -370,6 +385,15 @@ fn because(step: Step) -> String {
       <> lose(cells)
       <> " it."
     }
+
+    XYWing, RuleOut(cells, _) ->
+      "So nothing that can see both of them can be "
+      <> a_digit(step.about)
+      <> " — "
+      <> these(cells)
+      <> " "
+      <> lose(cells)
+      <> " it."
 
     _, _ -> ""
   }
@@ -447,20 +471,29 @@ fn crux(step: Step) -> String {
       <> unit_kind(step.unit)
       <> "."
 
-    XWing, RuleOut(_, _) -> {
+    XWing, RuleOut(_, _) | Swordfish, RuleOut(_, _) -> {
       let #(base, cover) = case reads_across(step) {
         True -> #(rows_of(step.evidence), columns_of(step.evidence))
         False -> #(columns_of(step.evidence), rows_of(step.evidence))
       }
 
-      "a "
-      <> written(step.about)
-      <> " in "
-      <> base
-      <> " keeps to "
-      <> cover
-      <> "."
+      a_digit(step.about) <> " in " <> base <> " keeps to " <> cover <> "."
     }
+
+    // The pivot first, since it is the cell the argument turns on and the
+    // one to look at: the wings are what follow from it.
+    XYWing, RuleOut(_, _) ->
+      case step.evidence {
+        [pivot, one, other] ->
+          "whichever way "
+          <> board.name(pivot)
+          <> " falls, one of "
+          <> cell_names([one, other])
+          <> " is "
+          <> a_digit(step.about)
+          <> "."
+        _ -> ""
+      }
 
     // Every technique has its own words above; this is only reached if one
     // is added without them.
@@ -543,6 +576,16 @@ fn plural(what: String, names: List(String)) -> String {
 
 fn cell_names(cells: List(Int)) -> String {
   cells |> list.map(board.name) |> joined("and")
+}
+
+/// A digit with the article that goes in front of it. Eight is the one that
+/// takes `an`, said aloud as a digit rather than as a word.
+fn a_digit(digits: List(Int)) -> String {
+  let said = written(digits)
+  case string.starts_with(said, "8") {
+    True -> "an " <> said
+    False -> "a " <> said
+  }
 }
 
 fn written(digits: List(Int)) -> String {
@@ -717,57 +760,182 @@ fn hidden_pair(_grid: Grid, marks: Pencil) -> Result(Step, Nil) {
 /// The digit takes one corner in each row, so it takes one in each column
 /// too, and is shut out of the rest of both columns.
 fn x_wing(_grid: Grid, marks: Pencil) -> Result(Step, Nil) {
+  fishing(marks, 2, XWing)
+}
+
+/// The same argument over three lines. Three rows whose every candidate for
+/// a digit falls in the same three columns take one apiece, so the three
+/// columns are spoken for and every other cell in them loses it.
+///
+/// Harder to see than an X-wing for the same reason it is the same
+/// argument: the rectangle a pair of rows makes is a shape, and three rows
+/// make no shape at all. Each of the three may have two cells or three, and
+/// they need not be the same two.
+fn swordfish(_grid: Grid, marks: Pencil) -> Result(Step, Nil) {
+  fishing(marks, 3, Swordfish)
+}
+
+/// Look for one of these, both ways round: rows shutting a digit into
+/// columns, and columns shutting it into rows.
+fn fishing(
+  marks: Pencil,
+  size: Int,
+  technique: Technique,
+) -> Result(Step, Nil) {
   use digit <- list.find_map(board.span(1, board.side))
 
-  case fish(marks, digit, board.rows(), board.col_of, board.columns()) {
+  case
+    fish(
+      marks,
+      digit,
+      size,
+      technique,
+      board.rows(),
+      board.col_of,
+      board.columns(),
+    )
+  {
     Ok(step) -> Ok(step)
-    Error(_) -> fish(marks, digit, board.columns(), board.row_of, board.rows())
+    Error(_) ->
+      fish(
+        marks,
+        digit,
+        size,
+        technique,
+        board.columns(),
+        board.row_of,
+        board.rows(),
+      )
   }
 }
 
+/// A digit shut into as many crossing lines as the lines it was read from.
+///
+/// `size` lines, each holding the digit in at least two cells and at most
+/// `size` of them, whose cells fall between them in exactly `size` crossing
+/// lines. Those crossings then hold one of the digit apiece and have none to
+/// spare, so every other cell in them loses it.
+///
+/// Two of everything is an X-wing and three is a swordfish. A line with the
+/// digit in only one cell is left out: that is a hidden single, which is
+/// eight ranks easier and will have been taken long before this is reached.
 fn fish(
   marks: Pencil,
   digit: Int,
+  size: Int,
+  technique: Technique,
   lines: List(List(Int)),
   crossing_of: fn(Int) -> Int,
   crossings: List(List(Int)),
 ) -> Result(Step, Nil) {
-  // The lines where the digit has exactly two cells left, and which crossing
-  // lines those are.
-  let pairs = {
+  let candidates = {
     use line <- list.filter_map(lines)
-    case holding(marks, line, digit) {
-      [one, other] ->
-        Ok(#([one, other], [crossing_of(one), crossing_of(other)]))
-      _ -> Error(Nil)
+    let cells = holding(marks, line, digit)
+    let count = list.length(cells)
+
+    case count >= 2 && count <= size {
+      True -> Ok(#(cells, list.map(cells, crossing_of) |> spread))
+      False -> Error(Nil)
     }
   }
 
-  use both <- list.find_map(combinations(pairs, 2))
-  case both {
-    [#(here, across), #(there, also)] ->
-      case across == also {
-        False -> Error(Nil)
-        True -> {
-          let corners = list.append(here, there)
-          let targets =
-            across
-            |> list.flat_map(fn(at) { line_at(crossings, at) })
-            |> except(corners)
+  use chosen <- list.find_map(combinations(candidates, size))
 
+  let corners = list.flat_map(chosen, fn(line) { line.0 })
+  let across = chosen |> list.flat_map(fn(line) { line.1 }) |> spread
+
+  case list.length(across) == size {
+    False -> Error(Nil)
+    True -> {
+      let targets =
+        across
+        |> list.flat_map(fn(at) { line_at(crossings, at) })
+        |> except(corners)
+
+      rule_out(
+        marks,
+        cells: targets,
+        digits: [digit],
+        about: [digit],
+        technique: technique,
+        evidence: corners,
+        unit: [],
+      )
+    }
+  }
+}
+
+/// Three cells of two candidates apiece: a pivot holding XY, and two wings
+/// it can see holding XZ and YZ.
+///
+/// Whichever of its two the pivot turns out to be, one of the wings is left
+/// holding Z — so nothing that can see both wings can be a Z, whether or not
+/// it can see the pivot at all.
+///
+/// The first technique here that is not read off a single unit. Everything
+/// above it argues inside a row, a column or a box, or across a rectangle of
+/// them; this one follows a digit from cell to cell, and the three cells
+/// need share no unit between them.
+fn xy_wing(_grid: Grid, marks: Pencil) -> Result(Step, Nil) {
+  let pairs = {
+    use index <- list.filter(board.indices())
+    list.length(candidates(marks, index)) == 2
+  }
+
+  use pivot <- list.find_map(pairs)
+
+  let wings = {
+    use index <- list.filter(pairs)
+    index != pivot && list.contains(board.peers_of(pivot), index)
+  }
+
+  use both <- list.find_map(combinations(wings, 2))
+
+  case candidates(marks, pivot), both {
+    [x, y], [one, other] ->
+      // The wings are alike, so which of them holds the pivot's first digit
+      // is a thing to try rather than to know.
+      case hinged(marks, pivot, x, y, one, other) {
+        Ok(step) -> Ok(step)
+        Error(_) -> hinged(marks, pivot, x, y, other, one)
+      }
+    _, _ -> Error(Nil)
+  }
+}
+
+/// One wing holding X and Z, the other holding Y and Z, and what that leaves
+/// for the cells which can see them both.
+fn hinged(
+  marks: Pencil,
+  pivot: Int,
+  x: Int,
+  y: Int,
+  one: Int,
+  other: Int,
+) -> Result(Step, Nil) {
+  case except(candidates(marks, one), [x]) {
+    [z] if z != y ->
+      case candidates(marks, other) == spread([y, z]) {
+        False -> Error(Nil)
+        True ->
           rule_out(
             marks,
-            cells: targets,
-            digits: [digit],
-            about: [digit],
-            technique: XWing,
-            evidence: corners,
+            cells: seen_by_both(one, other) |> except([pivot, one, other]),
+            digits: [z],
+            about: [z],
+            technique: XYWing,
+            evidence: [pivot, one, other],
             unit: [],
           )
-        }
       }
     _ -> Error(Nil)
   }
+}
+
+/// The cells that share a row, a column or a box with each of two cells.
+fn seen_by_both(one: Int, other: Int) -> List(Int) {
+  let theirs = board.peers_of(other)
+  list.filter(board.peers_of(one), list.contains(theirs, _))
 }
 
 // ---------------------------------------------------------------------------

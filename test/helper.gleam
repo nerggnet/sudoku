@@ -101,6 +101,30 @@ pub const needs_x_wing = "
   ... ..3 .6.
 "
 
+pub const needs_xy_wing = "
+  6.. 718 .29
+  271 459 .6.
+  98. 362 7..
+  356 947 182
+  8.7 6.. 9..
+  .9. 8.. .76
+  5.. 1.6 ..7
+  ..8 2.3 6.5
+  .69 5.4 23.
+"
+
+pub const needs_swordfish = "
+  486 217 593
+  913 ..5 427
+  527 943 681
+  294 7.1 .56
+  378 596 214
+  651 .2. ...
+  .45 1.2 ...
+  162 .79 ..5
+  .39 .5. 1.2
+"
+
 pub fn edit(current: editor.Editor, pressed: key.Key) -> editor.Editor {
   let assert editor.Continue(next) = editor.update(current, pressed)
   next
