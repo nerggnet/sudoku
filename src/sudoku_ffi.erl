@@ -4,6 +4,7 @@
 
 -export([enable_raw/0, read_byte/0, read_byte_after/1, now_ms/0, shuffle/1]).
 -export([remembered/2]).
+-export([seed/1, fresh_seed/0]).
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
@@ -133,6 +134,24 @@ remembered(Key, Work) ->
 
 now_ms() ->
     erlang:monotonic_time(millisecond).
+
+%% Start the chance in a deal at a named place.
+%%
+%% Everything chance decides while a puzzle is carved is drawn from here:
+%% the order the digits are tried in filling the grid, and the order the
+%% cells are taken back out of it. So the same seed carves the same puzzle,
+%% and a deal can be asked for a second time.
+seed(Seed) ->
+    _ = rand:seed(exsss, Seed),
+    nil.
+
+%% A seed nobody chose, short enough to read out over a telephone.
+%%
+%% Not drawn from rand itself, which is the thing being seeded: asked for
+%% twice in one run it would hand back the same number the second time, and
+%% two puzzles dealt in a sitting would be one puzzle dealt twice.
+fresh_seed() ->
+    erlang:phash2({erlang:monotonic_time(), erlang:unique_integer()}, 100000000).
 
 shuffle(List) ->
     [X || {_, X} <- lists:sort([{rand:uniform(), E} || E <- List])].
