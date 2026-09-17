@@ -91,7 +91,7 @@ pub fn a_flag_the_game_does_not_know_gets_the_usage_test() {
 pub fn the_usage_names_every_way_in_test() {
   // The flag is one of the invocations the help lists, so the two cannot
   // come to disagree about what the game accepts.
-  assert list.any(help.invocations, fn(entry) {
+  assert list.any(help.every_invocation(), fn(entry) {
     string.contains(entry.0, invocation.plain_flag)
   })
 }
@@ -200,7 +200,15 @@ pub fn help_outranks_a_seed_that_will_not_read_test() {
 }
 
 pub fn the_usage_names_the_seed_flag_test() {
-  assert list.any(help.invocations, fn(entry) {
+  assert list.any(help.every_invocation(), fn(entry) {
     string.contains(entry.0, invocation.seed_flag)
   })
+  assert string.contains(help.usage(), invocation.seed_flag)
+}
+
+pub fn the_usage_names_the_daily_test() {
+  assert list.any(help.every_invocation(), fn(entry) {
+    string.contains(entry.0, invocation.daily_word)
+  })
+  assert string.contains(help.usage(), invocation.daily_word)
 }

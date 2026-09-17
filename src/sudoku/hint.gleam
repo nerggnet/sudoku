@@ -39,7 +39,9 @@ pub fn hint(current: game.Game) -> game.Game {
 fn warning_due(current: game.Game) -> Bool {
   case current.puzzle.origin {
     generator.Handwritten | generator.Practising(_) -> False
-    generator.Dealt(_) ->
+    // A daily is timed like any other deal, and has more to lose than most:
+    // its time is the one other people's times are next to.
+    generator.Dealt(_) | generator.Daily(_) ->
       game.unaided(current) && current.offered != Some(game.TakeHint)
   }
 }

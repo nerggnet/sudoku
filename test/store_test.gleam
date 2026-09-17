@@ -106,13 +106,21 @@ pub fn an_unaided_solve_is_timed_test() {
   assert game.unaided(won)
 
   // Nothing on the books yet, so anything is the best there is.
-  assert store.judge(won, dict.new()) == game.BestYet
+  assert store.judge(won, dict.new(), dict.new()) == game.BestYet
 
   // And against a standing best, whichever is quicker.
   let quick = game.Game(..won, started_ms: won.started_ms - 60_000)
-  assert store.judge(quick, dict.from_list([#(generator.Medium, 30_000)]))
+  assert store.judge(
+      quick,
+      dict.from_list([#(generator.Medium, 30_000)]),
+      dict.new(),
+    )
     == game.Behind(30_000)
-  assert store.judge(won, dict.from_list([#(generator.Medium, 30_000)]))
+  assert store.judge(
+      won,
+      dict.from_list([#(generator.Medium, 30_000)]),
+      dict.new(),
+    )
     == game.BestYet
 }
 
@@ -121,7 +129,7 @@ pub fn a_solve_with_help_is_not_timed_test() {
   // record that the game was asked when the puzzle is done.
   let checked = helper.solved(helper.checked(helper.fixture()))
   assert !game.unaided(checked)
-  assert store.judge(checked, dict.new()) == game.Aided
+  assert store.judge(checked, dict.new(), dict.new()) == game.Aided
 
   // A hint is help too, however small.
   let hinted =
@@ -130,7 +138,7 @@ pub fn a_solve_with_help_is_not_timed_test() {
       key.Char("H"),
     ))
   assert hinted.hints >= 1
-  assert store.judge(hinted, dict.new()) == game.Aided
+  assert store.judge(hinted, dict.new(), dict.new()) == game.Aided
 }
 
 pub fn filling_the_candidates_in_is_not_help_test() {
@@ -138,17 +146,17 @@ pub fn filling_the_candidates_in_is_not_help_test() {
   let filled = helper.solved(helper.step(helper.fixture(), key.Char("f")))
 
   assert game.unaided(filled)
-  assert store.judge(filled, dict.new()) == game.BestYet
+  assert store.judge(filled, dict.new(), dict.new()) == game.BestYet
 }
 
 pub fn a_game_not_won_is_not_timed_test() {
   let revealed = helper.step(helper.fixture(), key.Char("R"))
-  assert store.judge(revealed, dict.new()) == game.Untimed
+  assert store.judge(revealed, dict.new(), dict.new()) == game.Untimed
 
   // And a puzzle typed in has no difficulty to file a time under.
   let assert editor.Ready(puzzle) =
     editor.update(helper.typed(helper.puzzle_text), key.Char("p"))
-  assert store.judge(helper.solved(game.new(puzzle)), dict.new())
+  assert store.judge(helper.solved(game.new(puzzle)), dict.new(), dict.new())
     == game.Untimed
 }
 

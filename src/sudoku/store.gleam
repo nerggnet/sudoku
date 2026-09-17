@@ -17,6 +17,7 @@ import gleam/result
 import gleam/set
 import gleam/string
 import sudoku/board.{type Board, type Grid}
+import sudoku/date.{type Date}
 import sudoku/game.{type Game}
 import sudoku/generator.{type Origin}
 import sudoku/logic
@@ -340,9 +341,9 @@ pub type Bests =
 /// reading and writing at once.
 pub fn settle(current: Game) -> game.Verdict {
   let books = bests()
-  let verdict = judge(current, books)
+  let days = dailies()
 
-  case verdict {
+  case judge(current, books, days) {
     // The books are only worth anything if the writing lands. A time nobody
     // can look up later is not a record, whatever the panel says.
     game.BestYet ->
@@ -350,14 +351,19 @@ pub fn settle(current: Game) -> game.Verdict {
         True -> game.BestYet
         False -> game.BestNotKept
       }
-    _ -> verdict
+    game.DailyDone ->
+      case write_dailies(with_day(current, days)) {
+        True -> game.DailyDone
+        False -> game.DailyNotKept
+      }
+    verdict -> verdict
   }
 }
 
 /// What the record books make of a game, given what they already hold. Kept
 /// apart from the reading and writing so that it can be thought about, and
 /// tested, on its own.
-pub fn judge(current: Game, books: Bests) -> game.Verdict {
+pub fn judge(current: Game, books: Bests, days: Dailies) -> game.Verdict {
   case current.puzzle.origin, current.ending, game.unaided(current) {
     generator.Dealt(difficulty), Some(game.Solved), True ->
       case dict.get(books, difficulty) {
@@ -367,6 +373,16 @@ pub fn judge(current: Game, books: Bests) -> game.Verdict {
             False -> game.Behind(best)
           }
         Error(_) -> game.BestYet
+      }
+
+    // A day is not a difficulty and keeps its times in a book of its own,
+    // one to a day. There is nothing to beat: the first time it was done is
+    // the time that stands, and doing it again is doing a puzzle you have
+    // already seen the answer to.
+    generator.Daily(on), Some(game.Solved), True ->
+      case dict.get(days, on) {
+        Ok(first) -> game.DailyAlready(first)
+        Error(_) -> game.DailyDone
       }
 
     // Solved, but with the answer to hand one way or another.
@@ -382,7 +398,15 @@ fn with_time(current: Game, books: Bests) -> Bests {
   case current.puzzle.origin {
     generator.Dealt(difficulty) ->
       dict.insert(books, difficulty, game.elapsed_ms(current))
-    generator.Handwritten | generator.Practising(_) -> books
+    generator.Handwritten | generator.Practising(_) | generator.Daily(_) ->
+      books
+  }
+}
+
+fn with_day(current: Game, days: Dailies) -> Dailies {
+  case current.puzzle.origin {
+    generator.Daily(on) -> dict.insert(days, on, game.elapsed_ms(current))
+    generator.Dealt(_) | generator.Handwritten | generator.Practising(_) -> days
   }
 }
 
@@ -400,6 +424,63 @@ pub fn bests() -> Bests {
         _, _ -> books
       }
   }
+}
+
+// ---------------------------------------------------------------------------
+// The book of days
+// ---------------------------------------------------------------------------
+
+/// What each day's puzzle was done in, for the days it has been done.
+///
+/// A book of its own rather than a fifth difficulty in the one above. A best
+/// is the quickest of many puzzles at a level and goes on being beaten; a
+/// day is one puzzle that happened once, and its time is a fact about that
+/// day rather than a record standing until something betters it.
+pub type Dailies =
+  Dict(Date, Int)
+
+const dailies_file = "dailies"
+
+pub fn dailies() -> Dailies {
+  read_file(dailies_file) |> result.unwrap("") |> dailies_read
+}
+
+fn write_dailies(book: Dailies) -> Bool {
+  write_file(dailies_file, dailies_written(book))
+}
+
+/// The two halves of the book that are not about files, kept apart from the
+/// reading and writing so that they can be thought about, and tested,
+/// without a disk to hand — the same way `judge` is kept apart from
+/// `settle`.
+///
+/// A line that will not read is passed over rather than refused. The book is
+/// a convenience and a day nobody can parse costs one line of it; refusing
+/// the file outright would cost every day in it, over a stray keystroke in
+/// something a person is invited to open and read.
+pub fn dailies_read(text: String) -> Dailies {
+  use book, line <- list.fold(string.split(text, "\n"), dict.new())
+  case string.split_once(string.trim(line), " ") {
+    Error(_) -> book
+    Ok(#(written, taken)) ->
+      case date.parse(written), int.parse(string.trim(taken)) {
+        Ok(on), Ok(milliseconds) -> dict.insert(book, on, milliseconds)
+        _, _ -> book
+      }
+  }
+}
+
+/// Written oldest first, which a date sorts into on its own once it is
+/// written the way `date` writes it. A file somebody might read should be in
+/// an order somebody would have put it in.
+pub fn dailies_written(book: Dailies) -> String {
+  book
+  |> dict.to_list
+  |> list.map(fn(entry) {
+    date.to_string(entry.0) <> " " <> int.to_string(entry.1)
+  })
+  |> list.sort(string.compare)
+  |> string.join("\n")
 }
 
 fn write_bests(books: Bests) -> Bool {
@@ -428,10 +509,16 @@ fn write_bests(books: Bests) -> Bool {
 /// its first space, so the rest of it can be as many words as it likes.
 const practising = "practice"
 
+/// The same again for a daily, whose second word is the day it belongs to.
+/// Its label would not do: that says the difficulty, which is worked out
+/// from the date and would be a second copy of it to fall out of step.
+const day = "daily"
+
 fn named(origin: Origin) -> String {
   case origin {
     generator.Practising(technique) ->
       practising <> " " <> string.lowercase(logic.label(technique))
+    generator.Daily(on) -> day <> " " <> date.to_string(on)
     _ -> string.lowercase(generator.origin_label(origin))
   }
 }
@@ -440,6 +527,8 @@ fn origin_named(name: String) -> Result(Origin, Nil) {
   case string.split_once(name, " ") {
     Ok(#(first, rest)) if first == practising ->
       logic.named(rest) |> result.map(generator.Practising)
+    Ok(#(first, rest)) if first == day ->
+      date.parse(rest) |> result.map(generator.Daily)
     _ ->
       case name == named(generator.Handwritten) {
         True -> Ok(generator.Handwritten)

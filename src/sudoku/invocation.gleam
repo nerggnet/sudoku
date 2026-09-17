@@ -12,6 +12,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import sudoku/board
+import sudoku/date.{type Date}
 import sudoku/editor
 import sudoku/generator.{type Difficulty, type Puzzle}
 import sudoku/help
@@ -26,6 +27,14 @@ pub type Asked {
   Compose
   /// The game left behind last time, if there is one left behind.
   Resume
+  /// The puzzle belonging to today, whichever day that turns out to be.
+  ///
+  /// Kept as "today" rather than read into a date here, since reading a
+  /// command line is meant to need nothing of the world — and what day it is
+  /// is the most worldly thing there is. The main module asks the clock.
+  Today
+  /// The puzzle belonging to a day that was named outright.
+  Day(on: Date)
   /// This puzzle, given as its 81 characters.
   Play(puzzle: Puzzle)
   /// Nothing to play: what the command line takes, which is a question
@@ -47,6 +56,9 @@ pub const help_flags = ["--help", "-h"]
 
 /// Asking for one deal in particular rather than whichever one comes up.
 pub const seed_flag = "--seed"
+
+/// Asking for the puzzle that belongs to a day.
+pub const daily_word = "daily"
 
 /// Read a command line, or refuse it with something worth reading.
 ///
@@ -147,6 +159,10 @@ fn played(
   use asked <- result.try(case rest {
     [] -> Ok(Menu)
     [only] -> asked(only)
+    // The one thing on the line that takes a word of its own, a date being
+    // no use to anybody as a bare word: `.` and digits would read as a
+    // puzzle, and 2026-09-17 as nothing at all.
+    [first, on] -> dated(first, on)
     _ -> Error(help.usage())
   })
 
@@ -165,6 +181,16 @@ fn seed_has_a_deal(asked: Asked, seed: Option(Int)) -> Result(Nil, String) {
   case asked, seed {
     _, None -> Ok(Nil)
     Deal(_), Some(_) -> Ok(Nil)
+    // A daily has its seed already, and it is the day: that is the whole of
+    // why everybody asking for a day is handed the same grid. A second one
+    // beside it would have to be ignored, and ignoring it quietly is how
+    // somebody comes to believe they are playing a puzzle they are not.
+    Today, Some(_) | Day(_), Some(_) ->
+      Error(
+        "A daily puzzle is carved from its own date, so "
+        <> seed_flag
+        <> " has nothing to add to it.",
+      )
     _, Some(_) ->
       Error(
         seed_flag
@@ -176,10 +202,30 @@ fn seed_has_a_deal(asked: Asked, seed: Option(Int)) -> Result(Nil, String) {
   }
 }
 
+/// `daily 2026-09-17`, which is the day named rather than taken from the
+/// clock. What two people in different places use when they want the same
+/// grid and their calendars have already disagreed about what day it is.
+fn dated(first: String, on: String) -> Result(Asked, String) {
+  case string.lowercase(first) == daily_word {
+    False -> Error(help.usage())
+    True ->
+      case date.parse(on) {
+        Ok(on) -> Ok(Day(on))
+        Error(_) ->
+          Error(
+            "A day is written like 2026-09-17, and "
+            <> on
+            <> " is not — or is not a day that happened.",
+          )
+      }
+  }
+}
+
 fn asked(argument: String) -> Result(Asked, String) {
   case string.lowercase(argument) {
     "resume" -> Ok(Resume)
     "custom" -> Ok(Compose)
+    name if name == daily_word -> Ok(Today)
     name ->
       case generator.named(name) {
         Ok(difficulty) -> Ok(Deal(difficulty))

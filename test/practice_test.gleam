@@ -72,7 +72,7 @@ pub fn a_practice_game_is_not_timed_test() {
   let assert Ok(puzzle) = practice.puzzle(logic.XWing)
   let solved = helper.solved(game.new(puzzle))
 
-  assert store.judge(solved, dict.new()) == game.Untimed
+  assert store.judge(solved, dict.new(), dict.new()) == game.Untimed
 }
 
 pub fn the_opening_line_says_what_is_being_practised_test() {

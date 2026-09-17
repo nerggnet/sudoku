@@ -11,6 +11,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import sudoku/board.{type Board, type Grid, type Peers}
+import sudoku/date.{type Date}
 import sudoku/logic
 import sudoku/random
 import sudoku/solver
@@ -29,6 +30,13 @@ pub type Origin {
   Dealt(Difficulty)
   Handwritten
   Practising(technique: logic.Technique)
+  /// The one puzzle that belongs to a day rather than to whoever dealt it.
+  ///
+  /// The date is the whole of it. How hard it is and which seed carved it
+  /// both follow from the date, and are worked out rather than carried, so
+  /// that a daily written down in a file cannot come back disagreeing with
+  /// itself about what day it is for.
+  Daily(date: Date)
 }
 
 pub type Puzzle {
@@ -77,6 +85,10 @@ pub fn origin_label(origin: Origin) -> String {
   case origin {
     Dealt(difficulty) -> label(difficulty)
     Handwritten -> "Custom"
+    // Not the date: which day it is stands under the board, and the header
+    // is for what kind of puzzle this is. The difficulty goes with it, since
+    // it is not a thing the player chose and is worth knowing.
+    Daily(date) -> "Daily " <> label(daily_difficulty(date))
     // Not the technique: which one it is was just chosen from a screen that
     // said so, and is said again in the line under the board as the puzzle
     // opens. What the header is for is which kind of puzzle this is.
@@ -149,6 +161,56 @@ type Cut {
 pub type Carving {
   Carving(attempt: Int, of: Int, asks: Result(logic.Technique, Nil))
 }
+
+// ---------------------------------------------------------------------------
+// The puzzle of the day
+// ---------------------------------------------------------------------------
+
+/// How hard the daily puzzle is, which depends on nothing but the day of the
+/// week.
+///
+/// The week ramps, the way a newspaper's does: an easy Monday for somebody
+/// on a train, and a Sunday that is an afternoon. It has to be a rule rather
+/// than a choice, because the whole of a daily is that two people who have
+/// never met are handed the same grid — and they cannot each be asked which
+/// difficulty they fancied.
+pub fn daily_difficulty(on: Date) -> Difficulty {
+  case date.weekday(on) {
+    date.Monday | date.Tuesday -> Easy
+    date.Wednesday | date.Thursday -> Medium
+    date.Friday | date.Saturday -> Hard
+    date.Sunday -> Expert
+  }
+}
+
+/// The seed a day is carved from, which is the date read as a number:
+/// the 17th of September 2026 is 20260917.
+///
+/// Legible on purpose. The game prints the seed of every deal as it leaves,
+/// and a daily printing one that can be read back as a date says what it was
+/// without needing a sentence about it.
+pub fn daily_seed(on: Date) -> Int {
+  on.year * 10_000 + on.month * 100 + on.day
+}
+
+/// Deal the puzzle belonging to a day.
+///
+/// Everyone who asks for the same day gets the same grid, since everything
+/// that went into carving it came from the date. Everyone running the same
+/// version of this, at least: the carving is what the seed steers, and
+/// changing how the carving works would steer it somewhere else.
+pub fn deal_daily(on: Date, telling: fn(Carving) -> Nil) -> Puzzle {
+  let dealt = generate_telling(daily_seed(on), daily_difficulty(on), telling)
+
+  // Restamped rather than carved as a daily from the start, for the same
+  // reason the seed is: the carving throws away up to thirty grids, and it
+  // is the one that came out that belongs to the day.
+  Puzzle(..dealt, origin: Daily(on))
+}
+
+// ---------------------------------------------------------------------------
+// Dealing
+// ---------------------------------------------------------------------------
 
 /// Deal a puzzle, from a seed nobody chose.
 pub fn generate(difficulty: Difficulty) -> Puzzle {
