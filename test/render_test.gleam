@@ -7,6 +7,7 @@ import gleam/option
 import gleam/string
 import helper
 import sudoku/board
+import sudoku/date
 import sudoku/editor
 import sudoku/game
 import sudoku/generator
@@ -14,6 +15,7 @@ import sudoku/help
 import sudoku/key
 import sudoku/logic
 import sudoku/palette
+import sudoku/practice
 import sudoku/render
 
 pub fn escape_stripping_leaves_the_text_test() {
@@ -472,7 +474,13 @@ pub fn a_terminal_that_will_not_say_is_left_alone_test() {
 
 /// The menu as it is drawn with nothing saved and no times to beat.
 fn opening() -> List(String) {
-  helper.lines_of(render.menu_frame(True, [], dict.new()))
+  helper.lines_of(render.menu_frame(
+    True,
+    [],
+    dict.new(),
+    helper.a_day(),
+    dict.new(),
+  ))
 }
 
 pub fn the_menu_offers_every_kind_of_puzzle_test() {
@@ -496,7 +504,14 @@ pub fn the_menu_says_what_each_level_asks_for_test() {
 
 pub fn the_menu_shows_a_time_to_beat_where_there_is_one_test() {
   let bests = dict.from_list([#(generator.Hard, 125_000)])
-  let lines = helper.lines_of(render.menu_frame(True, [], bests))
+  let lines =
+    helper.lines_of(render.menu_frame(
+      True,
+      [],
+      bests,
+      helper.a_day(),
+      dict.new(),
+    ))
 
   assert list.any(lines, fn(line) {
     string.contains(line, "Hard") && string.contains(line, "best 02:05")
@@ -508,7 +523,14 @@ pub fn the_menu_shows_a_time_to_beat_where_there_is_one_test() {
 
 pub fn the_menu_offers_a_saved_game_back_test() {
   let waiting = helper.step(helper.fixture(), key.Digit(4))
-  let lines = helper.lines_of(render.menu_frame(True, [waiting], dict.new()))
+  let lines =
+    helper.lines_of(render.menu_frame(
+      True,
+      [waiting],
+      dict.new(),
+      helper.a_day(),
+      dict.new(),
+    ))
 
   // What it was, how much is left of it, and how long it has taken.
   assert list.any(lines, fn(line) {
@@ -524,6 +546,8 @@ pub fn the_menu_offers_a_saved_game_back_test() {
       True,
       [waiting, helper.fixture()],
       dict.new(),
+      helper.a_day(),
+      dict.new(),
     ))
   assert list.any(two, string.contains(_, "one of 2 games put down"))
   assert !list.any(two, string.contains(_, "to go"))
@@ -533,7 +557,14 @@ pub fn the_menu_offers_a_saved_game_back_test() {
 }
 
 pub fn the_menu_says_when_the_terminal_is_in_line_mode_test() {
-  let lines = helper.lines_of(render.menu_frame(False, [], dict.new()))
+  let lines =
+    helper.lines_of(render.menu_frame(
+      False,
+      [],
+      dict.new(),
+      helper.a_day(),
+      dict.new(),
+    ))
 
   assert list.any(lines, string.contains(_, "press Enter after each key"))
   assert !list.any(opening(), string.contains(_, "press Enter"))
@@ -571,6 +602,8 @@ pub fn the_menu_fits_the_screen_test() {
         #(generator.Hard, 3),
         #(generator.Expert, 4),
       ]),
+      helper.a_day(),
+      dict.new(),
     ))
 
   assert list.length(lines) <= render.rows
@@ -674,9 +707,21 @@ pub fn no_frame_smuggles_a_newline_into_a_line_test() {
   // so it keeps whatever was drawn there before — and in raw mode the
   // carriage is not returned either.
   let frames = [
-    render.menu_frame(True, [], dict.new()),
-    render.menu_frame(True, [helper.fixture()], dict.new()),
-    render.menu_frame(False, [helper.fixture(), helper.fixture()], dict.new()),
+    render.menu_frame(True, [], dict.new(), helper.a_day(), dict.new()),
+    render.menu_frame(
+      True,
+      [helper.fixture()],
+      dict.new(),
+      helper.a_day(),
+      dict.new(),
+    ),
+    render.menu_frame(
+      False,
+      [helper.fixture(), helper.fixture()],
+      dict.new(),
+      helper.a_day(),
+      dict.new(),
+    ),
     render.saved_frame([helper.fixture(), helper.fixture()]),
     render.practice_frame(),
     render.generating(
@@ -692,4 +737,50 @@ pub fn no_frame_smuggles_a_newline_into_a_line_test() {
   use frame <- list.each(frames)
   use line <- list.each(helper.lines_of(frame))
   assert !string.contains(line, "\n")
+}
+
+/// The daily has a line of its own under the numbered levels, the way
+/// Practice does: it offers a day rather than a difficulty, and the number
+/// that reaches it is the one after Practice's.
+pub fn the_menu_offers_the_daily_test() {
+  let lines = opening()
+  let wanted = int.to_string(render.daily_choice())
+
+  assert render.daily_choice() == practice.choice() + 1
+  assert list.any(lines, fn(line) {
+    string.contains(line, wanted) && string.contains(line, "Daily")
+  })
+
+  // Which day it is, so the line is also the answer to "how do I play the
+  // same one as you", and how hard that day makes it.
+  assert list.any(lines, string.contains(_, "Thursday 2026-09-17"))
+  assert list.any(lines, string.contains(_, "Medium"))
+}
+
+pub fn the_menu_says_when_the_day_is_already_done_test() {
+  let book = dict.from_list([#(helper.a_day(), 521_000)])
+  let lines =
+    helper.lines_of(render.menu_frame(
+      True,
+      [],
+      dict.new(),
+      helper.a_day(),
+      book,
+    ))
+
+  assert list.any(lines, string.contains(_, "done in 08:41"))
+
+  // Another day's time is another day's business, and today is still to do.
+  let elsewhere =
+    dict.from_list([#(date.Date(year: 2026, month: 9, day: 16), 521_000)])
+  assert !list.any(
+    helper.lines_of(render.menu_frame(
+      True,
+      [],
+      dict.new(),
+      helper.a_day(),
+      elsewhere,
+    )),
+    string.contains(_, "done in"),
+  )
 }

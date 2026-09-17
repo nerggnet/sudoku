@@ -12,6 +12,7 @@ import gleam/option.{None, Some}
 import gleam/set.{type Set}
 import gleam/string
 import sudoku/board
+import sudoku/date.{type Date}
 import sudoku/editor.{type Editor}
 import sudoku/game.{type Game}
 import sudoku/generator.{type Difficulty, type Origin}
@@ -594,6 +595,14 @@ fn recorded(current: Game) -> String {
       term.styled(palette.dim, " Your best is " <> clock(best) <> ".")
     Some(game.Aided) ->
       term.styled(palette.dim, " Not recorded: unaided solves only.")
+    Some(game.DailyDone) -> term.styled(palette.good, " The day is yours.")
+    Some(game.DailyNotKept) ->
+      term.styled(palette.good, " The day is yours,")
+      <> term.styled(palette.alarm, " but it could not be saved.")
+    // The first run at a day is the one kept, so this is not a time being
+    // beaten but a time standing: you have seen this grid before.
+    Some(game.DailyAlready(first)) ->
+      term.styled(palette.dim, " You did this day in " <> clock(first) <> ".")
     _ -> ""
   }
 }
@@ -625,6 +634,8 @@ pub fn menu_frame(
   raw: Bool,
   saved: List(game.Game),
   bests: store.Bests,
+  today: Date,
+  days: store.Dailies,
 ) -> String {
   let options = {
     use origin, index <- list.index_map(generator.origins())
@@ -642,6 +653,14 @@ pub fn menu_frame(
     <> "  "
     <> string.pad_end("Practice", 10, " ")
     <> term.styled(palette.dim, "one technique, on a grid that needs it")
+
+  let daily =
+    "   "
+    <> term.styled(palette.key, int.to_string(daily_choice()))
+    <> "  "
+    <> string.pad_end("Daily", 10, " ")
+    <> term.styled(palette.dim, daily_aside(today))
+    <> term.styled(palette.best, done_on(today, days))
 
   let room = case cramped() {
     "" -> []
@@ -663,7 +682,7 @@ pub fn menu_frame(
     list.flatten([
       [term.styled(palette.title, "S U D O K U"), "", "Choose a puzzle:", ""],
       options,
-      [practice],
+      [practice, daily],
       [
         "",
         "   "
@@ -756,6 +775,11 @@ fn aside(origin: Origin) -> String {
     generator.Dealt(difficulty) -> generator.asks_for(difficulty)
     generator.Handwritten -> "type in a puzzle from a newspaper"
     generator.Practising(technique) -> logic.labels(technique)
+    // The daily has a line of its own below these, since what it offers is
+    // a day rather than a difficulty. This is only ever asked of the
+    // entries the menu numbers from `origins`, which the daily is not among.
+    generator.Daily(date) ->
+      generator.asks_for(generator.daily_difficulty(date))
   }
 }
 
@@ -763,12 +787,46 @@ fn aside(origin: Origin) -> String {
 /// in has no difficulty to have a best at.
 fn best(origin: Origin, bests: store.Bests) -> String {
   case origin {
-    generator.Handwritten | generator.Practising(_) -> ""
+    // A daily keeps its times in a book of its own, one to a day, so there
+    // is no single time to beat at it.
+    generator.Handwritten | generator.Practising(_) | generator.Daily(_) -> ""
     generator.Dealt(difficulty) ->
       case dict.get(bests, difficulty) {
         Error(_) -> ""
         Ok(taken) -> "best " <> clock(taken)
       }
+  }
+}
+
+/// Which number on the menu reaches the daily puzzle.
+///
+/// After the techniques, which are after the levels: worked out rather than
+/// written down, so that a puzzle added to the menu moves this along with it
+/// instead of quietly landing on top of it.
+pub fn daily_choice() -> Int {
+  practice.choice() + 1
+}
+
+/// What the daily offers, which is a day and whatever that day asks for.
+///
+/// The date is written the way the command line takes it, so that the menu
+/// is also the answer to "how do I play the same one as you": read the line
+/// out and the other person types it back.
+fn daily_aside(today: Date) -> String {
+  date.day_name(date.weekday(today))
+  <> " "
+  <> date.to_string(today)
+  <> ", "
+  <> generator.label(generator.daily_difficulty(today))
+}
+
+/// Today's time, where today has already been done. Not a best to beat —
+/// there is one puzzle a day and this was it — so it is said as a fact
+/// rather than as a target.
+fn done_on(today: Date, days: store.Dailies) -> String {
+  case dict.get(days, today) {
+    Error(_) -> ""
+    Ok(taken) -> "    done in " <> clock(taken)
   }
 }
 

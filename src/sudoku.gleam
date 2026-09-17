@@ -5,6 +5,7 @@ import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import sudoku/board
+import sudoku/date.{type Date}
 import sudoku/editor
 import sudoku/game
 import sudoku/generator.{type Difficulty}
@@ -77,6 +78,8 @@ fn opening(arguments: List(String)) -> Opening {
         invocation.Compose -> Start(Some(Compose), asked.plain)
         invocation.Deal(difficulty) ->
           Start(Some(Deal(difficulty, asked.seed)), asked.plain)
+        invocation.Today -> Start(Some(Day(date.today())), asked.plain)
+        invocation.Day(on) -> Start(Some(Day(on)), asked.plain)
         invocation.Play(puzzle) -> Start(Some(Play(puzzle)), asked.plain)
         invocation.Resume ->
           case store.saved() {
@@ -117,6 +120,15 @@ fn parting(played: Option(game.Game)) -> Nil {
         <> generator.label(difficulty)
         <> " from seed "
         <> int.to_string(seed)
+        <> ", which deals it again.",
+      )
+    // A daily says its day instead. The day is its seed and its name at
+    // once: it is what somebody else types to be handed the same grid, and
+    // the only part of it worth passing on.
+    _, generator.Daily(on) ->
+      io.println(
+        "\nThe daily puzzle for "
+        <> date.to_string(on)
         <> ", which deals it again.",
       )
     _, _ -> Nil
@@ -165,6 +177,8 @@ type Choice {
   /// A puzzle dealt at this difficulty, from the seed the command line named
   /// or from one nobody chose.
   Deal(Difficulty, Option(Int))
+  /// The puzzle belonging to a day, which everybody asking for that day gets.
+  Day(Date)
   Compose
   Resume(game.Game)
   Play(generator.Puzzle)
@@ -191,6 +205,15 @@ fn follow(raw: Bool, chosen: Choice) -> Option(game.Game) {
       let dealt =
         generator.generate_telling(seed, difficulty, fn(carving) {
           term.write(render.generating(difficulty, carving))
+        })
+
+      start(raw, game.new(dealt))
+    }
+
+    Day(on) -> {
+      let dealt =
+        generator.deal_daily(on, fn(carving) {
+          term.write(render.generating(generator.daily_difficulty(on), carving))
         })
 
       start(raw, game.new(dealt))
@@ -326,12 +349,18 @@ fn judged(before: game.Game, after: game.Game) -> game.Game {
 /// `render`, so what is on the screen and what a keystroke means are the same
 /// list read twice rather than two lists that have to agree.
 fn choose(raw: Bool, saved: List(game.Game)) -> Choice {
-  let frame = render.menu_frame(raw, saved, store.bests())
+  // Asked once, as the menu is drawn, rather than each time it is read: a
+  // menu that has been sat in front of since before midnight should go on
+  // offering the day it says it is offering.
+  let today = date.today()
+  let frame =
+    render.menu_frame(raw, saved, store.bests(), today, store.dailies())
   term.write(frame)
 
   // Worked out rather than written down, so that adding a puzzle to the
   // menu moves this along with it. A guard cannot call for it itself.
   let practice_at = practice.choice()
+  let daily_at = render.daily_choice()
 
   case press(frame), saved {
     key.Quit, _ | key.Char("q"), _ | key.Char("Q"), _ -> Stop
@@ -344,6 +373,7 @@ fn choose(raw: Bool, saved: List(game.Game)) -> Choice {
       picking_up(raw, saved)
 
     key.Digit(picked), _ if picked == practice_at -> practising(raw, saved)
+    key.Digit(picked), _ if picked == daily_at -> Day(today)
 
     key.Digit(picked), _ ->
       case list.drop(generator.origins(), picked - 1) {

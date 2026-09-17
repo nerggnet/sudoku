@@ -44,20 +44,47 @@ pub const invocations = [
   #("gleam run -- custom", "type a puzzle in"),
   #("gleam run -- resume", "pick up the game you left"),
   #("gleam run -- <puzzle>", "play that puzzle"),
-  #("gleam run -- hard --seed 7", "deal the puzzle that seed deals"),
   #("gleam run -- --plain", "draw without colour"),
   #("gleam run -- --help", "say all this and stop"),
 ]
+
+/// The ways of being handed a puzzle that somebody else had, or that you had
+/// yesterday. A list of their own because they share a page of their own,
+/// the everyday ones having filled the one before it.
+pub const repeating_invocations = [
+  #("gleam run -- daily", "the puzzle everybody gets today"),
+  #("gleam run -- daily 2026-09-17", "the one belonging to that day"),
+  #("gleam run -- hard --seed 7", "deal the puzzle that seed deals"),
+]
+
+/// Every way in, which is what the command line answers with and what the
+/// two pages between them show.
+pub fn every_invocation() -> List(#(String, String)) {
+  list.append(invocations, repeating_invocations)
+}
 
 const starting_notes = [
   "A puzzle is 81 characters, a digit for each clue and a dot for each blank;",
   "the game prints the one it was playing as it leaves, to hand on or hand back.",
   "",
-  "It prints the seed beside it, and that seed given back beside a difficulty",
-  "deals the same puzzle again. --seed=7 says it the other way round.",
-  "",
   "--plain drops the colours and keeps the shapes, and can be given alongside",
   "a puzzle. Setting NO_COLOR in the environment does the same thing.",
+]
+
+const repeating_notes = [
+  "Every deal is carved from a seed, and the game says which as it leaves. A",
+  "seed handed back beside a difficulty deals that same puzzle. --seed=7 says",
+  "it the other way round, and either wants a difficulty beside it: a seed",
+  "names a deal rather than a grid.",
+  "",
+  "The daily is one puzzle a day and everybody gets the same one, so it cannot",
+  "ask which difficulty you fancied. It ramps through the week instead — an",
+  "easy Monday, and a Sunday that is an afternoon — and the menu says which",
+  "day it is offering and how hard that makes it.",
+  "",
+  "Its times are kept apart from the levels', one to a day, and the first run",
+  "at a day is the one written down: a day played twice is a day you have",
+  "already seen the answer to.",
 ]
 
 /// The same, for a terminal that has not been taken over.
@@ -65,12 +92,12 @@ pub fn usage() -> String {
   // Wide enough for the longest of them, worked out rather than written
   // down: a line added here should not be able to run into its meaning.
   let column =
-    list.fold(invocations, 24, fn(widest, entry) {
+    list.fold(every_invocation(), 24, fn(widest, entry) {
       int.max(widest, string.length(entry.0) + 2)
     })
 
   let lines = {
-    use #(invocation, meaning) <- list.map(invocations)
+    use #(invocation, meaning) <- list.map(every_invocation())
     "  " <> string.pad_end(invocation, column, " ") <> meaning
   }
 
@@ -155,6 +182,12 @@ pub fn page(page: game.Help) -> List(String) {
     game.MoreKeys ->
       key_table("Keys: asking and finishing", asking_keys, ask_notes)
     game.Starting -> key_table("Starting up", invocations, starting_notes)
+    game.Repeating ->
+      key_table(
+        "Starting up: the same puzzle twice",
+        repeating_invocations,
+        repeating_notes,
+      )
     game.About(technique) -> about(technique)
   }
 

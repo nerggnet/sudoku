@@ -724,7 +724,7 @@ fn start_checking(current: game.Game) -> game.Game {
 fn about_to_check(current: game.Game) -> String {
   let found = list.count(board.indices(), game.is_wrong(current, _))
   let timed = case current.puzzle.origin {
-    generator.Dealt(_) -> game.unaided(current)
+    generator.Dealt(_) | generator.Daily(_) -> game.unaided(current)
     generator.Handwritten | generator.Practising(_) -> False
   }
 

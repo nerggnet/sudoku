@@ -8,6 +8,7 @@ import gleam/dict
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import sudoku/board.{type Board}
+import sudoku/date
 import sudoku/generator.{type Puzzle}
 import sudoku/key.{type Key}
 import sudoku/logic
@@ -169,12 +170,16 @@ pub type Help {
   Keys
   MoreKeys
   Starting
+  /// The ways of being handed a puzzle somebody else had: a seed, and the
+  /// day. A page of its own because the one before it was full, which is
+  /// the same reason the keys take two.
+  Repeating
   About(logic.Technique)
 }
 
 /// Every page, in the order they are paged through.
 pub fn pages() -> List(Help) {
-  [Keys, MoreKeys, Starting, ..list.map(logic.techniques, About)]
+  [Keys, MoreKeys, Starting, Repeating, ..list.map(logic.techniques, About)]
 }
 
 /// What the record books make of a game that is over.
@@ -196,6 +201,19 @@ pub type Verdict {
   /// Not timed: a puzzle typed in has no difficulty to file a time under,
   /// and a game not won has no time to file.
   Untimed
+  /// The day's puzzle, done and written into the book of days.
+  ///
+  /// Not a best and not a personal record: there is one of these a day and
+  /// everybody gets the same one, so the thing worth saying about a time is
+  /// that it is yours for that day rather than that it beat something.
+  DailyDone
+  /// The same, but the book would not take it.
+  DailyNotKept
+  /// This day had already been done, in that time, and that time stands.
+  ///
+  /// A day played a second time is a day whose answer is already known, so
+  /// a quicker run at it is not a quicker solve. The first is kept.
+  DailyAlready(first: Int)
 }
 
 /// Whether the game is still the player's own work.
@@ -268,6 +286,15 @@ fn opening(origin: generator.Origin) -> String {
       "This grid cannot be finished without "
       <> logic.labels(technique)
       <> ".\nPress ? for the page explaining them."
+    // Which day this is, since the header has only room to say how hard it
+    // is, and a daily picked up a week after it was put down is otherwise a
+    // puzzle with no date on it at all.
+    generator.Daily(on) ->
+      "The puzzle for "
+      <> date.day_name(date.weekday(on))
+      <> " "
+      <> date.to_string(on)
+      <> ".\nPress ? for help."
     _ -> "Press ? for help."
   }
 }

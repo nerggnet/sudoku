@@ -9,6 +9,7 @@ import gleam/list
 import gleam/option
 import gleam/string
 import sudoku/board
+import sudoku/date
 import sudoku/editor
 import sudoku/game
 import sudoku/generator
@@ -399,4 +400,10 @@ pub fn editor_lines(current: editor.Editor) -> List(String) {
   |> plain
   |> string.split("\r\n")
   |> list.map(string.trim_end)
+}
+
+/// A day to draw a menu for, fixed so that a test does not depend on when it
+/// is run. A Thursday, which the daily deals at Medium.
+pub fn a_day() -> date.Date {
+  date.Date(year: 2026, month: 9, day: 17)
 }

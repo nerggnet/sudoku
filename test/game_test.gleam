@@ -199,7 +199,8 @@ pub fn the_help_pages_through_the_techniques_test() {
   assert round.help == opened.help
 
   // A page for every technique, two of keys, and one on starting up.
-  assert list.length(game.pages()) == list.length(logic.techniques) + 3
+  // The keys twice over, starting up twice over, and then the techniques.
+  assert list.length(game.pages()) == list.length(logic.techniques) + 4
 }
 
 pub fn paging_the_help_does_not_reach_the_board_test() {

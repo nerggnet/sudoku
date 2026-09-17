@@ -5,6 +5,7 @@
 -export([enable_raw/0, read_byte/0, read_byte_after/1, now_ms/0, shuffle/1]).
 -export([remembered/2]).
 -export([seed/1, fresh_seed/0]).
+-export([today/0, day_of_week/3, valid_date/3]).
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
@@ -131,6 +132,27 @@ remembered(Key, Work) ->
         Value ->
             Value
     end.
+
+%% Today, on the wall where the player is sitting.
+%%
+%% Local rather than UTC. A daily puzzle belongs to somebody's day rather
+%% than to a moment, and a player in Stockholm should not be handed
+%% tomorrow's puzzle at one in the morning because a server somewhere has
+%% already turned over. Two people in different places who want the same
+%% grid can name the date outright, which is what naming it is for.
+today() ->
+    {{Y, M, D}, _} = erlang:localtime(),
+    {Y, M, D}.
+
+%% 1 for Monday through 7 for Sunday, which is how the week is counted here
+%% and how a daily puzzle knows how hard to be.
+day_of_week(Y, M, D) ->
+    calendar:day_of_the_week(Y, M, D).
+
+%% Whether those three numbers are a day that happened. February 30th is
+%% typed often enough to be worth refusing by name.
+valid_date(Y, M, D) ->
+    calendar:valid_date(Y, M, D).
 
 now_ms() ->
     erlang:monotonic_time(millisecond).

@@ -7,6 +7,8 @@ gleam run                     # choose a puzzle from the menu
 gleam run -- hard             # deal one at that difficulty
 gleam run -- custom           # type a puzzle in
 gleam run -- resume           # pick up the game you left
+gleam run -- daily            # the puzzle everybody gets today
+gleam run -- daily 2026-09-17 # the one belonging to that day
 gleam run -- 53..7....6..1..  # play that puzzle, dots for the blanks
 gleam run -- hard --seed 7    # deal the puzzle that seed deals
 gleam run -- --plain          # draw without colour
@@ -73,6 +75,44 @@ attributes, so clues stay bold, a wrong digit stays underlined, the cursor
 stays in reverse video — and a clash, which had only its redness to go on,
 would otherwise have looked exactly like a clue. There is a test that any two
 things the player must tell apart differ by more than their colour.
+
+## The daily puzzle
+
+One puzzle a day, the same one for everybody, carved from the date.
+
+```
+   7  Daily     Thursday 2026-09-17, Medium        done in 08:41
+```
+
+Because everybody gets the same grid, it cannot ask which difficulty you
+fancied, so it ramps through the week the way a newspaper's does:
+
+| | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| | Easy | Easy | Medium | Medium | Hard | Hard | Expert |
+
+An easy Monday for somebody on a train, and a Sunday that is an afternoon.
+Every level turns up in a week, so playing nothing but the daily is not a way
+of never meeting an X-wing.
+
+Naming the date plays that day's, which is what two people use when their
+calendars have already disagreed about what day it is — the day is taken from
+the clock where the player is sitting, not from UTC, because a daily belongs
+to somebody's morning rather than to a moment. It is also how you go back to
+one you missed.
+
+Its times are kept in a book of their own rather than among the levels' best
+times. A best is the quickest of many puzzles at a level and goes on being
+beaten; a day is one puzzle that happened once, and its time is a fact about
+that day rather than a record standing until something betters it. The first
+run at a day is the one written down — a day played twice is a day you have
+already seen the answer to, and a quicker second run at it is not a quicker
+solve.
+
+Everybody running this version, at any rate. The date steers the carving, and
+changing how the carving works would steer it somewhere else: two people
+comparing times should be on the same version, the same as they would be
+comparing crosswords out of the same edition.
 
 ## Dealing the same puzzle twice
 
