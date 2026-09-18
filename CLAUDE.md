@@ -47,8 +47,9 @@ vocabulary:
   A `Difficulty` is a band: a floor and ceiling of reasoning plus a clue
   target.
 - **`game`** — what a game *is*. **`rules`** — what a keystroke does to one.
-  **`hint`** — what `logic` makes of one. The last three reach into `game`;
-  `game` reaches into none of them.
+  **`hint`** — what `logic` makes of one. The latter two reach into `game`
+  and `game` reaches into neither, which is what lets the three be three
+  rather than a circle.
 - **`store`** — three files under XDG data: `game*` (one per game put
   down), `bests` (per difficulty: quickest, how many, total), `dailies` (one
   time per date). The palette lives under XDG *config* instead, being the
@@ -56,6 +57,8 @@ vocabulary:
 - **`render`** + **`palette`** + **`term`** — drawing, colours, and the
   terminal.
 - **`menu`** — what a keystroke means on the screens that choose a puzzle.
+- **`date`** — a day and its weekday, which is all the calendar the daily
+  needs. Day arithmetic goes through the day count, not through subtraction.
 - **`sudoku.gleam`** — the loop: draw, read, act. Deliberately thin.
 
 ## The convention that matters most
