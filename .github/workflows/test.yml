@@ -37,6 +37,9 @@ jobs:
           # anything here. A claim in a manifest is read as a fact by whoever
           # picks this up, so it is one this asks rather than one it makes.
           - { os: ubuntu-latest, otp: "29", gleam: "1.14.0" }
+          - { os: ubuntu-latest, otp: "29", gleam: "1.15.0" }
+          - { os: ubuntu-latest, otp: "29", gleam: "1.16.0" }
+          - { os: ubuntu-latest, otp: "29", gleam: "1.17.0" }
     steps:
       - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
