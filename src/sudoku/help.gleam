@@ -129,7 +129,7 @@ pub fn usage() -> String {
 const asking_keys = [
   #("c c", "check for good; a fourth wrong digit forfeits"),
   #("H", "take the next step, and say why"),
-  #("t", "on a practice grid, a nudge towards its technique"),
+  #("t", "on a practice grid, talk me through the next step"),
   #("R", "reveal the whole solution, on a second R"),
   #("p", "pause: put the board away and stop the clock"),
   #("X", "start this puzzle again, on a second X"),
@@ -144,8 +144,8 @@ const ask_notes = [
   "A hint takes the cell you are on whenever it can be worked out, and names",
   "the technique that settled it. There is a page on each of those further on.",
   "",
-  "On a practice grid t nudges you towards its technique instead of playing",
-  "it, and never touches the board, so the moment the grid kept survives.",
+  "On a practice grid t talks you through whatever the next step is, a nudge",
+  "at a time, and never plays it, so the grid teaches all it needs, not one.",
 ]
 
 const mark_notes = [

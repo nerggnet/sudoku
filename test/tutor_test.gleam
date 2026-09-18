@@ -220,17 +220,83 @@ pub fn an_xy_wing_is_pointed_at_by_its_pivot_test() {
 // When it is not the moment
 // ---------------------------------------------------------------------------
 
-/// Being sent to do the easy thing first is a lesson of its own: the
-/// reasoning always takes the simplest step going, and so should the person.
-pub fn before_the_moment_it_sends_you_to_the_simpler_step_test() {
+/// Before the moment it teaches the step that is there, rather than sending
+/// somebody away to work it out alone. A grid that wants an X-wing wants a
+/// dozen other things on the way to it, and whoever has never seen an X-wing
+/// has most likely never seen a hidden pair either.
+pub fn before_the_moment_it_teaches_the_step_that_is_there_test() {
   // Fresh, before anything has been taken: the X-wing grid wants a locked
-  // candidate first.
-  let lesson = tutor.lesson(practising(logic.XWing), 1)
+  // candidate first, so that is what it teaches.
+  let at = practising(logic.XWing)
+  let assert Ok(step) = logic.next_from(at.board.values, game.reading(at))
+  assert step.technique == logic.LockedCandidates
 
-  assert string.contains(lesson.what, "something simpler")
-  assert string.contains(string.lowercase(lesson.why), "locked candidates")
-  assert string.contains(lesson.why, "X-wing")
-  assert lesson.lit == []
+  let lesson = tutor.lesson(at, 1)
+  assert string.contains(lesson.what, "Locked candidates")
+  assert !string.contains(lesson.what, "simpler")
+
+  // And the whole ladder is there for it, the same as for any other step.
+  assert string.contains(tutor.lesson(at, 3).what, board.name(first_of(step)))
+  assert tutor.lesson(at, 4).what == explained(at).0
+}
+
+fn first_of(step: logic.Step) -> Int {
+  let assert [cell, ..] = step.evidence
+  cell
+}
+
+/// The first rung says whether this is the one the grid was kept for, since
+/// that is the technique somebody came to meet.
+pub fn it_says_when_the_one_you_came_for_arrives_test() {
+  let before = tutor.lesson(practising(logic.XWing), 1)
+  assert string.contains(before.what, "there is one here")
+  assert !string.contains(before.what, "the moment")
+
+  let at = tutor.lesson(at_the_moment(logic.XWing), 1)
+  assert string.contains(at.what, "the moment")
+}
+
+/// The thing this is for: somebody can be walked from the first step of a
+/// grid to the last without ever being told to go away and manage.
+pub fn it_guides_a_whole_grid_from_start_to_finish_test() {
+  let walked = guided(practising(logic.XWing), 80, [])
+  let #(finished, techniques) = walked
+
+  // The grid really was solved, a step at a time, with a lesson at each.
+  assert board.empty_count(finished.board) == 0
+
+  // And it took more than one kind of reasoning to get there, which is the
+  // whole reason teaching only one of them was not enough.
+  assert list.length(list.unique(techniques)) > 1
+  assert list.contains(techniques, logic.XWing)
+}
+
+/// Every rung has something to say about whatever this step turns out to
+/// be, and none of them is the old refusal.
+fn has_a_whole_ladder(current: game.Game) -> Nil {
+  use asked <- list.each([1, 2, 3, 4])
+  let lesson = tutor.lesson(current, asked)
+
+  assert lesson.what != ""
+  assert lesson.why != ""
+  assert !string.contains(lesson.what, "simpler here")
+}
+
+fn guided(
+  current: game.Game,
+  left: Int,
+  seen: List(logic.Technique),
+) -> #(game.Game, List(logic.Technique)) {
+  case left, logic.next_from(current.board.values, game.reading(current)) {
+    0, _ | _, Error(_) -> #(current, seen)
+    _, Ok(step) -> {
+      has_a_whole_ladder(current)
+      guided(game.with_board(current, played(current, step)), left - 1, [
+        step.technique,
+        ..seen
+      ])
+    }
+  }
 }
 
 pub fn it_says_so_away_from_a_practice_grid_test() {

@@ -12,6 +12,15 @@
 //// makes it free to ask and free to ask again: the moment is still there
 //// afterwards, and so is the grid.
 ////
+//// It teaches whatever step is in front of you rather than only the one the
+//// grid was kept for. A grid that wants an X-wing wants a dozen other things
+//// on the way to it, and somebody who has never seen an X-wing has most
+//// likely never seen a hidden pair either — so being told to go and work the
+//// easy ones out alone is being told no at the one moment they asked. Every
+//// rung still opens with "nothing simpler works from here", which is true of
+//// every step there is: the reasoning always takes the simplest one going,
+//// and that lesson is now in each of them rather than in a refusal.
+////
 //// Answers are worked out from `logic` rather than written down. What a
 //// step rests on, which digits it is about and which unit it was read in
 //// are all carried on a `Step` already, and they turn out to be exactly the
@@ -73,23 +82,11 @@ fn about(current: Game, technique: logic.Technique, asked: Int) -> Lesson {
         lit: [],
       )
 
-    Ok(step) ->
-      case step.technique == technique {
-        // Being told to do the easy thing first is a lesson of its own: the
-        // reasoning always takes the simplest step going, and so should the
-        // person doing it.
-        False ->
-          Lesson(
-            what: "Not yet — there is something simpler here.",
-            why: capitalised(logic.labels(step.technique))
-              <> " first. Take that, and the "
-              <> logic.label(technique)
-              <> " will be next.",
-            lit: [],
-          )
-
-        True -> rung(step, asked)
-      }
+    // Whatever the step turns out to be, not only the one the grid was kept
+    // for. A grid that wants an X-wing wants a dozen other things on the way
+    // to it, and being sent away to work those out alone is being sent away
+    // at the one moment somebody asked for help.
+    Ok(step) -> rung(step, step.technique == technique, asked)
   }
 }
 
@@ -98,13 +95,21 @@ fn about(current: Game, technique: logic.Technique, asked: Int) -> Lesson {
 /// Each says less than the one after it on purpose. Somebody who can find an
 /// X-wing once they know which digit to look for has learnt more than
 /// somebody shown four cells, and much more than somebody shown the answer.
-fn rung(step: logic.Step, asked: Int) -> Lesson {
+///
+/// The first rung says whether this is the technique the grid was kept for,
+/// since that is the one somebody came to meet and is worth knowing when it
+/// arrives. The rest of the ladder is the same either way: a step is a step.
+fn rung(step: logic.Step, came_for: Bool, asked: Int) -> Lesson {
   let named = capitalised(logic.label(step.technique))
 
   case asked {
     1 ->
       Lesson(
-        what: named <> ": this is the moment.",
+        what: named
+          <> case came_for {
+          True -> ": this is the moment."
+          False -> ": there is one here."
+        },
         why: "Nothing simpler works from here. Look for "
           <> written(step.about)
           <> ". Press t again for where.",

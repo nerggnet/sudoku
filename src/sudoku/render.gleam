@@ -948,7 +948,7 @@ pub fn practice_frame() -> String {
         "   "
           <> term.styled(
           palette.dim(),
-          "walked up to it a nudge at a time. The tutor never plays a move.",
+          "talked through every step of it. The tutor never plays a move.",
         ),
         "",
         "   "

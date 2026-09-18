@@ -221,7 +221,7 @@ pub fn the_help_screen_lists_the_keys_test() {
 
   assert list.any(asking, string.contains(_, "reveal the whole solution"))
   // The tutor is a thing asked for, so it is listed with the rest of them.
-  assert list.any(asking, string.contains(_, "nudge towards its technique"))
+  assert list.any(asking, string.contains(_, "talk me through the next step"))
 
   // Help takes the screen over rather than sharing it with the board.
   use page <- list.each(pages)

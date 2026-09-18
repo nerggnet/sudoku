@@ -59,7 +59,7 @@ newspaper.
 | `r` | do it again |
 | `c` | check what is filled in from here on, at a price (press twice) |
 | `H` | take the next step, and say why |
-| `t` | on a practice grid, be nudged towards its technique |
+| `t` | on a practice grid, be talked through the next step |
 | `R` | reveal the whole solution (press twice) |
 | `p` | pause: put the board away and stop the clock |
 | `X` | start this puzzle again (press twice) |
@@ -380,16 +380,21 @@ to ask again — the moment is still there afterwards, and so is the grid. `H`
 is still there to play the step for you; this is what to press instead of
 reaching for it.
 
-Ask before the moment and it sends you back to the easy work:
+It teaches whatever step is in front of you rather than only the one the
+grid was kept for. A grid that wants an X-wing wants a dozen other things on
+the way to it, and whoever has never seen an X-wing has most likely never
+seen a hidden pair either — so ask on the X-wing grid before the X-wing is
+due and you get the locked candidate that is due, with the same four rungs:
 
 ```
- Not yet — there is something simpler here.
- Locked candidates first. Take that, and the X-wing will be next.
+ Locked candidates: there is one here.
+ Nothing simpler works from here. Look for 3. Press t again for where.
 ```
 
-Which is a lesson of its own. The reasoning always takes the simplest step
-going, and so should the person doing it — an X-wing you found while a naked
-single was sitting there is an X-wing you did not need.
+"Nothing simpler works from here" is true of every one of them, the
+reasoning always taking the simplest step going — so the lesson that used to
+be a refusal is in each of them instead. The first rung says when the one
+you came for has arrived, since that is the technique you came to meet.
 
 None of it is written down anywhere. What a step rests on, which digits it is
 about and which unit it was read in are all carried on the step already, and
