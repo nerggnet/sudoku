@@ -9,6 +9,46 @@ on:
 
 jobs:
   test:
+    name: ${{ matrix.os }} · OTP ${{ matrix.otp }} · Gleam ${{ matrix.gleam }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Every leg reports. Which runtime a puzzle comes out different on is
+      # the question being asked, and stopping at the first answer hides the
+      # rest of it.
+      fail-fast: false
+      matrix:
+        include:
+          # What the game is written on, and what it was written on before
+          # this file asked anything else.
+          - { os: ubuntu-latest, otp: "29", gleam: "1.18.1" }
+
+          # Where it is actually played. The terminal shim is the most
+          # platform-minded code here and had never been run on a Mac by
+          # anything but a person.
+          - { os: macos-latest, otp: "29", gleam: "1.18.1" }
+
+          # The oldest runtime the game claims: `sudoku_ffi` says raw mode
+          # wants OTP 26, and nothing has ever checked that it still does.
+          - { os: ubuntu-latest, otp: "26", gleam: "1.18.1" }
+          - { os: macos-latest, otp: "26", gleam: "1.18.1" }
+
+          # The oldest Gleam `gleam.toml` claims. A claim in a manifest is
+          # read as a fact by whoever picks this up.
+          - { os: ubuntu-latest, otp: "29", gleam: "1.11.0" }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          gleam-version: ${{ matrix.gleam }}
+          rebar3-version: "3"
+      - run: gleam deps download
+      - run: gleam test
+
+  # How the source is written is a fact about the source rather than about
+  # the runtime under it, so it is asked once and on the version the game is
+  # written on.
+  format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -17,7 +57,4 @@ jobs:
           otp-version: "29"
           gleam-version: "1.18.1"
           rebar3-version: "3"
-          # elixir-version: "1"
-      - run: gleam deps download
-      - run: gleam test
       - run: gleam format --check src test
