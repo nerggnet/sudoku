@@ -34,7 +34,7 @@ pub fn main() -> Nil {
       // Only ever switched on here: without the flag the environment has the
       // say, and NO_COLOR is not something to talk anybody out of.
       case plain {
-        True -> term.plainly(True)
+        True -> term.colouring(term.Plain)
         False -> Nil
       }
 

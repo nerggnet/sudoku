@@ -387,9 +387,16 @@ pub fn count_said(cells: Int) -> String {
 /// Nothing is asserted inside on purpose: an assertion that failed would take
 /// the restoring with it and leave every test after it drawing in plain.
 pub fn without_colour(draw: fn() -> a) -> a {
-  term.plainly(True)
+  with_colours(term.Plain, draw)
+}
+
+/// Draw as a terminal of a given depth would, and put back whatever this one
+/// turned out to be. Tests must not depend on the terminal running them.
+pub fn with_colours(colours: term.Colours, draw: fn() -> a) -> a {
+  let had = term.colours()
+  term.colouring(colours)
   let drawn = draw()
-  term.plainly(False)
+  term.colouring(had)
   drawn
 }
 

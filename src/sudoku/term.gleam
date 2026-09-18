@@ -49,14 +49,34 @@ pub fn columns() -> Int
 @external(erlang, "sudoku_ffi", "rows")
 pub fn rows() -> Int
 
-/// Whether the game is being drawn without colour, either because `NO_COLOR`
-/// is set or because `--plain` asked for it.
-@external(erlang, "sudoku_ffi", "plain")
-pub fn plain() -> Bool
+/// How much colour the terminal has.
+///
+/// Three answers rather than two, because there are three terminals. The
+/// washes behind the board are 256-colour greys and a terminal with sixteen
+/// draws them as nothing at all, so it needs telling apart from one that has
+/// them and from one that has no colour whatever.
+pub type Colours {
+  /// None. `NO_COLOR`, `--plain`, or a terminal that says it is dumb.
+  Plain
+  /// The sixteen every terminal has had since the beginning, which is every
+  /// colour this game uses except the washes.
+  Basic
+  /// The 256, which is where the washes live.
+  Full
+}
 
-/// Say so, once, before anything is drawn.
-@external(erlang, "sudoku_ffi", "set_plain")
-pub fn plainly(plain: Bool) -> Nil
+/// What the terminal has, worked out from the environment and settled once.
+@external(erlang, "sudoku_ffi", "colours")
+pub fn colours() -> Colours
+
+/// Say otherwise, before anything is drawn.
+@external(erlang, "sudoku_ffi", "colouring")
+pub fn colouring(colours: Colours) -> Nil
+
+/// Whether the game is being drawn without colour at all.
+pub fn plain() -> Bool {
+  colours() == Plain
+}
 
 pub const esc = "\u{1b}"
 

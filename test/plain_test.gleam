@@ -35,10 +35,14 @@ pub fn colours_go_and_shapes_stay_test() {
 pub fn a_colour_with_arguments_is_swallowed_whole_test() {
   // 48;5;22 is three codes making one colour. Dropping only the 48 would
   // leave 5 and 22 behind to be read as blink and something in the 20s.
-  assert term.uncoloured(palette.hint_wash) == ""
-  assert term.uncoloured(palette.hint_wash <> ";" <> palette.given) == "1"
+  //
+  // Written out rather than taken from the palette: what is being asked is
+  // how a code with arguments is read, and the palette's answer now depends
+  // on how much colour the terminal has.
+  assert term.uncoloured("48;5;22") == ""
+  assert term.uncoloured("48;5;22;" <> palette.given) == "1"
   assert term.uncoloured("38;2;10;20;30;4") == "4"
-  assert term.uncoloured("4;" <> palette.peer_wash <> ";1") == "4;1"
+  assert term.uncoloured("4;48;5;236;1") == "4;1"
 }
 
 pub fn styled_writes_no_escape_where_nothing_is_left_test() {

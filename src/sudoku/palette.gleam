@@ -6,6 +6,8 @@
 //// works — and so that changing what the game looks like is a matter of
 //// reading one short file.
 
+import sudoku/term
+
 /// An empty cell, and a cell carrying more than one pencil mark.
 pub const empty_cell = "\u{00b7}"
 
@@ -65,16 +67,46 @@ pub const mark = "33"
 // A wash behind the cells sharing a unit with the cursor, behind cells
 // holding the same digit as the one under the cursor, and behind the cells a
 // hint is resting its argument on.
-pub const peer_wash = "48;5;236"
+pub fn peer_wash() -> String {
+  wash("48;5;236")
+}
 
-pub const match_wash = "48;5;238"
+pub fn match_wash() -> String {
+  wash("48;5;238")
+}
 
-pub const hint_wash = "48;5;22"
+pub fn hint_wash() -> String {
+  wash("48;5;22")
+}
 
 /// Behind the cells a scan says its digit could still go in. Blue against the
 /// hint's green: a hint is telling you something, a scan is only showing you
 /// where to look.
-pub const scan_wash = "48;5;17"
+pub fn scan_wash() -> String {
+  wash("48;5;17")
+}
+
+/// The one grey a terminal with sixteen colours can wash with.
+///
+/// Bright black, which is the only background of the sixteen that is neither
+/// the terminal's own nor a shout: grey on a dark terminal and grey on a
+/// light one. Every other candidate is a colour somebody has chosen their
+/// whole screen to be, or one loud enough to lose the digits inside it.
+const only_grey = "100"
+
+/// A wash, or what becomes of it where four shades cannot be told apart.
+///
+/// Sixteen colours have one usable background and this game wants four, so
+/// under them the four become one and the wash stops saying which kind it
+/// is. What the two that were saying something lose by merging they get
+/// back in the column in front of the cell — the same mark a terminal with
+/// no colour at all has always been given.
+fn wash(full: String) -> String {
+  case term.colours() {
+    term.Full -> full
+    term.Basic | term.Plain -> only_grey
+  }
+}
 
 /// The cursor itself, which is reverse video rather than a colour, so that it
 /// is the cursor whatever the rest is painted in.

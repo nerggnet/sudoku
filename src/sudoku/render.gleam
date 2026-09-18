@@ -309,19 +309,21 @@ fn painted(
 }
 
 /// The column in front of a cell. It is a space, so that a wash reads as a
-/// solid block — except where the wash cannot be seen, and the column has to
-/// say what it was going to say instead.
+/// solid block — except where the wash cannot say which kind it is, and the
+/// column has to say it instead.
 ///
-/// Two ways it cannot be seen. There is no colour at all, and then nothing is
-/// shaded. Or the cell is the one the cursor is on, whose colour is spoken
-/// for by the cursor — and that is the cell the player most wants an answer
-/// about, since it is the one they have gone to look at.
+/// Three ways it cannot. There is no colour at all, and then nothing is
+/// shaded. There are only the sixteen, and then all four washes are the one
+/// grey a terminal of sixteen can wash with — shaded, but not saying which.
+/// Or the cell is the one the cursor is on, whose colour is spoken for by
+/// the cursor — and that is the cell the player most wants an answer about,
+/// since it is the one they have gone to look at.
 ///
 /// Only what is being said gets a column. The washes behind the cursor's row,
 /// its column and the digit it is sitting on are there to help the eye wander
 /// rather than to say anything, and an eye can wander without them.
 fn lead(washes: Washes, index: Int) -> String {
-  let unseen = term.plain() || index == washes.cursor
+  let unseen = term.colours() != term.Full || index == washes.cursor
 
   case
     unseen,
@@ -393,10 +395,10 @@ fn background(washes: Washes, index: Int, matching: Bool) -> String {
     // The cursor stays visible through a hint: it is where the player is,
     // and a hint is only passing.
     True, _, _, _, _ -> palette.cursor
-    _, True, _, _, _ -> palette.hint_wash
-    _, _, True, _, _ -> palette.scan_wash
-    _, _, _, True, _ -> palette.match_wash
-    _, _, _, _, True -> palette.peer_wash
+    _, True, _, _, _ -> palette.hint_wash()
+    _, _, True, _, _ -> palette.scan_wash()
+    _, _, _, True, _ -> palette.match_wash()
+    _, _, _, _, True -> palette.peer_wash()
     _, _, _, _, _ -> ""
   }
 }

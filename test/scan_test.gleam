@@ -9,6 +9,7 @@ import sudoku/game
 import sudoku/key
 import sudoku/palette
 import sudoku/render
+import sudoku/term
 
 /// A game looking for sevens.
 fn looking_for(digit: Int) -> game.Game {
@@ -26,7 +27,7 @@ pub fn asking_for_a_scan_asks_which_digit_test() {
   assert string.contains(asked.message, "1 to 9")
 
   // Nothing is shaded yet: no digit has been named.
-  assert !string.contains(render.frame(asked), palette.scan_wash)
+  assert !string.contains(render.frame(asked), palette.scan_wash())
 }
 
 pub fn a_digit_after_s_says_what_to_look_for_test() {
@@ -70,14 +71,14 @@ pub fn a_scan_reads_the_grid_and_not_the_marks_test() {
     marked |> helper.step(key.Char("S")) |> helper.step(key.Digit(7))
 
   assert list.contains(board.could_take(looking.board, 7), first)
-  assert string.contains(render.frame(looking), palette.scan_wash)
+  assert string.contains(render.frame(looking), palette.scan_wash())
 }
 
 pub fn a_scan_puts_the_cursor_s_own_row_and_column_away_test() {
   // Nine shaded cells and three shaded units at once is a mess, and the scan
   // is the thing that was asked for.
-  assert string.contains(render.frame(helper.fixture()), palette.peer_wash)
-  assert !string.contains(render.frame(looking_for(7)), palette.peer_wash)
+  assert string.contains(render.frame(helper.fixture()), palette.peer_wash())
+  assert !string.contains(render.frame(looking_for(7)), palette.peer_wash())
 }
 
 pub fn the_title_says_what_is_being_looked_for_test() {
@@ -91,7 +92,7 @@ pub fn asking_again_stops_looking_test() {
   let stopped = helper.step(looking_for(7), key.Char("S"))
 
   assert stopped.scan == game.NotScanning
-  assert !string.contains(render.frame(stopped), palette.scan_wash)
+  assert !string.contains(render.frame(stopped), palette.scan_wash())
 }
 
 pub fn a_scan_asked_for_and_not_answered_lapses_test() {
@@ -190,4 +191,47 @@ pub fn the_cell_under_the_cursor_says_whether_it_could_take_it_test() {
     })
   let away = game.Game(..looking, cursor: elsewhere)
   assert helper.occurrences(render.frame(away), palette.could_go) == 0
+}
+
+/// What a scan looks like on each of the three terminals.
+///
+/// The washes are 256-colour greys, so a terminal with sixteen draws them as
+/// nothing at all unless it is told to do something else. This is the thing
+/// that used to go quietly missing: colour enough to look coloured, and no
+/// shading where the shading was the answer.
+pub fn a_scan_is_marked_out_on_every_terminal_test() {
+  let looking = looking_for(7)
+
+  // With the 256, the wash says it and the column in front stays a space.
+  let full = helper.with_colours(term.Full, fn() { render.frame(looking) })
+  assert string.contains(full, "48;5;17")
+  assert !string.contains(full, palette.could_go)
+
+  // With sixteen, the one grey says a cell is marked out and the column in
+  // front says which kind of marking it is.
+  let basic = helper.with_colours(term.Basic, fn() { render.frame(looking) })
+  assert string.contains(basic, "100")
+  assert !string.contains(basic, "48;5;")
+  assert string.contains(basic, palette.could_go)
+
+  // With none, the column carries it alone.
+  let plain = helper.with_colours(term.Plain, fn() { render.frame(looking) })
+  assert !string.contains(plain, "48;5;")
+  assert string.contains(plain, palette.could_go)
+}
+
+/// However little colour there is, a cell a digit could go in is told apart
+/// from one it could not. That is the whole of what a scan is for.
+pub fn a_scan_says_as_much_on_sixteen_colours_as_on_256_test() {
+  let looking = looking_for(7)
+  let room = board.could_take(looking.board, 7)
+
+  use colours <- list.each([term.Full, term.Basic, term.Plain])
+  let drawn = helper.with_colours(colours, fn() { render.frame(looking) })
+
+  // Something marks them out, whatever it is.
+  assert room != []
+  assert string.contains(drawn, "100")
+    || string.contains(drawn, "48;5;17")
+    || string.contains(drawn, palette.could_go)
 }

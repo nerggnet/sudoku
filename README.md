@@ -78,6 +78,40 @@ stays in reverse video — and a clash, which had only its redness to go on,
 would otherwise have looked exactly like a clue. There is a test that any two
 things the player must tell apart differ by more than their colour.
 
+## Colour
+
+The game asks the terminal how much colour it has and draws three different
+ways.
+
+| | washes | the column in front of a cell |
+| --- | --- | --- |
+| 256 colours | four, one per kind | a space |
+| 16 colours | one grey, all four kinds | `›` for a hint, `+` for a scan |
+| none | none | `›` for a hint, `+` for a scan |
+
+The washes behind the board — the cursor's row and column, a hint's cells,
+where a digit could still go — are 256-colour greys, and a terminal with
+sixteen draws them as nothing at all. Not wrongly: simply not at all, which
+is the worst way for a thing to go missing, since the screen still looks
+coloured and the shading that was the answer is just not there.
+
+Sixteen colours hold exactly one background that is neither the terminal's
+own nor a shout, so under them the four washes become that one grey and stop
+saying which kind they are. What the two that were saying something lose by
+merging they get back as a mark in the column in front of the cell — the
+same mark a terminal with no colour at all has always been given.
+
+`TERM` naming 256 colours is how a terminal claims them, and `COLORTERM`
+being `truecolor` is the newer way. A terminal that misdescribes itself is
+common enough to be worth a way round:
+
+```sh
+SUDOKU_COLOURS=full   # or basic, or none
+SUDOKU_COLORS=full    # spelled the other way, which also works
+```
+
+`NO_COLOR` wins over all of it, as does `--plain`.
+
 ## The daily puzzle
 
 One puzzle a day, the same one for everybody, carved from the date.

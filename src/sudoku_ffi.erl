@@ -9,7 +9,7 @@
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
--export([plain/0, set_plain/1]).
+-export([colours/0, colouring/1]).
 -export([protected/2, stop/1]).
 
 %% Put the terminal into raw mode: one byte at a time, no echo, no line
@@ -246,26 +246,80 @@ arguments() ->
     [unicode:characters_to_binary(Argument)
      || Argument <- init:get_plain_arguments()].
 
-%% Whether to draw without colour. NO_COLOR is the usual way of asking for
-%% that across command line tools, so it is the one this honours; --plain sets
-%% the same switch. Looked up once and kept, since it is asked hundreds of
-%% times a frame.
-plain() ->
-    case persistent_term:get(sudoku_plain, undefined) of
+%% How much colour the terminal has: none, sixteen, or the 256 the washes
+%% behind the board are painted in.
+%%
+%% Three answers rather than two. A terminal with sixteen colours draws a
+%% 256-colour wash as nothing at all — not wrongly, simply not at all, which
+%% is the worst way for a thing to be missing: the shading behind the cursor
+%% and behind a hint's cells would just quietly not be there. Looked up once
+%% and kept, since it is asked hundreds of times a frame.
+colours() ->
+    case persistent_term:get(sudoku_colours, undefined) of
         undefined ->
-            Plain = case os:getenv("NO_COLOR") of
-                        Value when is_list(Value), Value =/= "" -> true;
-                        _ -> false
-                    end,
-            persistent_term:put(sudoku_plain, Plain),
-            Plain;
-        Plain ->
-            Plain
+            Level = detected(),
+            persistent_term:put(sudoku_colours, Level),
+            Level;
+        Level ->
+            Level
     end.
 
-set_plain(Plain) ->
-    persistent_term:put(sudoku_plain, Plain),
+colouring(Level) ->
+    persistent_term:put(sudoku_colours, Level),
     nil.
+
+%% NO_COLOR is the one thing the world agrees on and it wins over the rest,
+%% the same as it always did.
+detected() ->
+    case os:getenv("NO_COLOR") of
+        Value when is_list(Value), Value =/= "" -> plain;
+        _ -> told_or_guessed()
+    end.
+
+%% A terminal that misdescribes itself is common enough to be worth a way
+%% round. Spelled both ways because this game spells it one way and most of
+%% the world the other, and being right about the spelling is not a thing to
+%% make somebody guess at.
+told_or_guessed() ->
+    case told(["SUDOKU_COLOURS", "SUDOKU_COLORS"]) of
+        {ok, Level} -> Level;
+        error -> guessed()
+    end.
+
+told([]) -> error;
+told([Name | Rest]) ->
+    case os:getenv(Name) of
+        false -> told(Rest);
+        Value ->
+            case string:lowercase(Value) of
+                "none" -> {ok, plain};
+                "plain" -> {ok, plain};
+                "basic" -> {ok, basic};
+                "16" -> {ok, basic};
+                "full" -> {ok, full};
+                "256" -> {ok, full};
+                %% Anything else is not an answer, so it is not taken for one.
+                _ -> told(Rest)
+            end
+    end.
+
+%% What the terminal says about itself. TERM naming 256 colours is the old
+%% way of claiming them and COLORTERM the newer one; anything that says
+%% neither is taken to have the sixteen every terminal has always had.
+guessed() ->
+    case os:getenv("TERM") of
+        false -> plain;
+        "" -> plain;
+        "dumb" -> plain;
+        Term ->
+            case truecolour() orelse string:find(Term, "256color") =/= nomatch of
+                true -> full;
+                false -> basic
+            end
+    end.
+
+truecolour() ->
+    lists:member(os:getenv("COLORTERM"), ["truecolor", "24bit"]).
 
 %% How much room the terminal has, or -1 where it will not say.
 columns() -> measure(fun io:columns/0).
