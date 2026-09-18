@@ -5,6 +5,7 @@
 
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/string
 import helper
 import sudoku/board
@@ -299,29 +300,124 @@ fn guided(
   }
 }
 
-pub fn it_says_so_away_from_a_practice_grid_test() {
-  let lesson = tutor.lesson(helper.fixture(), 1)
+/// It teaches on any board, not only the nine kept for teaching on. Nothing
+/// in a lesson comes from the puzzle — only from the position — so there was
+/// never anything for a dealt game to be missing.
+pub fn it_teaches_on_an_ordinary_puzzle_too_test() {
+  let playing = helper.fixture()
+  let assert Ok(step) =
+    logic.next_from(playing.board.values, game.reading(playing))
 
-  assert string.contains(lesson.what, "practice grid")
-  assert lesson.lit == []
+  let lesson = tutor.lesson(playing, 1)
+  assert string.contains(
+    string.lowercase(lesson.what),
+    logic.label(step.technique),
+  )
+
+  // With no technique it was kept for, there is no arrival to announce.
+  assert !string.contains(lesson.what, "the moment")
+  assert string.contains(lesson.what, "there is one here")
 }
 
 // ---------------------------------------------------------------------------
 // What it costs
 // ---------------------------------------------------------------------------
 
-/// Nothing. The tutor never touches the board, which is the whole of why it
-/// is worth having beside `H`: `H` plays the step and spends the one chance
-/// the grid had to teach its technique, and this leaves it there.
+/// The tutor never touches the board, wherever it is asked. That is the
+/// whole of why it is worth having beside `H`: `H` plays the step and spends
+/// the one chance a practice grid had to teach its technique.
 pub fn the_tutor_never_touches_the_board_test() {
+  use start <- list.each([at_the_moment(logic.Swordfish), helper.fixture()])
+  let assert game.Continue(pressed) = rules.update(start, key.Char("t"))
+
+  assert pressed.board == start.board
+  assert pressed.hints == start.hints
+}
+
+/// On a practice grid there is nothing to spend, so it costs nothing however
+/// often it is asked — which is what makes walking a whole grid with it a
+/// thing anybody would do.
+pub fn it_costs_nothing_where_nothing_is_at_stake_test() {
   let at = at_the_moment(logic.Swordfish)
+  assert !game.at_stake(at)
 
-  use asked <- list.each([1, 2, 3, 4, 5])
-  let _ = tutor.lesson(at, asked)
+  let asked =
+    list.fold(["t", "t", "t", "t"], at, fn(current, key) {
+      let assert game.Continue(next) = rules.update(current, key.Char(key))
+      next
+    })
 
-  let assert game.Continue(pressed) = rules.update(at, key.Char("t"))
-  assert pressed.board == at.board
-  assert pressed.hints == at.hints
-  assert pressed.aided == at.aided
-  assert game.unaided(pressed)
+  // Asked four times and counted four times — it did happen — but nothing
+  // was spent, because a practice grid has nothing to spend.
+  assert game.unaided(asked)
+  assert asked.tutored == 4
+}
+
+// ---------------------------------------------------------------------------
+// What it costs on a game that is timed
+// ---------------------------------------------------------------------------
+
+/// The same bargain a hint offers, for the same reason. It hands over no
+/// digits, but what it hands over is the reasoning the player came to do.
+pub fn on_a_timed_game_it_says_what_it_will_cost_first_test() {
+  let playing = helper.fixture()
+  assert game.at_stake(playing)
+
+  let warned = helper.step(playing, key.Char("t"))
+  assert string.contains(warned.message, "aided")
+  assert warned.offered == option.Some(game.TakeTutor)
+
+  // Nothing has been spent by being told what it would cost.
+  assert game.unaided(warned)
+  assert warned.tutored == 0
+  assert warned.teaching == game.NotTeaching
+}
+
+pub fn pressing_it_again_goes_ahead_test() {
+  let taught =
+    helper.step(helper.step(helper.fixture(), key.Char("t")), key.Char("t"))
+
+  assert !game.unaided(taught)
+  assert taught.tutored == 1
+  assert taught.teaching == game.Teaching(1)
+  // It played nothing, which is the whole of what it is.
+  assert taught.hints == 0
+  assert taught.board == helper.fixture().board
+}
+
+/// Warned once and not again. Somebody who has spent the timing has nothing
+/// left to be warned about.
+pub fn the_warning_comes_only_while_there_is_something_to_lose_test() {
+  let taught =
+    helper.step(helper.step(helper.fixture(), key.Char("t")), key.Char("t"))
+  let again = helper.step(taught, key.Char("t"))
+
+  assert again.tutored == 2
+  assert again.teaching == game.Teaching(2)
+}
+
+/// Asking past the foot of the ladder is not being told anything more, so
+/// it is not counted as having been told anything.
+pub fn asking_past_the_bottom_costs_nothing_more_test() {
+  let walked =
+    list.fold(["t", "t", "t", "t", "t", "t", "t"], helper.fixture(), fn(at, _) {
+      helper.step(at, key.Char("t"))
+    })
+
+  // One press for the warning, four rungs, and two that said nothing new.
+  assert walked.tutored == tutor.rungs
+}
+
+/// A puzzle typed in is not timed, so there is nothing for the tutor to
+/// spend on it — the same as a hint, and for the same reason.
+pub fn a_puzzle_typed_in_costs_nothing_test() {
+  let typed = helper.playing(helper.puzzle_text)
+  assert !game.timed(typed)
+
+  let taught = helper.step(typed, key.Char("t"))
+
+  // No warning, straight to the lesson.
+  assert taught.teaching == game.Teaching(1)
+  assert game.unaided(taught)
+  assert taught.tutored == 1
 }

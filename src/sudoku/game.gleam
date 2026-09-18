@@ -79,6 +79,13 @@ pub type Game {
     /// A digit asked for and not yet given, until the next keystroke.
     asking: Asking,
     hints: Int,
+    /// Times the tutor has been asked for more than it had already said.
+    ///
+    /// Counted apart from hints because it is a different thing to have
+    /// done: a hint plays the move and this only talks about it, and a panel
+    /// that called them both hints would be telling somebody they had been
+    /// given an answer they were not given.
+    tutored: Int,
     /// Wrong digits checking has caught, counting towards `mistake_limit`.
     mistakes: Int,
     /// Whether the game has been helped along — by checking, or by a hint —
@@ -108,6 +115,9 @@ pub type Offer {
   /// The game is still the player's own work. Asking again takes a hint, and
   /// it stops being.
   TakeHint
+  /// The same, for the tutor. It plays nothing, but what it says is the
+  /// reasoning the player came to do, so a time set after it is not a time.
+  TakeTutor
   /// Checking is off. Asking again switches it on, for good, and with
   /// whatever that costs where it stands.
   StartChecking
@@ -126,6 +136,7 @@ pub fn asked_by(offer: Offer) -> List(Key) {
     RedoMarks -> [key.Char("f")]
     GiveUp -> [key.Char("n"), key.Char("N")]
     TakeHint -> [key.Char("H")]
+    TakeTutor -> [key.Char("t")]
     StartChecking -> [key.Char("c")]
     Reveal -> [key.Char("R")]
     StartAgain -> [key.Char("X")]
@@ -240,6 +251,30 @@ pub type Verdict {
   DailyAlready(first: Int)
 }
 
+/// Whether asking the game for something would cost anything here.
+///
+/// A puzzle typed in has no difficulty to file a time under and a practice
+/// grid is not timed at all, so there is nothing on either to spend. A dealt
+/// puzzle and a daily both have a time riding on them — until something has
+/// been spent already, after which there is nothing left to warn about.
+pub fn at_stake(current: Game) -> Bool {
+  timed(current) && unaided(current)
+}
+
+/// Whether this puzzle is the kind that gets timed at all.
+///
+/// Apart from `at_stake` because the two are asked at different moments and
+/// stop being true at different ones. Whether to warn somebody depends on
+/// there being something left to lose, and stops the moment they have spent
+/// it; whether asking costs anything depends only on the kind of puzzle, and
+/// goes on being true for as long as the puzzle does.
+pub fn timed(current: Game) -> Bool {
+  case current.puzzle.origin {
+    generator.Handwritten | generator.Practising(_) -> False
+    generator.Dealt(_) | generator.Daily(_) -> True
+  }
+}
+
 /// Whether the game is still the player's own work.
 ///
 /// Kept as a fact of its own rather than worked out from the hints taken and
@@ -301,6 +336,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     teaching: NotTeaching,
     asking: NotAsking,
     hints: 0,
+    tutored: 0,
     mistakes: 0,
     aided: False,
     ending: None,

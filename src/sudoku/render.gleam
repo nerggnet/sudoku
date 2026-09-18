@@ -616,7 +616,7 @@ fn finished(current: Game) -> List(String) {
         palette.good(),
         "Solved in " <> clock(game.elapsed_ms(current)),
       )
-      <> term.styled(palette.good(), with_hints(current.hints))
+      <> term.styled(palette.good(), with_help(current))
       <> recorded(current)
   }
 
@@ -654,12 +654,26 @@ fn recorded(current: Game) -> String {
   }
 }
 
-/// What a solve cost in hints, tacked onto the time it took.
-fn with_hints(hints: Int) -> String {
+/// What a solve cost, tacked onto the time it took.
+///
+/// Hints and the tutor are named apart because they are not the same thing
+/// to have done. A hint plays the move; the tutor only ever talks about one,
+/// and somebody told that they had been given twelve hints when they were
+/// given none would be owed an apology.
+fn with_help(current: Game) -> String {
+  case helped(current.hints), current.tutored {
+    "", 0 -> "!"
+    "", _ -> ", with the tutor."
+    hints, 0 -> ", " <> hints <> "."
+    hints, _ -> ", " <> hints <> " and the tutor."
+  }
+}
+
+fn helped(hints: Int) -> String {
   case hints {
-    0 -> "!"
-    1 -> ", with one hint."
-    _ -> ", with " <> int.to_string(hints) <> " hints."
+    0 -> ""
+    1 -> "with one hint"
+    _ -> "with " <> int.to_string(hints) <> " hints"
   }
 }
 

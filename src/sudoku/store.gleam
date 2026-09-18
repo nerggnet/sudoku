@@ -45,6 +45,7 @@ pub fn encode(current: Game) -> String {
     "aided " <> yes_no(current.aided),
     "wrong " <> int.to_string(current.mistakes),
     "hints " <> int.to_string(current.hints),
+    "tutor " <> int.to_string(current.tutored),
   ]
   |> list.append(seed_line(current.puzzle.seed))
   |> string.join("\n")
@@ -116,9 +117,11 @@ pub fn decode(text: String) -> Result(Game, Nil) {
         // by what it was helped with.
         aided: dict.get(fields, "aided") == Ok("yes")
         || dict.get(fields, "checking") == Ok("yes")
-        || whole_at(fields, "hints", 0) > 0,
+        || whole_at(fields, "hints", 0) > 0
+        || whole_at(fields, "tutor", 0) > 0,
       mistakes: whole_at(fields, "wrong", 0),
       hints: whole_at(fields, "hints", 0),
+      tutored: whole_at(fields, "tutor", 0),
       started_ms: term.now_ms() - whole_at(fields, "clock", 0),
       message: "Picked up where you left off.",
     ),

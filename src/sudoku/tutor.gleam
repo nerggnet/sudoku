@@ -29,6 +29,7 @@
 
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import sudoku/board
 import sudoku/game.{type Game}
@@ -52,29 +53,9 @@ pub const rungs = 4
 /// Asked afresh every frame rather than remembered, so moving the cursor
 /// about under a lesson leaves the lesson where it was.
 pub fn lesson(current: Game, asked: Int) -> Lesson {
-  case wanted(current) {
-    Error(_) ->
-      Lesson(
-        what: "The tutor works on a practice grid.",
-        why: "Pick a technique from the menu and it will walk you up to one.",
-        lit: [],
-      )
-    Ok(technique) -> about(current, technique, asked)
-  }
-}
-
-/// The technique this grid was kept to teach, if it was kept to teach one.
-fn wanted(current: Game) -> Result(logic.Technique, Nil) {
-  case current.puzzle.origin {
-    generator.Practising(technique) -> Ok(technique)
-    _ -> Error(Nil)
-  }
-}
-
-fn about(current: Game, technique: logic.Technique, asked: Int) -> Lesson {
   case logic.next_from(current.board.values, game.reading(current)) {
-    // Nothing follows from what is on the board. On a practice grid that
-    // means the player has written something in that cannot be true.
+    // Nothing follows from what is on the board, which means something
+    // written in cannot be true.
     Error(_) ->
       Lesson(
         what: "Nothing follows from the board as it stands.",
@@ -82,11 +63,36 @@ fn about(current: Game, technique: logic.Technique, asked: Int) -> Lesson {
         lit: [],
       )
 
-    // Whatever the step turns out to be, not only the one the grid was kept
-    // for. A grid that wants an X-wing wants a dozen other things on the way
-    // to it, and being sent away to work those out alone is being sent away
-    // at the one moment somebody asked for help.
-    Ok(step) -> rung(step, step.technique == technique, asked)
+    // Whatever the step turns out to be, not only the one a practice grid
+    // was kept for. A grid that wants an X-wing wants a dozen other things
+    // on the way to it, and being sent away to work those out alone is being
+    // sent away at the one moment somebody asked for help.
+    Ok(step) -> rung(step, wanted(current) == Some(step.technique), asked)
+  }
+}
+
+/// The technique a grid was kept to teach, where it was kept to teach one.
+///
+/// A dealt puzzle was kept for nothing and answers `None`, which changes
+/// only how the first rung is worded: there is no technique somebody came to
+/// meet, so there is no moment to announce the arrival of.
+fn wanted(current: Game) -> Option(logic.Technique) {
+  case current.puzzle.origin {
+    generator.Practising(technique) -> Some(technique)
+    _ -> None
+  }
+}
+
+/// Whether there is a step here to be taught at all.
+///
+/// Asked before charging a game for one. A board with something wrong
+/// written into it has nothing that follows from it and the tutor says so,
+/// but saying so is not worth somebody's timing: charging for that would be
+/// charging for the worst news the game has.
+pub fn anything_to_say(current: Game) -> Bool {
+  case logic.next_from(current.board.values, game.reading(current)) {
+    Ok(_) -> True
+    Error(_) -> False
   }
 }
 

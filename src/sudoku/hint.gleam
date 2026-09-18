@@ -14,7 +14,6 @@ import gleam/result
 import gleam/set
 import sudoku/board
 import sudoku/game
-import sudoku/generator
 import sudoku/logic
 
 /// The simplest step the reasoning can find, said out loud and then taken.
@@ -36,13 +35,7 @@ pub fn hint(current: game.Game) -> game.Game {
 /// helped along has nothing left to spend, and a puzzle typed in was never
 /// going to be timed.
 fn warning_due(current: game.Game) -> Bool {
-  case current.puzzle.origin {
-    generator.Handwritten | generator.Practising(_) -> False
-    // A daily is timed like any other deal, and has more to lose than most:
-    // its time is the one other people's times are next to.
-    generator.Dealt(_) | generator.Daily(_) ->
-      game.unaided(current) && current.offered != Some(game.TakeHint)
-  }
+  game.at_stake(current) && current.offered != Some(game.TakeHint)
 }
 
 fn warn(current: game.Game) -> game.Game {

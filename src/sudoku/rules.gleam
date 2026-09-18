@@ -616,16 +616,59 @@ fn afresh(current: game.Game) -> game.Game {
 /// the bottom of the ladder wants the argument to stay on the screen and not
 /// to be told the digit again.
 ///
-/// Nothing here touches the board, so this costs nothing and is not counted
-/// anywhere. That is the whole of why the tutor is worth having next to `H`,
-/// which plays the step and spends the one chance the grid had to teach it.
+/// It plays nothing, ever. What it costs is the timing, and only where there
+/// was timing to lose: a practice grid and a puzzle typed in are not timed
+/// at all, so it is free on both, exactly as a hint is.
 fn teaching(current: game.Game) -> game.Game {
+  case game.at_stake(current) && current.offered != Some(game.TakeTutor) {
+    True -> warn_of_tutor(current)
+    False -> taught(current)
+  }
+}
+
+/// What the tutor costs, said before it costs it.
+///
+/// The same bargain a hint offers and for the same reason. It hands over no
+/// digits, but what it hands over is the reasoning the player came to do,
+/// and a time set after being talked through it is not a time.
+fn warn_of_tutor(current: game.Game) -> game.Game {
+  game.Game(
+    ..current,
+    offered: Some(game.TakeTutor),
+    message: "The tutor makes this an aided game, and aided games are not timed.\nPress t again to go ahead.",
+  )
+}
+
+fn taught(current: game.Game) -> game.Game {
   let asked = case current.teaching {
     game.NotTeaching -> 1
     game.Teaching(asked) -> int.min(asked + 1, tutor.rungs)
   }
 
-  game.Game(..current, teaching: game.Teaching(asked), message: "")
+  // Counted only where it told them something they had not been told, and
+  // only where there was something to tell. Pressing t at the foot of the
+  // ladder says what it said before, and a board nothing follows from gets
+  // an apology rather than a lesson; neither is anything to have been told.
+  let learnt =
+    current.teaching != game.Teaching(asked) && tutor.anything_to_say(current)
+
+  let told = game.Game(..current, teaching: game.Teaching(asked), message: "")
+
+  case learnt {
+    False -> told
+    True ->
+      game.Game(
+        ..told,
+        // Counted wherever it happened, because it happened: the panel says
+          // what a solve was done with, and that is as true of a practice grid
+          // as of anything else.
+          tutored: told.tutored + 1,
+        // Charged only where there was a time to charge. A practice grid and
+          // a puzzle typed in are not timed, so there is nothing for the tutor
+          // to spend on either and calling them aided would say there was.
+          aided: told.aided || game.timed(told),
+      )
+  }
 }
 
 fn scanning(current: game.Game) -> game.Game {

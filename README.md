@@ -59,7 +59,7 @@ newspaper.
 | `r` | do it again |
 | `c` | check what is filled in from here on, at a price (press twice) |
 | `H` | take the next step, and say why |
-| `t` | on a practice grid, be talked through the next step |
+| `t` | be talked through the next step, without it being played |
 | `R` | reveal the whole solution (press twice) |
 | `p` | pause: put the board away and stop the clock |
 | `X` | start this puzzle again (press twice) |
@@ -396,6 +396,30 @@ reasoning always taking the simplest step going — so the lesson that used to
 be a refusal is in each of them instead. The first rung says when the one
 you came for has arrived, since that is the technique you came to meet.
 
+### What it costs
+
+It works on any puzzle, not only the grids kept for teaching on, and it
+costs what a hint costs: the game becomes an aided one and is not timed. It
+says so before it does it, and asks to be pressed again — the same bargain
+checking and a first hint offer, for the same reason. It plays no move, but
+what it hands over is the reasoning you came to do, and a time set after
+being talked through that is not a time.
+
+Where there was no time to lose it costs nothing at all and asks nothing
+first: a practice grid, a drill and a puzzle typed in are none of them timed,
+so there is nothing on any of them for the tutor to spend.
+
+The panel names it apart from a hint, because the two are not the same thing
+to have done:
+
+```
+ Solved in 12:04, with one hint and the tutor. Not recorded: unaided solves only.
+```
+
+A hint plays the move. The tutor only ever talks about one, and somebody told
+they had been given twelve hints when they had been given none would be owed
+an apology.
+
 None of it is written down anywhere. What a step rests on, which digits it is
 about and which unit it was read in are all carried on the step already, and
 they turn out to be exactly the rungs somebody wants, in that order: the
@@ -424,7 +448,7 @@ shape by. `d` on the practice screen asks the other question:
 
 A drill is a position rather than a puzzle: taken out of a real deal, with
 the candidates already pencilled in and the technique the very next step. A
-different one each time. `t` nudges there too, and nothing is timed.
+different one each time. `t` talks you through it too, and nothing is timed.
 
 None of them is written down as a grid. A deal is the same deal every time
 it is asked for, so a position is named by the seed it came from, the level
