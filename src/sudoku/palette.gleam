@@ -5,7 +5,20 @@
 //// in the same colours without one of them having to know how the other
 //// works — and so that changing what the game looks like is a matter of
 //// reading one short file.
+////
+//// Reading it is no longer the only way to change it. Every colour here is
+//// a default rather than a decree: a line in `~/.config/sudoku/palette`
+//// naming one has the last word on it, so a terminal this was not tuned for
+//// — a pale one, most of all, since all of this assumes a dark screen —
+//// can be put right without a compiler.
+////
+//// Only the colours. The characters below stay where they are, because a
+//// colour that is wrong is ugly and a character of the wrong width takes
+//// the grid apart, and there are tests about the width of the grid that a
+//// file nobody compiles could otherwise walk straight through.
 
+import gleam/list
+import gleam/result
 import sudoku/term
 
 /// An empty cell, and a cell carrying more than one pencil mark.
@@ -22,68 +35,133 @@ pub const pointer = "\u{203a}"
 /// mark from the hint's, since the two can be up at once.
 pub const could_go = "+"
 
-// Foreground colours.
-pub const given = "1;97"
+/// Every colour there is, by the name a palette file calls it, and what it
+/// is where no file says otherwise.
+///
+/// One list rather than two. A colour added here is a colour a palette file
+/// can name, without anybody having to remember to write it down twice.
+const defaults = [
+  #("given", "1;97"),
+  #("entered", "96"),
+  #("conflict", "1;9;91"),
+  #("alarm", "1;91"),
+  #("wrong", "1;91;4"),
+  #("key", "96"),
+  #("best", "92"),
+  #("note", "93"),
+  #("empty", "90"),
+  #("dim", "90"),
+  #("title", "1;95"),
+  #("good", "1;92"),
+  #("mark", "33"),
+  #("cursor", "7"),
+  #("peer_wash", "48;5;236"),
+  #("match_wash", "48;5;238"),
+  #("hint_wash", "48;5;22"),
+  #("scan_wash", "48;5;17"),
+  // The one a terminal of sixteen colours washes with, there being only one
+  // of it to name.
+  #("wash", only_grey),
+]
 
-pub const entered = "96"
+pub fn names() -> List(String) {
+  list.map(defaults, fn(entry) { entry.0 })
+}
+
+// Foreground colours.
+pub fn given() -> String {
+  chosen("given")
+}
+
+pub fn entered() -> String {
+  chosen("entered")
+}
 
 /// A digit clashing with another in its row, column or box: red, and struck
 /// through so that it says so without the red being seen. Bold is spoken for
 /// by the clues, underline by a wrong digit and reverse by the cursor, which
 /// leaves this — apt enough for a digit that cannot stand.
-pub const conflict = "1;9;91"
+pub fn conflict() -> String {
+  chosen("conflict")
+}
 
 /// Red for something gone wrong that is said in words rather than drawn in a
 /// cell. Words do not need striking through to be read.
-pub const alarm = "1;91"
+pub fn alarm() -> String {
+  chosen("alarm")
+}
 
 /// Wrong, while checking is on: red, and underlined so that it says so
 /// without relying on the colour being seen.
-pub const wrong = "1;91;4"
+pub fn wrong() -> String {
+  chosen("wrong")
+}
 
 /// A key to press, where the game is listing them for choosing between. Not
 /// the same thing as a digit written in, though they look alike: one is an
 /// instruction and the other is an answer.
-pub const key = "96"
+pub fn key() -> String {
+  chosen("key")
+}
 
 /// A time to beat, mentioned in passing. The green a result is announced in
 /// is bolder; this one sits in a list and should not shout.
-pub const best = "92"
+pub fn best() -> String {
+  chosen("best")
+}
 
 /// Something the player should know that is nobody's fault — a terminal in
 /// line mode, say. Not `alarm`, which is for something gone wrong.
-pub const note = "93"
+pub fn note() -> String {
+  chosen("note")
+}
 
-pub const empty = "90"
+pub fn empty() -> String {
+  chosen("empty")
+}
 
-pub const dim = "90"
+pub fn dim() -> String {
+  chosen("dim")
+}
 
-pub const title = "1;95"
+pub fn title() -> String {
+  chosen("title")
+}
 
-pub const good = "1;92"
+pub fn good() -> String {
+  chosen("good")
+}
 
-pub const mark = "33"
+pub fn mark() -> String {
+  chosen("mark")
+}
+
+/// The cursor itself, which is reverse video rather than a colour, so that it
+/// is the cursor whatever the rest is painted in.
+pub fn cursor() -> String {
+  chosen("cursor")
+}
 
 // A wash behind the cells sharing a unit with the cursor, behind cells
 // holding the same digit as the one under the cursor, and behind the cells a
 // hint is resting its argument on.
 pub fn peer_wash() -> String {
-  wash("48;5;236")
+  wash("peer_wash")
 }
 
 pub fn match_wash() -> String {
-  wash("48;5;238")
+  wash("match_wash")
 }
 
 pub fn hint_wash() -> String {
-  wash("48;5;22")
+  wash("hint_wash")
 }
 
 /// Behind the cells a scan says its digit could still go in. Blue against the
 /// hint's green: a hint is telling you something, a scan is only showing you
 /// where to look.
 pub fn scan_wash() -> String {
-  wash("48;5;17")
+  wash("scan_wash")
 }
 
 /// The one grey a terminal with sixteen colours can wash with.
@@ -101,13 +179,28 @@ const only_grey = "100"
 /// is. What the two that were saying something lose by merging they get
 /// back in the column in front of the cell — the same mark a terminal with
 /// no colour at all has always been given.
-fn wash(full: String) -> String {
+///
+/// One name for that one grey, since there is only one of it to name.
+fn wash(name: String) -> String {
   case term.colours() {
-    term.Full -> full
-    term.Basic | term.Plain -> only_grey
+    term.Full -> chosen(name)
+    term.Basic | term.Plain -> chosen("wash")
   }
 }
 
-/// The cursor itself, which is reverse video rather than a colour, so that it
-/// is the cursor whatever the rest is painted in.
-pub const cursor = "7"
+/// What the player has said this colour should be, or what it has always
+/// been where they have said nothing — which is the usual case, there being
+/// no file at all until somebody writes one.
+fn chosen(name: String) -> String {
+  case list.key_find(theme(), name) {
+    Ok(codes) -> codes
+    Error(_) ->
+      // Only reachable with a name no longer in the table above, which the
+      // accessors are written from. A test keeps them together.
+      list.key_find(defaults, name) |> result.unwrap("")
+  }
+}
+
+/// The palette file, read once and kept.
+@external(erlang, "sudoku_ffi", "theme")
+fn theme() -> List(#(String, String))

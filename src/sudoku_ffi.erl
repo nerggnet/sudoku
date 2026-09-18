@@ -9,7 +9,7 @@
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
--export([colours/0, colouring/1]).
+-export([colours/0, colouring/1, theme/0]).
 -export([protected/2, stop/1]).
 
 %% Put the terminal into raw mode: one byte at a time, no echo, no line
@@ -177,6 +177,57 @@ fresh_seed() ->
 
 shuffle(List) ->
     [X || {_, X} <- lists:sort([{rand:uniform(), E} || E <- List])].
+
+%% What the player has written in the palette file, as a list of name and
+%% codes. Empty where there is no file, which is the usual case.
+%%
+%% Read once and kept. Colours are asked for hundreds of times a frame and
+%% a file is not, and a palette that changed halfway down a board would be a
+%% stranger thing than one that waits for the game to be started again.
+theme() ->
+    case persistent_term:get(sudoku_theme, undefined) of
+        undefined ->
+            Theme = read_theme(),
+            persistent_term:put(sudoku_theme, Theme),
+            Theme;
+        Theme ->
+            Theme
+    end.
+
+read_theme() ->
+    case file:read_file(configured("palette")) of
+        {ok, Text} -> [Line || Line <- lines(Text), Line =/= skip];
+        _ -> []
+    end.
+
+lines(Text) ->
+    [entry(string:trim(Line))
+     || Line <- string:split(Text, "\n", all)].
+
+%% `name codes`, with blanks and anything behind a # passed over. A line
+%% naming a colour this game does not have is passed over too: the names are
+%% listed in the help, and a file is a thing people edit by hand.
+entry(<<"#", _/binary>>) -> skip;
+entry(<<>>) -> skip;
+entry(Line) ->
+    case string:split(Line, " ") of
+        [Name, Codes] ->
+            case {string:trim(Name), string:trim(Codes)} of
+                {<<>>, _} -> skip;
+                {_, <<>>} -> skip;
+                {N, C} -> {N, C}
+            end;
+        _ -> skip
+    end.
+
+%% Where the player's own settings live, which is not where the game's own
+%% records do: one is theirs to write and the other is the game's.
+configured(Name) ->
+    Base = case os:getenv("XDG_CONFIG_HOME") of
+               Dir when is_list(Dir), Dir =/= "" -> Dir;
+               _ -> filename:join(home(), ".config")
+           end,
+    filename:join([Base, "sudoku", Name]).
 
 %% Where the game keeps what it remembers: under XDG_DATA_HOME if the
 %% environment names one, and under ~/.local/share otherwise.

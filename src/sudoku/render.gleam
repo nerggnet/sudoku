@@ -100,16 +100,16 @@ pub fn frame(current: Game) -> String {
 /// waiting back.
 fn resting(current: Game) -> List(String) {
   [
-    term.styled(palette.title, "Paused"),
+    term.styled(palette.title(), "Paused"),
     "",
     term.styled(
-      palette.dim,
+      palette.dim(),
       "The board is put away and the clock has stopped at "
         <> clock(game.elapsed_ms(current))
         <> ".",
     ),
     "",
-    term.styled(palette.dim, "Press any key to carry on, or q to quit."),
+    term.styled(palette.dim(), "Press any key to carry on, or q to quit."),
   ]
 }
 
@@ -118,12 +118,12 @@ fn resting(current: Game) -> List(String) {
 fn header(name: String, mode: String) -> List(String) {
   let badge = case mode {
     "" -> ""
-    _ -> term.styled(palette.mark, "    " <> mode)
+    _ -> term.styled(palette.mark(), "    " <> mode)
   }
 
   [
-    term.styled(palette.title, "S U D O K U")
-      <> term.styled(palette.dim, "    " <> name)
+    term.styled(palette.title(), "S U D O K U")
+      <> term.styled(palette.dim(), "    " <> name)
       <> badge,
     "",
   ]
@@ -144,8 +144,8 @@ fn tallied(head: List(String), current: Game) -> List(String) {
     [], _ -> head
     [title, ..rest], False -> {
       let colour = case current.mistakes >= game.mistake_limit {
-        True -> palette.alarm
-        False -> palette.mark
+        True -> palette.alarm()
+        False -> palette.mark()
       }
       let tally =
         "    checking "
@@ -166,8 +166,8 @@ fn footer(current: Game) -> List(String) {
     // rather than about Sudoku, and worth saying out loud.
     False ->
       case cramped() {
-        "" -> [term.styled(palette.dim, key_hints(current))]
-        complaint -> [term.styled(palette.alarm, complaint)]
+        "" -> [term.styled(palette.dim(), key_hints(current))]
+        complaint -> [term.styled(palette.alarm(), complaint)]
       }
   }
 }
@@ -231,7 +231,7 @@ fn grids(current: Game, clashes: Set(Int)) -> List(String) {
 
 fn caption(left: String, right: String) -> String {
   term.styled(
-    palette.dim,
+    palette.dim(),
     string.pad_end("  " <> left, grid_columns, " ") <> grid_gap <> "  " <> right,
   )
 }
@@ -283,9 +283,9 @@ fn board_cell(
 /// exactly one reading, an asterisk where it has been given several.
 fn mark_cell(current: Game, washes: Washes, index: Int) -> String {
   let #(glyph, colour) = case board.sorted_marks(current.board, index) {
-    [] -> #(palette.empty_cell, palette.empty)
-    [only] -> #(int.to_string(only), palette.mark)
-    _ -> #(palette.crowded_cell, palette.mark)
+    [] -> #(palette.empty_cell, palette.empty())
+    [only] -> #(int.to_string(only), palette.mark())
+    _ -> #(palette.crowded_cell, palette.mark())
   }
 
   painted(washes, index, False, glyph, colour)
@@ -348,11 +348,11 @@ fn board_colour(
     set.contains(clashes, index),
     board.is_given(current.board, index)
   {
-    True, _, _, _ -> palette.empty
-    _, True, _, _ -> palette.wrong
-    _, _, True, _ -> palette.conflict
-    _, _, _, True -> palette.given
-    _, _, _, _ -> palette.entered
+    True, _, _, _ -> palette.empty()
+    _, True, _, _ -> palette.wrong()
+    _, _, True, _ -> palette.conflict()
+    _, _, _, True -> palette.given()
+    _, _, _, _ -> palette.entered()
   }
 }
 
@@ -394,7 +394,7 @@ fn background(washes: Washes, index: Int, matching: Bool) -> String {
   {
     // The cursor stays visible through a hint: it is where the player is,
     // and a hint is only passing.
-    True, _, _, _, _ -> palette.cursor
+    True, _, _, _, _ -> palette.cursor()
     _, True, _, _, _ -> palette.hint_wash()
     _, _, True, _, _ -> palette.scan_wash()
     _, _, _, True, _ -> palette.match_wash()
@@ -424,7 +424,7 @@ fn status(current: Game, clashes: Set(Int)) -> List(String) {
 
   let marks = case cursor_marks(current) {
     "" -> ""
-    text -> term.styled(palette.dim, "  \u{2502}  ") <> text
+    text -> term.styled(palette.dim(), "  \u{2502}  ") <> text
   }
 
   // Nothing to place, or nothing more to be done about it: the row goes,
@@ -438,7 +438,7 @@ fn status(current: Game, clashes: Set(Int)) -> List(String) {
   }
 
   list.flatten([
-    ["", term.styled(palette.dim, facts) <> marks],
+    ["", term.styled(palette.dim(), facts) <> marks],
     tally,
     said(current.message),
   ])
@@ -462,16 +462,16 @@ fn remaining(current: Game) -> String {
 
     let said = case board.left_to_place(current.board, digit) {
       0 ->
-        term.styled(palette.empty, int.to_string(digit) <> palette.empty_cell)
+        term.styled(palette.empty(), int.to_string(digit) <> palette.empty_cell)
       left ->
-        term.styled(palette.entered, int.to_string(digit))
-        <> term.styled(palette.dim, "\u{00d7}" <> int.to_string(left))
+        term.styled(palette.entered(), int.to_string(digit))
+        <> term.styled(palette.dim(), "\u{00d7}" <> int.to_string(left))
     }
 
     said
   }
 
-  term.styled(palette.dim, "left  ") <> string.join(entries, "   ")
+  term.styled(palette.dim(), "left  ") <> string.join(entries, "   ")
 }
 
 /// What the message says, over two rows.
@@ -483,7 +483,7 @@ fn remaining(current: Game) -> String {
 fn said(message: String) -> List(String) {
   case string.split(message, "\n") {
     [what] -> [what, ""]
-    [what, why, ..] -> [what, term.styled(palette.dim, why)]
+    [what, why, ..] -> [what, term.styled(palette.dim(), why)]
     [] -> ["", ""]
   }
 }
@@ -494,9 +494,9 @@ fn cursor_marks(current: Game) -> String {
   case board.sorted_marks(current.board, current.cursor) {
     [] -> ""
     marks ->
-      term.styled(palette.dim, board.name(current.cursor) <> " marked ")
+      term.styled(palette.dim(), board.name(current.cursor) <> " marked ")
       <> term.styled(
-        palette.mark,
+        palette.mark(),
         marks |> list.map(int.to_string) |> string.join(" "),
       )
   }
@@ -577,46 +577,49 @@ fn other_mode(current: Game) -> String {
 
 fn finished(current: Game) -> List(String) {
   let headline = case current.ending {
-    Some(game.Revealed) -> term.styled(palette.dim, "Solution revealed.")
+    Some(game.Revealed) -> term.styled(palette.dim(), "Solution revealed.")
     // However the allowance ran out, saying how many were wrong covers both
     // writing one too many and asking and being told about several.
     Some(game.Forfeited) ->
       term.styled(
-        palette.alarm,
+        palette.alarm(),
         int.to_string(current.mistakes) <> " wrong digits: forfeited.",
       )
-      <> term.styled(palette.dim, "  They are the ones in red.")
+      <> term.styled(palette.dim(), "  They are the ones in red.")
     _ ->
-      term.styled(palette.good, "Solved in " <> clock(game.elapsed_ms(current)))
-      <> term.styled(palette.good, with_hints(current.hints))
+      term.styled(
+        palette.good(),
+        "Solved in " <> clock(game.elapsed_ms(current)),
+      )
+      <> term.styled(palette.good(), with_hints(current.hints))
       <> recorded(current)
   }
 
   // No blank line above: the message's second row is nearly always the gap,
   // and a 24-row terminal has none to spare once the panel is up.
-  [headline, term.styled(palette.dim, "n new puzzle  \u{2502}  q quit")]
+  [headline, term.styled(palette.dim(), "n new puzzle  \u{2502}  q quit")]
 }
 
 /// What the record books made of it, said on the same line: the panel has
 /// only the two, and the one below it is spoken for.
 fn recorded(current: Game) -> String {
   case current.verdict {
-    Some(game.BestYet) -> term.styled(palette.good, " Your best yet.")
+    Some(game.BestYet) -> term.styled(palette.good(), " Your best yet.")
     Some(game.BestNotKept) ->
-      term.styled(palette.good, " Your best yet,")
-      <> term.styled(palette.alarm, " but it could not be saved.")
+      term.styled(palette.good(), " Your best yet,")
+      <> term.styled(palette.alarm(), " but it could not be saved.")
     Some(game.Behind(best)) ->
-      term.styled(palette.dim, " Your best is " <> clock(best) <> ".")
+      term.styled(palette.dim(), " Your best is " <> clock(best) <> ".")
     Some(game.Aided) ->
-      term.styled(palette.dim, " Not recorded: unaided solves only.")
-    Some(game.DailyDone) -> term.styled(palette.good, " The day is yours.")
+      term.styled(palette.dim(), " Not recorded: unaided solves only.")
+    Some(game.DailyDone) -> term.styled(palette.good(), " The day is yours.")
     Some(game.DailyNotKept) ->
-      term.styled(palette.good, " The day is yours,")
-      <> term.styled(palette.alarm, " but it could not be saved.")
+      term.styled(palette.good(), " The day is yours,")
+      <> term.styled(palette.alarm(), " but it could not be saved.")
     // The first run at a day is the one kept, so this is not a time being
     // beaten but a time standing: you have seen this grid before.
     Some(game.DailyAlready(first)) ->
-      term.styled(palette.dim, " You did this day in " <> clock(first) <> ".")
+      term.styled(palette.dim(), " You did this day in " <> clock(first) <> ".")
     _ -> ""
   }
 }
@@ -654,31 +657,31 @@ pub fn menu_frame(
   let options = {
     use origin, index <- list.index_map(generator.origins())
     "   "
-    <> term.styled(palette.key, int.to_string(index + 1))
+    <> term.styled(palette.key(), int.to_string(index + 1))
     <> "  "
     <> string.pad_end(generator.origin_label(origin), 10, " ")
-    <> term.styled(palette.dim, string.pad_end(aside(origin), 24, " "))
-    <> term.styled(palette.best, best(origin, bests))
+    <> term.styled(palette.dim(), string.pad_end(aside(origin), 24, " "))
+    <> term.styled(palette.best(), best(origin, bests))
   }
 
   let practice =
     "   "
-    <> term.styled(palette.key, int.to_string(practice.choice()))
+    <> term.styled(palette.key(), int.to_string(practice.choice()))
     <> "  "
     <> string.pad_end("Practice", 10, " ")
-    <> term.styled(palette.dim, "one technique, on a grid that needs it")
+    <> term.styled(palette.dim(), "one technique, on a grid that needs it")
 
   let daily =
     "   "
-    <> term.styled(palette.key, int.to_string(menu.daily_choice()))
+    <> term.styled(palette.key(), int.to_string(menu.daily_choice()))
     <> "  "
     <> string.pad_end("Daily", 10, " ")
-    <> term.styled(palette.dim, daily_aside(today))
-    <> term.styled(palette.best, done_on(today, days))
+    <> term.styled(palette.dim(), daily_aside(today))
+    <> term.styled(palette.best(), done_on(today, days))
 
   let room = case cramped() {
     "" -> []
-    complaint -> ["", term.styled(palette.alarm, complaint)]
+    complaint -> ["", term.styled(palette.alarm(), complaint)]
   }
 
   let note = case raw {
@@ -686,7 +689,7 @@ pub fn menu_frame(
     False -> [
       "",
       term.styled(
-        palette.note,
+        palette.note(),
         "This terminal is in line mode: press Enter after each key.",
       ),
     ]
@@ -694,14 +697,14 @@ pub fn menu_frame(
 
   term.screen(
     list.flatten([
-      [term.styled(palette.title, "S U D O K U"), "", "Choose a puzzle:", ""],
+      [term.styled(palette.title(), "S U D O K U"), "", "Choose a puzzle:", ""],
       options,
       [practice, daily],
       [
         "",
         "   "
           <> term.styled(
-          palette.dim,
+          palette.dim(),
           "Each level names the hardest reasoning its puzzles ask for.",
         ),
       ],
@@ -717,7 +720,7 @@ pub fn menu_frame(
             <> " games put down",
           )
       },
-      ["", "   " <> term.styled(palette.key, "q") <> "  quit"],
+      ["", "   " <> term.styled(palette.key(), "q") <> "  quit"],
       room,
       note,
     ]),
@@ -732,10 +735,10 @@ fn resuming(said: String) -> List(String) {
   [
     "",
     "   "
-      <> term.styled(palette.key, "r")
+      <> term.styled(palette.key(), "r")
       <> "  "
       <> string.pad_end("Resume", 10, " ")
-      <> term.styled(palette.dim, said),
+      <> term.styled(palette.dim(), said),
   ]
 }
 
@@ -750,15 +753,15 @@ pub fn saved_frame(saved: List(game.Game)) -> String {
   let options = {
     use current, index <- list.index_map(saved)
     "   "
-    <> term.styled(palette.key, int.to_string(index + 1))
+    <> term.styled(palette.key(), int.to_string(index + 1))
     <> "  "
-    <> term.styled(palette.dim, summary(current))
+    <> term.styled(palette.dim(), summary(current))
   }
 
   term.screen(
     list.flatten([
       [
-        term.styled(palette.title, "S U D O K U"),
+        term.styled(palette.title(), "S U D O K U"),
         "",
         "Which game do you want back?",
         "",
@@ -768,14 +771,14 @@ pub fn saved_frame(saved: List(game.Game)) -> String {
         "",
         "   "
           <> term.styled(
-          palette.dim,
+          palette.dim(),
           "The one put down most recently is first.",
         ),
         "",
         "   "
-          <> term.styled(palette.key, "q")
+          <> term.styled(palette.key(), "q")
           <> "  quit"
-          <> term.styled(palette.dim, "        any other key goes back"),
+          <> term.styled(palette.dim(), "        any other key goes back"),
       ],
     ]),
   )
@@ -848,16 +851,16 @@ pub fn practice_frame() -> String {
     let clues = practice.clue_count(technique)
 
     "   "
-    <> term.styled(palette.key, int.to_string(index + 1))
+    <> term.styled(palette.key(), int.to_string(index + 1))
     <> "  "
     <> string.pad_end(capitalised(logic.label(technique)), 20, " ")
-    <> term.styled(palette.dim, int.to_string(clues) <> " clues")
+    <> term.styled(palette.dim(), int.to_string(clues) <> " clues")
   }
 
   term.screen(
     list.flatten([
       [
-        term.styled(palette.title, "S U D O K U"),
+        term.styled(palette.title(), "S U D O K U"),
         "",
         "Practise which technique?",
         "",
@@ -867,19 +870,19 @@ pub fn practice_frame() -> String {
         "",
         "   "
           <> term.styled(
-          palette.dim,
+          palette.dim(),
           "Each grid needs its technique and nothing harder. Press ? while",
         ),
         "   "
           <> term.styled(
-          palette.dim,
+          palette.dim(),
           "playing for the page explaining the one you picked.",
         ),
         "",
         "   "
-          <> term.styled(palette.key, "q")
+          <> term.styled(palette.key(), "q")
           <> "  quit"
-          <> term.styled(palette.dim, "        any other key goes back"),
+          <> term.styled(palette.dim(), "        any other key goes back"),
       ],
     ]),
   )
@@ -903,16 +906,16 @@ pub fn generating(
   carving: generator.Carving,
 ) -> String {
   term.screen([
-    term.styled(palette.title, "S U D O K U"),
+    term.styled(palette.title(), "S U D O K U"),
     "",
     term.styled(
-      palette.dim,
+      palette.dim(),
       "Carving out " <> article(generator.label(difficulty)) <> " puzzle...",
     ),
     "",
-    term.styled(palette.dim, counted(carving)),
+    term.styled(palette.dim(), counted(carving)),
     term.styled(
-      palette.dim,
+      palette.dim(),
       "Each is carved as far as it will go, and the hardest of them kept.",
     ),
   ])
@@ -960,7 +963,7 @@ pub fn editor_frame(current: Editor) -> String {
         list.flatten([
           head,
           help.editor_keys(),
-          ["", term.styled(palette.dim, "Any key returns to the board.")],
+          ["", term.styled(palette.dim(), "Any key returns to the board.")],
         ]),
       )
     False -> {
@@ -968,13 +971,13 @@ pub fn editor_frame(current: Editor) -> String {
       term.screen(
         list.flatten([
           head,
-          [term.styled(palette.dim, "  clues")],
+          [term.styled(palette.dim(), "  clues")],
           grids.grid(fn(index) { clue_cell(current, clashes, index) }),
           editor_status(current, clashes),
           [
             case cramped() {
-              "" -> term.styled(palette.dim, editor_key_hints)
-              complaint -> term.styled(palette.alarm, complaint)
+              "" -> term.styled(palette.dim(), editor_key_hints)
+              complaint -> term.styled(palette.alarm(), complaint)
             },
           ],
         ]),
@@ -993,9 +996,9 @@ fn clue_cell(current: Editor, clashes: Set(Int), index: Int) -> String {
   }
 
   let colour = case digit == 0, set.contains(clashes, index) {
-    True, _ -> palette.empty
-    _, True -> palette.conflict
-    _, _ -> palette.given
+    True, _ -> palette.empty()
+    _, True -> palette.conflict()
+    _, _ -> palette.given()
   }
 
   let focus = editor.value(current, current.cursor)
@@ -1020,7 +1023,7 @@ fn editor_status(current: Editor, clashes: Set(Int)) -> List(String) {
     ]
     |> string.join("  \u{2502}  ")
 
-  ["", term.styled(palette.dim, facts), current.message]
+  ["", term.styled(palette.dim(), facts), current.message]
 }
 
 const editor_key_hints = "arrows/hjkl move  \u{2502}  1-9 type  \u{2502}  0 gap  \u{2502}  p play  \u{2502}  ? help  \u{2502}  q quit"

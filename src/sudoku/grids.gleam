@@ -48,7 +48,7 @@ pub fn banded_rule(
     list.repeat(string.repeat("\u{2500}", size * 2 + 1), 9 / size)
     |> string.join(join)
 
-  margin <> term.styled(palette.dim, left <> bars <> right)
+  margin <> term.styled(palette.dim(), left <> bars <> right)
 }
 
 /// One grid, from its column ruler down to its bottom rule. What goes in each
@@ -68,7 +68,7 @@ pub fn grid(cell: fn(Int) -> String) -> List(String) {
     |> list.flatten
 
   list.flatten([
-    [term.styled(palette.dim, "  " <> ruler)],
+    [term.styled(palette.dim(), "  " <> ruler)],
     [rule("\u{250c}", "\u{252c}", "\u{2510}")],
     bands,
     [rule("\u{2514}", "\u{2534}", "\u{2518}")],
@@ -80,7 +80,7 @@ pub fn row_line(cell: fn(Int) -> String, row: Int, label: String) -> String {
     board.span(0, board.side - 1)
     |> list.map(fn(column) { cell(board.at(row, column)) })
 
-  term.styled(palette.dim, label)
+  term.styled(palette.dim(), label)
   <> " "
-  <> banded(cells, term.styled(palette.dim, "\u{2502}"))
+  <> banded(cells, term.styled(palette.dim(), "\u{2502}"))
 }

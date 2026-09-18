@@ -19,17 +19,17 @@ import sudoku/term
 pub fn colours_go_and_shapes_stay_test() {
   // A clashing digit is bold, struck through and red; the red is the part
   // that goes.
-  assert term.uncoloured(palette.conflict) == "1;9"
+  assert term.uncoloured(palette.conflict()) == "1;9"
 
   // Cyan on its own leaves nothing behind, and so writes nothing at all.
-  assert term.uncoloured(palette.entered) == ""
+  assert term.uncoloured(palette.entered()) == ""
   assert term.uncoloured("") == ""
 
   // The cursor is reverse video, which is not a colour and does not need one.
-  assert term.uncoloured(palette.cursor) == palette.cursor
+  assert term.uncoloured(palette.cursor()) == palette.cursor()
 
   // A wrong digit keeps its underline.
-  assert term.uncoloured(palette.wrong) == "1;4"
+  assert term.uncoloured(palette.wrong()) == "1;4"
 }
 
 pub fn a_colour_with_arguments_is_swallowed_whole_test() {
@@ -40,7 +40,7 @@ pub fn a_colour_with_arguments_is_swallowed_whole_test() {
   // how a code with arguments is read, and the palette's answer now depends
   // on how much colour the terminal has.
   assert term.uncoloured("48;5;22") == ""
-  assert term.uncoloured("48;5;22;" <> palette.given) == "1"
+  assert term.uncoloured("48;5;22;" <> palette.given()) == "1"
   assert term.uncoloured("38;2;10;20;30;4") == "4"
   assert term.uncoloured("4;48;5;236;1") == "4;1"
 }
@@ -48,7 +48,10 @@ pub fn a_colour_with_arguments_is_swallowed_whole_test() {
 pub fn styled_writes_no_escape_where_nothing_is_left_test() {
   let #(bare, struck) =
     helper.without_colour(fn() {
-      #(term.styled(palette.entered, "5"), term.styled(palette.conflict, "5"))
+      #(
+        term.styled(palette.entered(), "5"),
+        term.styled(palette.conflict(), "5"),
+      )
     })
 
   assert bare == "5"
@@ -121,4 +124,45 @@ fn pointing_at(row: List(Int)) -> game.Game {
       unit: row,
     )),
   )
+}
+
+/// Every colour the game draws with can be named in a palette file, and
+/// every name has something behind it.
+///
+/// The accessors are written from the same table `names` reads, so this is
+/// what keeps a colour added to one from going missing from the other: a
+/// name nobody can set is a colour nobody can fix.
+pub fn every_colour_can_be_named_in_a_palette_file_test() {
+  let named = palette.names()
+
+  assert named != []
+  assert list.unique(named) == named
+
+  use name <- list.each(named)
+  assert name != ""
+  // Lowercase and underscores: a name typed into a file by hand, rather
+  // than one that needs quoting or shifting.
+  assert string.lowercase(name) == name
+}
+
+/// The colours the board is actually drawn with are the ones a file can
+/// name, spelled the same way. Nothing here is reachable only through a
+/// name that is not on the list.
+pub fn the_names_cover_what_the_board_uses_test() {
+  let named = palette.names()
+
+  use name <- list.each([
+    "given", "entered", "conflict", "wrong", "cursor", "dim", "empty",
+    "peer_wash", "match_wash", "hint_wash", "scan_wash", "wash",
+  ])
+  assert list.contains(named, name)
+}
+
+/// The characters are not among them, and that is on purpose: a colour that
+/// is wrong is ugly, and a character of the wrong width takes the grid
+/// apart — and there are tests about the width of the grid that a file
+/// nobody compiles could otherwise walk straight through.
+pub fn the_characters_are_not_settable_test() {
+  use name <- list.each(["empty_cell", "crowded_cell", "pointer", "could_go"])
+  assert !list.contains(palette.names(), name)
 }

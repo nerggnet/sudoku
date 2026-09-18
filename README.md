@@ -112,6 +112,35 @@ SUDOKU_COLORS=full    # spelled the other way, which also works
 
 `NO_COLOR` wins over all of it, as does `--plain`.
 
+### Changing the colours
+
+All of this assumes a dark screen. On a pale one the dim greys are close to
+invisible, and there is nothing to be done about that from inside the game —
+so it can be done from outside it, in `~/.config/sudoku/palette`:
+
+```
+# A name and the SGR codes it should be drawn with.
+dim     37
+given   1;30
+title   1;34
+
+# The one grey a sixteen-colour terminal washes with.
+wash    47
+```
+
+Blank lines and anything behind a `#` are passed over, and so is a line
+naming a colour the game does not have. The names are:
+
+```
+given  entered  conflict  alarm  wrong  key  best  note
+empty  dim  title  good  mark  cursor
+peer_wash  match_wash  hint_wash  scan_wash  wash
+```
+
+The file is read once, when the game starts. Only colours can be set: `·`
+and `›` and the rest stay where they are, because a colour that is wrong is
+ugly and a character of the wrong width takes the grid apart.
+
 ## The daily puzzle
 
 One puzzle a day, the same one for everybody, carved from the date.

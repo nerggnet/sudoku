@@ -157,15 +157,15 @@ fn key_table(
   let entries = {
     use #(pressed, meaning) <- list.map(reference)
     "  "
-    <> term.styled(palette.entered, string.pad_end(pressed, column, " "))
-    <> term.styled(palette.dim, meaning)
+    <> term.styled(palette.entered(), string.pad_end(pressed, column, " "))
+    <> term.styled(palette.dim(), meaning)
   }
 
   list.flatten([
     [term.styled("1", title), ""],
     entries,
     [""],
-    list.map(notes, term.styled(palette.dim, _)),
+    list.map(notes, term.styled(palette.dim(), _)),
   ])
 }
 
@@ -207,17 +207,17 @@ pub fn page(page: game.Help) -> List(String) {
 fn getting_about(page: game.Help) -> String {
   let turning =
     term.styled(
-      palette.dim,
+      palette.dim(),
       "\u{2190} \u{2192}  " <> paging(page) <> "     any other key returns",
     )
 
   case page {
     game.About(technique) ->
       turning
-      <> term.styled(palette.dim, "     practise it: ")
-      <> term.styled(palette.key, int.to_string(practice.choice()))
-      <> term.styled(palette.dim, " then ")
-      <> term.styled(palette.key, int.to_string(at(technique)))
+      <> term.styled(palette.dim(), "     practise it: ")
+      <> term.styled(palette.key(), int.to_string(practice.choice()))
+      <> term.styled(palette.dim(), " then ")
+      <> term.styled(palette.key(), int.to_string(at(technique)))
     _ -> turning
   }
 }
@@ -234,11 +234,11 @@ fn about(technique: logic.Technique) -> List(String) {
 
   list.flatten([
     [term.styled("1", capitalised(logic.label(technique))), ""],
-    list.map(what, term.styled(palette.dim, _)),
+    list.map(what, term.styled(palette.dim(), _)),
     [""],
     example,
     [""],
-    [term.styled(palette.entered, so)],
+    [term.styled(palette.entered(), so)],
   ])
 }
 
@@ -405,7 +405,7 @@ fn wings(
   let ruler =
     "    "
     <> term.styled(
-      palette.dim,
+      palette.dim(),
       grids.chunked(
         list.map(board.span(1, 9), fn(column) { "  " <> int.to_string(column) }),
         9,
@@ -420,16 +420,16 @@ fn wings(
       let name = board.name(board.at(row, column))
 
       case list.key_find(held, name), list.contains(out, name) {
-        Ok(pair), _ -> term.styled(palette.given, " " <> pair)
-        _, True -> term.styled(palette.conflict, "  " <> digit)
-        _, False -> term.styled(palette.empty, "  \u{b7}")
+        Ok(pair), _ -> term.styled(palette.given(), " " <> pair)
+        _, True -> term.styled(palette.conflict(), "  " <> digit)
+        _, False -> term.styled(palette.empty(), "  \u{b7}")
       }
     }
 
     "  "
-    <> term.styled(palette.dim, board.row_letter(row))
+    <> term.styled(palette.dim(), board.row_letter(row))
     <> " "
-    <> grids.chunked(cells, 9, term.styled(palette.dim, "\u{2502}"))
+    <> grids.chunked(cells, 9, term.styled(palette.dim(), "\u{2502}"))
   }
 
   // Not `banded_rule`, which measures itself for cells two columns wide.
@@ -437,7 +437,7 @@ fn wings(
   let rules = fn(left, right) {
     "    "
     <> term.styled(
-      palette.dim,
+      palette.dim(),
       left <> string.repeat("\u{2500}", 9 * width + 1) <> right,
     )
   }
@@ -457,13 +457,13 @@ fn strip(
   lit: List(Int),
   out: List(Int),
 ) -> List(String) {
-  let wall = term.styled(palette.dim, "\u{2502}")
+  let wall = term.styled(palette.dim(), "\u{2502}")
   let wide = 5
 
   let ruler =
     "    "
     <> term.styled(
-      palette.dim,
+      palette.dim(),
       " "
         <> {
         use column <- list.map(board.span(1, 9))
@@ -475,7 +475,7 @@ fn strip(
   let rules = fn(left, join, right) {
     "    "
     <> term.styled(
-      palette.dim,
+      palette.dim(),
       left
         <> {
         list.repeat(string.repeat("\u{2500}", wide), 9) |> string.join(join)
@@ -486,15 +486,15 @@ fn strip(
 
   let row =
     "  "
-    <> term.styled(palette.dim, label)
+    <> term.styled(palette.dim(), label)
     <> " "
     <> wall
     <> {
       use cell, at <- list.index_map(cells)
       let colour = case list.contains(lit, at), list.contains(out, at) {
-        True, _ -> palette.given
-        _, True -> palette.conflict
-        _, _ -> palette.empty
+        True, _ -> palette.given()
+        _, True -> palette.conflict()
+        _, _ -> palette.empty()
       }
       term.styled(colour, centred(cell, wide)) <> wall
     }
@@ -524,7 +524,7 @@ fn map(digit: String, rows: List(String), boxed: Bool) -> List(String) {
   let ruler =
     "    "
     <> term.styled(
-      palette.dim,
+      palette.dim(),
       grids.chunked(
         list.map(board.span(1, 9), fn(column) { " " <> int.to_string(column) }),
         size,
@@ -537,16 +537,16 @@ fn map(digit: String, rows: List(String), boxed: Bool) -> List(String) {
     let cells = {
       use marker <- list.map(string.to_graphemes(line))
       case marker {
-        "#" -> term.styled(palette.given, " " <> digit)
-        "!" -> term.styled(palette.conflict, " " <> digit)
-        _ -> term.styled(palette.empty, " \u{b7}")
+        "#" -> term.styled(palette.given(), " " <> digit)
+        "!" -> term.styled(palette.conflict(), " " <> digit)
+        _ -> term.styled(palette.empty(), " \u{b7}")
       }
     }
 
     "  "
-    <> term.styled(palette.dim, board.row_letter(at))
+    <> term.styled(palette.dim(), board.row_letter(at))
     <> " "
-    <> grids.chunked(cells, size, term.styled(palette.dim, "\u{2502}"))
+    <> grids.chunked(cells, size, term.styled(palette.dim(), "\u{2502}"))
   }
 
   let rules = fn(left, join, right) {

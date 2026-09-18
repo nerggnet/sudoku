@@ -414,10 +414,10 @@ fn without_colour(style: String) -> List(String) {
 pub fn the_board_can_be_read_without_colour_test() {
   // A terminal with no colour draws the attributes and nothing else, so any
   // two things the player has to tell apart must differ in those alone.
-  let given = without_colour(palette.given)
-  let entered = without_colour(palette.entered)
-  let conflict = without_colour(palette.conflict)
-  let wrong = without_colour(palette.wrong)
+  let given = without_colour(palette.given())
+  let entered = without_colour(palette.entered())
+  let conflict = without_colour(palette.conflict())
+  let wrong = without_colour(palette.wrong())
 
   assert given != entered
   assert conflict != given
@@ -427,14 +427,14 @@ pub fn the_board_can_be_read_without_colour_test() {
   assert wrong != entered
 
   // The cursor is reverse video, which is no colour at all.
-  assert without_colour(palette.cursor) == ["7"]
+  assert without_colour(palette.cursor()) == ["7"]
 }
 
 pub fn words_are_not_struck_through_test() {
   // Striking a digit out says it cannot stand. Striking out a sentence says
   // it should not be read, which is the opposite of what a panel is for.
-  assert !list.contains(without_colour(palette.alarm), "9")
-  assert list.contains(without_colour(palette.conflict), "9")
+  assert !list.contains(without_colour(palette.alarm()), "9")
+  assert list.contains(without_colour(palette.conflict()), "9")
 }
 
 pub fn the_cursor_is_highlighted_test() {
