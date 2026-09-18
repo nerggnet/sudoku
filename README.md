@@ -1240,7 +1240,26 @@ gleam test  # Run the tests
 Tests live beside the subject they are about — `board_test`, `logic_test`,
 `hint_test` and the rest — with the puzzles and fixtures they share in
 `helper`. Gleeunit runs every function ending in `_test` anywhere under
-`test`, so `sudoku_test` holds nothing but the call that starts them.
+`test`, so `sudoku_test` holds only the call that starts them and the one
+line that says which terminal they are all drawn for. That line is not
+decoration: the palette answers to the environment, and a suite that passed
+by whatever `TERM` happened to be would not be a suite.
+
+Gleeunit has no way to run one of them. There is a way, and it is in
+[CLAUDE.md](CLAUDE.md) along with the rest of what this repository expects
+of somebody opening it for the first time. It is written for Claude Code and
+is as good a place as any for a person to start, being the conventions
+rather than the contents: that deciding is kept apart from doing everywhere
+— `logic` from `rules`, `judge` from `settle`, reading a command line from
+acting on it — and that this is less a style than the only reason any of it
+can be tested, since a test can read no key, write no frame and open no
+file.
+
+It also lists what will bite. The help pages are capped at twenty-four rows
+and several sit at exactly twenty-four. The practice screen has nine digits
+and nine techniques. And carving is a promise rather than an implementation
+detail, so changing a band or the week's ramp changes puzzles somebody may
+already have played.
 
 ## Licence
 
