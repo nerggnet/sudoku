@@ -805,8 +805,15 @@ fn aside(origin: Origin) -> String {
   }
 }
 
-/// The time to beat at this difficulty, where there is one. A puzzle typed
-/// in has no difficulty to have a best at.
+/// What the books have to say about a difficulty: the time to beat, and
+/// what the solves it was drawn from look like altogether.
+///
+/// The average is the half of it that says whether the best was a fluke,
+/// which a best on its own never can. It is left out where there has been
+/// one solve, since one solve is its own average and saying so twice is
+/// saying nothing.
+///
+/// A puzzle typed in has no difficulty to have a best at.
 fn best(origin: Origin, bests: store.Bests) -> String {
   case origin {
     // A daily keeps its times in a book of its own, one to a day, so there
@@ -815,7 +822,17 @@ fn best(origin: Origin, bests: store.Bests) -> String {
     generator.Dealt(difficulty) ->
       case dict.get(bests, difficulty) {
         Error(_) -> ""
-        Ok(taken) -> "best " <> clock(taken)
+        Ok(record) ->
+          "best "
+          <> clock(record.best)
+          <> case record.solved {
+            1 -> ""
+            solved ->
+              "    average "
+              <> clock(store.average(record))
+              <> " of "
+              <> int.to_string(solved)
+          }
       }
   }
 }

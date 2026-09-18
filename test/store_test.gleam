@@ -112,13 +112,13 @@ pub fn an_unaided_solve_is_timed_test() {
   let quick = game.Game(..won, started_ms: won.started_ms - 60_000)
   assert store.judge(
       quick,
-      dict.from_list([#(generator.Medium, 30_000)]),
+      dict.from_list([#(generator.Medium, helper.a_record(30_000))]),
       dict.new(),
     )
     == game.Behind(30_000)
   assert store.judge(
       won,
-      dict.from_list([#(generator.Medium, 30_000)]),
+      dict.from_list([#(generator.Medium, helper.a_record(30_000))]),
       dict.new(),
     )
     == game.BestYet
@@ -284,4 +284,59 @@ pub fn a_game_finds_its_way_back_to_its_own_file_test() {
   // keeps the name it had.
   assert store.file_of("") == "game"
   assert store.id_of("game") == ""
+}
+
+// ---------------------------------------------------------------------------
+// What the books hold about a difficulty
+// ---------------------------------------------------------------------------
+
+pub fn the_books_survive_being_written_down_test() {
+  let books =
+    dict.from_list([
+      #(generator.Easy, store.Record(best: 30_000, solved: 3, total: 270_000)),
+      #(generator.Master, store.Record(best: 61_000, solved: 1, total: 61_000)),
+    ])
+
+  assert store.bests_read(store.bests_written(books)) == books
+
+  // Easiest first, which is the order the menu offers them in.
+  assert store.bests_written(books)
+    == "easy 30000 3 270000\nmaster 61000 1 61000"
+}
+
+/// A line from before the books counted anything. One solve of that length
+/// is the only thing it can honestly be read as — there was a solve, it took
+/// that long, and how many others there were is a thing nobody wrote down.
+pub fn a_book_from_before_the_counting_still_reads_test() {
+  let books = store.bests_read("easy 45000\nhard 300000\n")
+
+  assert dict.get(books, generator.Easy)
+    == Ok(store.Record(best: 45_000, solved: 1, total: 45_000))
+  assert dict.get(books, generator.Hard)
+    == Ok(store.Record(best: 300_000, solved: 1, total: 300_000))
+
+  // And an average that says nothing beyond the best, which is the truth
+  // about a file that did not know how many there had been.
+  let assert Ok(record) = dict.get(books, generator.Easy)
+  assert store.average(record) == record.best
+}
+
+pub fn a_spoiled_line_costs_only_its_own_difficulty_test() {
+  let books =
+    store.bests_read("easy 30000 3 270000\nrubbish\nnonsense 1 2 3\n\nhard x")
+
+  assert dict.get(books, generator.Easy)
+    == Ok(store.Record(best: 30_000, solved: 3, total: 270_000))
+  assert dict.size(books) == 1
+}
+
+/// A record with no solves in it is not a record. Nothing writes one, and a
+/// file claiming one would make an average that divides by nothing.
+pub fn a_record_without_a_solve_is_not_read_test() {
+  assert store.bests_read("easy 30000 0 0") == dict.new()
+}
+
+pub fn the_average_is_of_the_solves_behind_the_best_test() {
+  let record = store.Record(best: 30_000, solved: 3, total: 270_000)
+  assert store.average(record) == 90_000
 }

@@ -206,7 +206,7 @@ pub fn a_day_not_won_is_not_written_down_test() {
 /// nobody can find the puzzle for.
 pub fn a_day_does_not_touch_the_difficulty_bests_test() {
   let won = helper.solved(daily_game("2026-09-17"))
-  let bests = dict.from_list([#(generator.Medium, 1)])
+  let bests = dict.from_list([#(generator.Medium, helper.a_record(1))])
 
   // An unbeatable Medium best standing does not make the day Behind.
   assert store.judge(won, bests, dict.new()) == game.DailyDone(1)

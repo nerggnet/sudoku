@@ -234,6 +234,27 @@ week later still knows how it was dealt. Nothing else has one: a grid typed
 in was not dealt from anything, and a practice grid is the same grid every
 time without any chance involved in it.
 
+## What the books keep
+
+```
+   1  Easy      naked singles           best 00:30    average 01:30 of 3
+```
+
+A best on its own never says whether it was a fluke, so the books count the
+solves it was drawn from and total them, and the menu says the average
+beside it. Where there has been one solve the average is left out: one solve
+is its own average, and saying so twice says nothing.
+
+All three numbers are about the same games — unaided solves, and nothing
+else. A best drawn from those and an average drawn from every game finished
+would be two numbers about two different things sitting next to each other
+looking comparable, and the average would fall every time somebody gave a
+puzzle up.
+
+A file written before any of this was counted still reads. It holds a best
+and nothing more, so it is taken as one solve of that length, which is the
+only thing it can honestly be read as.
+
 ## Difficulty
 
 A difficulty is not a clue count. It is the hardest reasoning a puzzle will

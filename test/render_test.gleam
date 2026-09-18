@@ -504,7 +504,7 @@ pub fn the_menu_says_what_each_level_asks_for_test() {
 }
 
 pub fn the_menu_shows_a_time_to_beat_where_there_is_one_test() {
-  let bests = dict.from_list([#(generator.Hard, 125_000)])
+  let bests = dict.from_list([#(generator.Hard, helper.a_record(125_000))])
   let lines =
     helper.lines_of(render.menu_frame(
       True,
@@ -598,10 +598,10 @@ pub fn the_menu_fits_the_screen_test() {
       False,
       [helper.fixture()],
       dict.from_list([
-        #(generator.Easy, 1),
-        #(generator.Medium, 2),
-        #(generator.Hard, 3),
-        #(generator.Expert, 4),
+        #(generator.Easy, helper.a_record(1)),
+        #(generator.Medium, helper.a_record(2)),
+        #(generator.Hard, helper.a_record(3)),
+        #(generator.Expert, helper.a_record(4)),
       ]),
       helper.a_day(),
       dict.new(),

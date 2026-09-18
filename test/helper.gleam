@@ -18,6 +18,7 @@ import sudoku/logic
 import sudoku/render
 import sudoku/rules
 import sudoku/solver
+import sudoku/store
 import sudoku/term
 
 // A puzzle with a single solution, and that solution.
@@ -437,4 +438,10 @@ pub fn editor_lines(current: editor.Editor) -> List(String) {
 /// is run. A Thursday, which the daily deals at Medium.
 pub fn a_day() -> date.Date {
   date.Date(year: 2026, month: 9, day: 17)
+}
+
+/// A record made of one solve of that length, for a test that cares about
+/// the time to beat and not about how many there have been.
+pub fn a_record(taken: Int) -> store.Record {
+  store.Record(best: taken, solved: 1, total: taken)
 }

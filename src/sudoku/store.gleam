@@ -330,9 +330,29 @@ fn kept_files(prefix: String) -> List(#(String, Int))
 // The record books
 // ---------------------------------------------------------------------------
 
-/// The quickest unaided solve at each difficulty, in milliseconds.
+/// What the books hold about a difficulty, all of it about unaided solves
+/// and nothing else: the quickest, how many there have been, and how long
+/// they took between them.
+///
+/// One set of games rather than several. A best that is drawn from unaided
+/// solves and an average that is drawn from every game finished would be two
+/// numbers about two different things sitting next to each other looking
+/// comparable, and the average would fall every time somebody gave a puzzle
+/// up.
+pub type Record {
+  Record(best: Int, solved: Int, total: Int)
+}
+
+/// A record only exists once there is a solve to make one out of, so a
+/// difficulty nobody has finished is absent rather than empty.
 pub type Bests =
-  Dict(generator.Difficulty, Int)
+  Dict(generator.Difficulty, Record)
+
+/// The average of the solves behind a record. Never called on a record that
+/// does not exist, there being no record without a solve in it.
+pub fn average(record: Record) -> Int {
+  record.total / record.solved
+}
 
 /// What the record books make of a finished game, writing the time down if it
 /// belongs there.
@@ -351,6 +371,16 @@ pub fn settle(current: Game) -> game.Verdict {
         True -> game.BestYet
         False -> game.BestNotKept
       }
+    // Not a best, and still a solve the books should know about: what they
+    // count and what they average is every unaided solve rather than the
+    // quickest one. A write that fails costs a count rather than a record,
+    // which is not worth a verdict of its own — the time to beat it names
+    // is true either way.
+    game.Behind(best) -> {
+      let _ = write_bests(with_time(current, books))
+      game.Behind(best)
+    }
+
     game.DailyDone(running) ->
       case write_dailies(with_day(current, days)) {
         True -> game.DailyDone(running)
@@ -367,10 +397,10 @@ pub fn judge(current: Game, books: Bests, days: Dailies) -> game.Verdict {
   case current.puzzle.origin, current.ending, game.unaided(current) {
     generator.Dealt(difficulty), Some(game.Solved), True ->
       case dict.get(books, difficulty) {
-        Ok(best) ->
-          case game.elapsed_ms(current) < best {
+        Ok(record) ->
+          case game.elapsed_ms(current) < record.best {
             True -> game.BestYet
-            False -> game.Behind(best)
+            False -> game.Behind(record.best)
           }
         Error(_) -> game.BestYet
       }
@@ -399,8 +429,20 @@ pub fn judge(current: Game, books: Bests, days: Dailies) -> game.Verdict {
 
 fn with_time(current: Game, books: Bests) -> Bests {
   case current.puzzle.origin {
-    generator.Dealt(difficulty) ->
-      dict.insert(books, difficulty, game.elapsed_ms(current))
+    generator.Dealt(difficulty) -> {
+      let taken = game.elapsed_ms(current)
+      let record = case dict.get(books, difficulty) {
+        Ok(had) ->
+          Record(
+            best: int.min(had.best, taken),
+            solved: had.solved + 1,
+            total: had.total + taken,
+          )
+        Error(_) -> Record(best: taken, solved: 1, total: taken)
+      }
+
+      dict.insert(books, difficulty, record)
+    }
     generator.Handwritten | generator.Practising(_) | generator.Daily(_) ->
       books
   }
@@ -410,22 +452,6 @@ fn with_day(current: Game, days: Dailies) -> Dailies {
   case current.puzzle.origin {
     generator.Daily(on) -> dict.insert(days, on, game.elapsed_ms(current))
     generator.Dealt(_) | generator.Handwritten | generator.Practising(_) -> days
-  }
-}
-
-/// The quickest unaided solve at each difficulty so far.
-pub fn bests() -> Bests {
-  let text = read_file(bests_file) |> result.unwrap("")
-
-  use books, line <- list.fold(string.split(text, "\n"), dict.new())
-  case string.split_once(string.trim(line), " ") {
-    Error(_) -> books
-    Ok(#(name, taken)) ->
-      case generator.named(name), int.parse(string.trim(taken)) {
-        Ok(difficulty), Ok(milliseconds) ->
-          dict.insert(books, difficulty, milliseconds)
-        _, _ -> books
-      }
   }
 }
 
@@ -506,21 +532,77 @@ pub fn dailies_written(book: Dailies) -> String {
   |> string.join("\n")
 }
 
+/// What the books hold, read back from where they are kept.
+pub fn bests() -> Bests {
+  read_file(bests_file) |> result.unwrap("") |> bests_read
+}
+
 fn write_bests(books: Bests) -> Bool {
+  write_file(bests_file, bests_written(books))
+}
+
+/// The two halves that are not about files, kept apart from the reading and
+/// the writing so that they can be tested without a disk — the same way the
+/// book of days is, and `judge` from `settle`.
+pub fn bests_read(text: String) -> Bests {
+  use books, line <- list.fold(string.split(text, "\n"), dict.new())
+  case words(line) {
+    [name, best, solved, total] ->
+      case
+        generator.named(name),
+        int.parse(best),
+        int.parse(solved),
+        int.parse(total)
+      {
+        Ok(difficulty), Ok(best), Ok(solved), Ok(total) if solved > 0 ->
+          dict.insert(books, difficulty, Record(best:, solved:, total:))
+        _, _, _, _ -> books
+      }
+
+    // A line from before the books counted anything. One solve of that
+    // length is the only thing it can honestly be read as: there was a
+    // solve, it took that long, and how many others there were is a thing
+    // nobody wrote down.
+    [name, best] ->
+      case generator.named(name), int.parse(best) {
+        Ok(difficulty), Ok(best) ->
+          dict.insert(
+            books,
+            difficulty,
+            Record(best: best, solved: 1, total: best),
+          )
+        _, _ -> books
+      }
+
+    _ -> books
+  }
+}
+
+/// Written easiest first, which is the order the menu offers them in and the
+/// order somebody reading the file would have put them in.
+pub fn bests_written(books: Bests) -> String {
   let lines = {
     use difficulty <- list.filter_map(generator.difficulties)
     case dict.get(books, difficulty) {
       Error(_) -> Error(Nil)
-      Ok(taken) ->
+      Ok(record) ->
         Ok(
-          string.lowercase(generator.label(difficulty))
-          <> " "
-          <> int.to_string(taken),
+          [
+            string.lowercase(generator.label(difficulty)),
+            int.to_string(record.best),
+            int.to_string(record.solved),
+            int.to_string(record.total),
+          ]
+          |> string.join(" "),
         )
     }
   }
 
-  write_file(bests_file, string.join(lines, "\n"))
+  string.join(lines, "\n")
+}
+
+fn words(line: String) -> List(String) {
+  string.split(string.trim(line), " ") |> list.filter(fn(word) { word != "" })
 }
 
 // ---------------------------------------------------------------------------
