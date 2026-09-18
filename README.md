@@ -47,6 +47,8 @@ newspaper.
 | Key | |
 | --- | --- |
 | `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
+| `Home`, `End` | to the ends of the row |
+| `Tab`, `Shift-Tab` | to the next cell left empty, or the one before |
 | `1`–`9` | write a digit, or pencil one in while marking |
 | `M` then `1`–`9` | pencil one digit in, or rub it out |
 | `0`, space, backspace | clear the cell, or its marks while marking |
@@ -965,6 +967,7 @@ come out right; paste the unspaced line.)
 | Key | |
 | --- | --- |
 | `←` `↑` `↓` `→`, `hjkl`, `wasd` | move the cursor |
+| `Home`, `End` | to the ends of the row |
 | `1`–`9` | type a clue in and step on to the next cell |
 | `0`, space, backspace, `.`, `_` | leave the cell empty and step on |
 | `u` | undo |

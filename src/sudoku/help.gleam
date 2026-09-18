@@ -24,7 +24,11 @@ import sudoku/term
 
 /// Getting about the board, and putting things on it.
 const board_keys = [
-  #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
+  #(
+    "\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd",
+    "move the cursor; Home and End for the row's ends",
+  ),
+  #("Tab, Shift-Tab", "to the next cell left empty, or the one before"),
   #("1 - 9", "write a digit, or pencil one in while marking"),
   #("M then 1 - 9", "pencil one digit in, or rub it out"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
@@ -132,9 +136,8 @@ const mark_notes = [
   "one, an asterisk where it has several, and all of them in the status line.",
   "Writing a digit rubs out the marks it rules out, unless checking is on and",
   "the digit is wrong. M and a digit pencils one in without leaving writing,",
-  "and shift and a digit does the same in one keystroke, where the game can",
-  "read your number row. S and a digit shades every cell that digit could",
-  "still go in, read off the grid rather than your marks.",
+  "and shift and a digit does the same where the game can read your number",
+  "row. S and a digit shades where a digit could still go, read off the grid.",
 ]
 
 /// A key reference, with a paragraph under it. Used for both the game's help
@@ -575,7 +578,10 @@ pub fn editor_keys() -> List(String) {
 }
 
 const editor_key_reference = [
-  #("\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd", "move the cursor"),
+  #(
+    "\u{2190} \u{2191} \u{2193} \u{2192}, hjkl, wasd",
+    "move the cursor; Home and End for the row's ends",
+  ),
   #("1 - 9", "type a clue in and step on to the next cell"),
   #("0, space, . or _", "leave the cell empty and step on"),
   #("u", "undo"),

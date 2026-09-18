@@ -382,3 +382,83 @@ pub fn what_the_undo_pile_holds_is_the_cell_it_is_about_test() {
   assert undone.cursor == asked.cursor
   assert undone.board == asked.board
 }
+
+/// Tab to the next cell with nothing in it, which is the one move the
+/// arrows are bad at: a hard grid has its blanks in ones and twos with
+/// clues between them, and walking to the next of them a cell at a time is
+/// the part of a puzzle that is not thinking.
+pub fn tab_goes_to_the_next_empty_cell_test() {
+  let start = helper.fixture()
+  let blanks = helper.blanks()
+
+  let assert Ok(first) = list.first(blanks)
+  let at_first = game.Game(..start, cursor: first)
+  let next = helper.step(at_first, key.Tab).cursor
+
+  // The next blank in reading order, with every clue between passed over.
+  assert list.contains(blanks, next)
+  assert next > first
+  assert list.all(board.span(first + 1, next - 1), fn(index) {
+    !list.contains(blanks, index)
+  })
+}
+
+pub fn shift_tab_goes_back_the_same_way_test() {
+  let start = helper.fixture()
+  let assert Ok(first) = list.first(helper.blanks())
+  let at_first = game.Game(..start, cursor: first)
+
+  let there = helper.step(at_first, key.Tab)
+  assert helper.step(there, key.BackTab).cursor == first
+}
+
+/// The last blank leads round to the first, which is the wrap the arrows
+/// have at the edges.
+pub fn tab_wraps_round_the_board_test() {
+  let start = helper.fixture()
+  let blanks = helper.blanks()
+  let assert Ok(first) = list.first(blanks)
+  let assert Ok(last) = list.last(blanks)
+
+  assert helper.step(game.Game(..start, cursor: last), key.Tab).cursor == first
+  assert helper.step(game.Game(..start, cursor: first), key.BackTab).cursor
+    == last
+}
+
+/// Empty means empty. A cell with a wrong digit in it is somewhere to go
+/// back to rather than somewhere left to work, and undo is the way back.
+pub fn tab_passes_over_a_cell_that_is_filled_in_test() {
+  let start = helper.fixture()
+  let assert Ok(first) = list.first(helper.blanks())
+
+  let filled = helper.step(game.Game(..start, cursor: first), key.Digit(1))
+  assert board.value(filled.board, first) == 1
+
+  // Standing on it and tabbing leaves it, and coming back round skips it.
+  let onwards = helper.step(filled, key.Tab)
+  assert onwards.cursor != first
+  assert helper.step(onwards, key.BackTab).cursor != first
+}
+
+/// A board with nothing left empty has nowhere to send it, and says so: a
+/// key that does nothing twice reads as a key that is broken.
+pub fn tab_says_so_when_nothing_is_left_test() {
+  let full = helper.solved(helper.fixture())
+  let stuck = game.Game(..full, finished_ms: option.None, ending: option.None)
+  let pressed = helper.step(stuck, key.Tab)
+
+  assert pressed.cursor == stuck.cursor
+  assert pressed.message != ""
+}
+
+pub fn home_and_end_go_to_the_ends_of_the_row_test() {
+  let middle = game.Game(..helper.fixture(), cursor: board.at(4, 4))
+
+  assert helper.step(middle, key.Home).cursor == board.at(4, 0)
+  assert helper.step(middle, key.End).cursor == board.at(4, 8)
+
+  // The row is the one the cursor is on, whichever that is.
+  let elsewhere = game.Game(..helper.fixture(), cursor: board.at(7, 2))
+  assert helper.step(elsewhere, key.Home).cursor == board.at(7, 0)
+  assert helper.step(elsewhere, key.End).cursor == board.at(7, 8)
+}

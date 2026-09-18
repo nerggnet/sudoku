@@ -175,6 +175,11 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Right | key.Char("l") | key.Char("d") ->
       game.Continue(move(current, 0, 1))
 
+    key.Tab -> game.Continue(hunt(current, 1))
+    key.BackTab -> game.Continue(hunt(current, -1))
+    key.Home -> game.Continue(along(current, 0))
+    key.End -> game.Continue(along(current, board.side - 1))
+
     // A digit straight after S or M answers the question that key asked,
     // rather than writing anything. Only that one: asking is a thing done
     // once, not a mode to be in.
@@ -244,6 +249,57 @@ fn move(current: game.Game, rows: Int, cols: Int) -> game.Game {
 // --------------------------------------------------------------------------
 // Writing a digit
 // --------------------------------------------------------------------------
+
+/// To the next cell with nothing in it, or the one before it.
+///
+/// The one move the arrows are bad at, and it gets worse the harder the
+/// puzzle: an Expert grid opens with sixty blanks and a Master one with
+/// nearer sixty-five, in ones and twos with clues between them. Walking to
+/// the next of them a cell at a time is the part of a puzzle that is not
+/// thinking about the puzzle.
+///
+/// Empty means empty. A cell with a wrong digit in it is not somewhere left
+/// to work, whatever checking has to say about it — it is somewhere to go
+/// back to, and undo is the way back.
+fn hunt(current: game.Game, by: Int) -> game.Game {
+  case blank_from(current, by, current.cursor, board.cell_count) {
+    Ok(index) -> game.Game(..current, cursor: index, message: "")
+    // Nothing left to hunt for. Said rather than passed over in silence: a
+    // key that does nothing twice reads as a key that is broken.
+    Error(_) -> game.Game(..current, message: "Every cell has something in it.")
+  }
+}
+
+/// The next blank in reading order, given at most one lap to find it.
+///
+/// The lap is what makes the last blank on the board lead round to the
+/// first, which is the same wrap the arrows have at the edges. Counting it
+/// out rather than trusting the grid to hold one is what stops a full board
+/// going round for ever.
+fn blank_from(
+  current: game.Game,
+  by: Int,
+  from: Int,
+  left: Int,
+) -> Result(Int, Nil) {
+  case left {
+    0 -> Error(Nil)
+    _ -> {
+      let next = { from + by + board.cell_count } % board.cell_count
+      case board.value(current.board, next) {
+        0 -> Ok(next)
+        _ -> blank_from(current, by, next, left - 1)
+      }
+    }
+  }
+}
+
+/// To one end of the row or the other, which is what Home and End mean
+/// everywhere else there is a row to be at the end of.
+fn along(current: game.Game, column: Int) -> game.Game {
+  let at = board.at(board.row_of(current.cursor), column)
+  game.Game(..current, cursor: at, message: "")
+}
 
 fn place(current: game.Game, digit: Int) -> game.Game {
   case board.is_given(current.board, current.cursor) {

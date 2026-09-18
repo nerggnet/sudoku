@@ -1,5 +1,6 @@
 //// Turning bytes from the terminal into keystrokes.
 
+import gleam/list
 import helper
 import sudoku/key
 
@@ -26,19 +27,50 @@ pub fn arrow_keys_decode_test() {
 }
 
 pub fn a_numbered_sequence_is_read_to_its_end_test() {
-  // Home, End and the page keys mean nothing here, but a sequence has to be
-  // read to the end whatever it means, or its tail arrives as a keystroke
-  // the player never made.
-  assert helper.press_leaving([0x1b, 0x5b, 0x31, 0x7e]) == #(key.Unknown, [])
+  // The page keys mean nothing here, but a sequence has to be read to the
+  // end whatever it means, or its tail arrives as a keystroke the player
+  // never made.
+  assert helper.press_leaving([0x1b, 0x5b, 0x35, 0x7e]) == #(key.Unknown, [])
   assert helper.press_leaving([0x1b, 0x5b, 0x36, 0x7e]) == #(key.Unknown, [])
 
   // Two digits, as the function keys use.
   assert helper.press_leaving([0x1b, 0x5b, 0x31, 0x35, 0x7e])
     == #(key.Unknown, [])
 
-  // What follows a sequence is the next key, and nothing else.
-  assert helper.press_leaving([0x1b, 0x5b, 0x31, 0x7e, 0x35])
+  // What follows a sequence is the next key, and nothing else — for one
+  // that means something as much as for one that does not.
+  assert helper.press_leaving([0x1b, 0x5b, 0x36, 0x7e, 0x35])
     == #(key.Unknown, [0x35])
+  assert helper.press_leaving([0x1b, 0x5b, 0x31, 0x7e, 0x35])
+    == #(key.Home, [0x35])
+}
+
+/// Home and End, both ways terminals spell them.
+///
+/// The lettered form and the numbered one are the same keys on different
+/// terminals, and the numbers disagree as well: 1 and 4 on some, 7 and 8 on
+/// others. All four are still in the wild, so all four are read.
+pub fn home_and_end_decode_however_they_are_spelled_test() {
+  use bytes <- list.each([[0x1b, 0x5b, 0x48], [0x1b, 0x4f, 0x48]])
+  assert helper.press(bytes) == key.Home
+
+  use bytes <- list.each([[0x1b, 0x5b, 0x46], [0x1b, 0x4f, 0x46]])
+  assert helper.press(bytes) == key.End
+}
+
+pub fn home_and_end_decode_numbered_too_test() {
+  use number <- list.each([0x31, 0x37])
+  assert helper.press([0x1b, 0x5b, number, 0x7e]) == key.Home
+
+  use number <- list.each([0x34, 0x38])
+  assert helper.press([0x1b, 0x5b, number, 0x7e]) == key.End
+}
+
+pub fn tab_and_shift_tab_decode_test() {
+  assert helper.press([0x09]) == key.Tab
+
+  // Shift and Tab has one spelling, and it is a sequence rather than a byte.
+  assert helper.press([0x1b, 0x5b, 0x5a]) == key.BackTab
 }
 
 pub fn the_delete_key_decodes_test() {

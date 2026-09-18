@@ -17,6 +17,12 @@ pub type Key {
   Shifted(Int)
   /// Anything meaning "clear this cell": 0, space, backspace or delete.
   Erase
+  /// To the next empty cell, and to the one before it.
+  Tab
+  BackTab
+  /// To the ends of the row.
+  Home
+  End
   /// A printable key. Case is kept, so `H` and `h` are different keys.
   Char(String)
   /// Ctrl-L: draw the screen again. Whatever has made a mess of it came from
@@ -100,6 +106,12 @@ fn sequence(
     0x42 -> #(Down, source)
     0x43 -> #(Right, source)
     0x44 -> #(Left, source)
+    // `ESC [ H` and `ESC [ F`, which is one of the two ways a terminal
+    // spells Home and End; the numbered way is below.
+    0x48 -> #(Home, source)
+    0x46 -> #(End, source)
+    // `ESC [ Z`, which is the only way anybody spells shift and Tab.
+    0x5a -> #(BackTab, source)
     -1 -> #(Quit, source)
     _ if byte >= 0x30 && byte <= 0x39 -> numbered(byte - 0x30, source, next)
     _ -> #(Unknown, source)
@@ -128,6 +140,11 @@ fn numbered(
     _ ->
       case number {
         3 -> #(Erase, source)
+        // Home and End again, numbered. Terminals disagree about which
+        // numbers they are, and the disagreement is old enough that both
+        // pairs are still in the wild.
+        1 | 7 -> #(Home, source)
+        4 | 8 -> #(End, source)
         _ -> #(Unknown, source)
       }
   }
@@ -141,6 +158,7 @@ fn from_byte(byte: Int) -> Key {
     0x0c -> Redraw
     // Backspace, delete, space and `0` all clear a cell.
     0x08 | 0x7f | 0x20 | 0x30 -> Erase
+    0x09 -> Tab
     // Carriage return and newline mean nothing here, but arrive in line mode.
     0x0a | 0x0d -> Unknown
     _ if byte >= 0x31 && byte <= 0x39 -> Digit(byte - 0x30)

@@ -75,6 +75,11 @@ pub fn update(current: Editor, pressed: Key) -> Step {
     key.Down | key.Char("j") | key.Char("s") -> Continue(move(current, 1, 0))
     key.Left | key.Char("h") | key.Char("a") -> Continue(move(current, 0, -1))
     key.Right | key.Char("l") | key.Char("d") -> Continue(move(current, 0, 1))
+    // Where the board also has Tab for the next cell left empty. Here every
+    // cell is being gone through in turn and the empty ones are the ones
+    // being left that way on purpose, so there is nothing for it to mean.
+    key.Home -> Continue(along(current, 0))
+    key.End -> Continue(along(current, board.side - 1))
 
     key.Digit(digit) | key.Shifted(digit) -> Continue(type_in(current, digit))
 
@@ -91,6 +96,11 @@ pub fn update(current: Editor, pressed: Key) -> Step {
 
     _ -> Continue(current)
   }
+}
+
+fn along(current: Editor, column: Int) -> Editor {
+  let at = board.at(board.row_of(current.cursor), column)
+  Editor(..current, cursor: at, message: "")
 }
 
 fn move(current: Editor, rows: Int, cols: Int) -> Editor {
