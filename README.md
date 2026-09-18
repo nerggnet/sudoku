@@ -146,7 +146,7 @@ ugly and a character of the wrong width takes the grid apart.
 One puzzle a day, the same one for everybody, carved from the date.
 
 ```
-   7  Daily     Thursday 2026-09-17, Medium        done in 08:41
+   8  Daily     Thursday 2026-09-17, Medium        done in 08:41
 ```
 
 Because everybody gets the same grid, it cannot ask which difficulty you
@@ -598,7 +598,7 @@ reading about a technique and losing your place on the board.
 
  C1 and C3 take 7 and 9, so C4 is down to a 1 or a 3.
 
- ← →  page 5 of 8     any other key returns
+ ← →  page 5 of 13     any other key returns
 ```
 
 The strips show what the cells of one unit have left in them. Where a
@@ -620,7 +620,7 @@ where the reasoning has just shut it out:
 ```
 
 The clock waits while the help is up. Reading about a technique is not
-playing, and eight pages is long enough that it would otherwise show. `p`
+playing, and thirteen pages is long enough that it would otherwise show. `p`
 does the same thing on purpose — see below.
 
 The examples are drawn by hand rather than lifted from a real grid, since a
@@ -853,7 +853,7 @@ On the way out the game prints the puzzle it was playing, as the same
 ```
 Thanks for playing.
 
-Saved in /Users/you/.local/share/sudoku/game
+Saved in /Users/you/.local/share/sudoku/game-1789722089-12542-1
 
 This puzzle:
 ...5....3.4..6.82.75...86...3...5...8956.1374...4...9...69...38.28.1..6.3....6...
@@ -865,7 +865,7 @@ with nothing left on it — the game says so instead, and the puzzle line is
 still there to keep by hand:
 
 ```
-Could not save in /Users/you/.local/share/sudoku/game.
+Could not save in /Users/you/.local/share/sudoku/game-1789722089-12542-1.
 ```
 
 The same goes for a record. A best time that the books would not take is
@@ -996,7 +996,10 @@ wander rather than to say anything, and an eye can wander without them.
 
 ## Best times
 
-A puzzle solved unaided is timed, and the menu shows what there is to beat:
+A puzzle solved unaided is timed, and the menu shows what there is to beat —
+and, once there has been more than one solve at a level, the average of them
+too, which is the half that says whether a best was a fluke. What the books
+keep and why is further up.
 
 ```
     1  Easy      naked singles           best 09:12
@@ -1005,11 +1008,13 @@ A puzzle solved unaided is timed, and the menu shows what there is to beat:
 ```
 
 Unaided means the game was never asked for anything: no hints, and checking
-never switched on. The game says which it is while you play, beside the
-difficulty, rather than leaving it to the panel at the end. Both of those work from the answer, and a time set with the
-answer to hand is not a time. Filling the candidates in with `f` is another
-matter and does not count against you, since it works out nothing you could
-not have worked out yourself with a pencil.
+never switched on. Both of those work from the answer, and a time set with
+the answer to hand is not a time. The game says which it is while you play,
+beside the difficulty, rather than leaving it to the panel at the end.
+
+Filling the candidates in with `f` is another matter and does not count
+against you, since it works out nothing you could not have worked out
+yourself with a pencil.
 
 A solve with help says so rather than quietly going unrecorded:
 
@@ -1105,7 +1110,8 @@ Shift and a digit does the same in one keystroke, where the keyboard is one
 the game can read. What the shifted number row produces depends on the
 layout, so both the Swedish row and the American one are read, and `!` is a 1
 on either. Where the two disagree there is nothing in the byte that arrived to
-say which key was pressed — `&` sits over 6 in Stockholm and 7 in Seattle — so
+say which key was pressed — `&` sits over 6 in Stockholm and 7 in
+Seattle — so
 those are let go rather than guessed at. Guessing would be wrong for half the
 keyboards in the world and quietly wrong at that: a 6 pencilled in where a 7
 was asked for reads like a slip of the hand rather than a game that cannot
@@ -1132,7 +1138,8 @@ wrong guess does not cost you the reasoning behind it — and erasing gives the
 digit back to the marks around it, since it was the game that took it out of
 them when the digit went in. Without that, every digit written and thought
 better of would leave a hole in the marks that nothing would ever fill, and
-the holes would collect until the marks said things that could not be true. Undo covers marks as
+the holes would collect until the marks said things that could not be
+true. Undo covers marks as
 well as digits, and `r` walks forward again through whatever was undone —
 until something else is written, which makes a different way forward and
 throws the old one away.
@@ -1155,6 +1162,7 @@ pile is being walked.
 | `sudoku/rules` | what each key does to it |
 | `sudoku/hint` | turning the reasoning into a hint, and pointing it somewhere |
 | `sudoku/invocation` | reading what the command line asked for |
+| `sudoku/menu` | what a keystroke means on the screens that choose a puzzle |
 | `sudoku/editor` | typing a puzzle in by hand |
 | `sudoku/store` | writing a game down, reading it back, and keeping times |
 | `sudoku/render` | drawing a screen: the menu, the board, the editor |
@@ -1162,15 +1170,26 @@ pile is being walked.
 | `sudoku/practice` | one grid per technique, kept to be practised on |
 | `sudoku/grids` | drawing a nine by nine, for the board and the help alike |
 | `sudoku/palette` | the colours it is all drawn in, and what each one means |
+| `sudoku/date` | a day, and which day of the week it was |
+| `sudoku/random` | shuffling, and the seed a deal is carved from |
 | `sudoku/key` | decoding bytes into keystrokes |
 | `sudoku/term` | raw input and ANSI escapes |
 
-Those first three used to be one module, and they split the way the sentence
+`game`, `rules` and `hint` used to be one module, and they split the way the
+sentence
 that described it split: the state, the rules for how a keystroke changes it,
 and the one rule long enough to want a module of its own. `rules` and `hint`
 both reach into `game`; `game` reaches into neither, which is what lets the
 three be three rather than a circle. Everything else — drawing, saving,
 the record books — still talks to `game` alone and did not notice.
+
+`invocation` and `menu` are the same idea twice over: what a command line
+asks for and what a keystroke means on a screen are questions about text and
+about keys, answerable with no terminal, no files and no puzzle dealt, and
+they are kept apart from the doing so that they can be asked in a test. The
+main loop is what is left once both have been taken out of it, and it is
+thin on purpose — the one bug of that kind this game has had lived in the
+part of it that is not.
 
 Every screen is drawn by `render` and every colour comes out of `palette`.
 That was not always true — the menu drew itself in the main module out of
@@ -1185,17 +1204,19 @@ of one function that takes the cell renderer as an argument, so they cannot
 drift apart in shape, and the editor draws its grid with the same function
 again.
 
-A puzzle carries where it came from, `Dealt(difficulty)` or `Handwritten`,
-which is all that separates a typed-in puzzle from a generated one once play
-begins. Generating one carves clues out of a solution; typing one in works the
-other way round, solving the clues to find the answer the game will check
-against, and refusing them if there is not exactly one.
+A puzzle carries where it came from — `Dealt(difficulty)`, `Handwritten`,
+`Practising(technique)` or `Daily(date)` — which is all that separates one
+kind from another once play begins, and what decides whether a time is
+filed, and where. Generating one carves clues out of a solution; typing one
+in works the other way round, solving the clues to find the answer the game
+will check against, and refusing them if there is not exactly one.
 
 There are two solvers, because there are two questions. `sudoku/solver`
 searches, expanding the empty cell with the fewest candidates first, and
 answers what the digits are; it is what fills a grid at random to start a
 puzzle off. `sudoku/logic` reasons, trying naked singles, hidden singles,
-locked candidates, pairs, triples and X-wings in that order, and answers how
+locked candidates, pairs, triples, X-wings, XY-wings and swordfish in that
+order, and answers how
 the digits can be worked out and how hard that is. Rating a grid that way
 takes about a millisecond, which is what makes it affordable to ask the
 question after every single cell carving takes out.
@@ -1204,13 +1225,16 @@ Generation fills a grid at random and then removes cells in rotationally
 symmetric pairs, and singly where a pair will not go, for as long as the
 puzzle stays inside its difficulty. Carving is greedy and often lands easier
 than the level wants, so it carves up to thirty grids and keeps the hardest —
-which is why an Expert puzzle takes about a second to deal and an Easy one
-arrives at once.
+which is why a Master puzzle takes a second or two to deal, an Expert one
+about half a second, and an Easy one arrives at once.
 
 Keyboard input needs OTP 26 or later, which is where
-`shell:start_interactive({noshell, raw})` arrived. Without it — on older OTP,
-or when input is piped rather than typed — the game still runs, but each key
-has to be followed by Enter, and it says so on the menu. The clock holds
+`shell:start_interactive({noshell, raw})` arrived. Without it — when input is
+piped rather than typed — the game still runs, but each key has to be
+followed by Enter, and it says so on the menu. Older OTP does not come into
+it any more: gleam_stdlib will not compile below 27, so 27 is the floor
+whatever this game asks for, and the workflow has a leg apiece for it and
+for the oldest Gleam that can build this. The clock holds
 still there, since a frame landing on a half-typed line would rub out what
 was being typed before Enter handed it over.
 
