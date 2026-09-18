@@ -15,6 +15,7 @@ import sudoku/hint
 import sudoku/key.{type Key}
 import sudoku/logic
 import sudoku/term
+import sudoku/tutor
 
 pub fn update(current: game.Game, pressed: Key) -> game.Step {
   case pressed, current.paused, current.help {
@@ -208,6 +209,7 @@ fn play(current: game.Game, pressed: Key) -> game.Step {
     key.Char("u") -> game.Continue(undo(current))
     key.Char("r") -> game.Continue(redo(current))
     key.Char("S") -> game.Continue(scanning(current))
+    key.Char("t") -> game.Continue(teaching(current))
     key.Char("c") -> game.Continue(start_checking(current))
     key.Char("H") -> game.Continue(hint.hint(current))
     key.Char("R") -> game.Continue(revealing(current))
@@ -607,6 +609,25 @@ fn afresh(current: game.Game) -> game.Game {
 
 /// Ask which digit to look for, or put away the scan already up — and the
 /// question itself, where it is the question that is up.
+/// Ask the tutor, or ask it again.
+///
+/// Asking again is asking for more, up to everything it knows; past that it
+/// stays where it is rather than starting over, since somebody pressing t at
+/// the bottom of the ladder wants the argument to stay on the screen and not
+/// to be told the digit again.
+///
+/// Nothing here touches the board, so this costs nothing and is not counted
+/// anywhere. That is the whole of why the tutor is worth having next to `H`,
+/// which plays the step and spends the one chance the grid had to teach it.
+fn teaching(current: game.Game) -> game.Game {
+  let asked = case current.teaching {
+    game.NotTeaching -> 1
+    game.Teaching(asked) -> int.min(asked + 1, tutor.rungs)
+  }
+
+  game.Game(..current, teaching: game.Teaching(asked), message: "")
+}
+
 fn scanning(current: game.Game) -> game.Game {
   case current.scan, current.asking {
     game.NotScanning, game.NotAsking ->

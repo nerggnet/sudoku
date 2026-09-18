@@ -59,6 +59,7 @@ newspaper.
 | `r` | do it again |
 | `c` | check what is filled in from here on, at a price (press twice) |
 | `H` | take the next step, and say why |
+| `t` | on a practice grid, be nudged towards its technique |
 | `R` | reveal the whole solution (press twice) |
 | `p` | pause: put the board away and stop the clock |
 | `X` | start this puzzle again (press twice) |
@@ -345,9 +346,61 @@ grid is the fullest of the lot and the hidden-single grid the barest.
 
 Each technique page in the help ends with the two keys that reach its grid,
 and while you are playing one, `?` opens the page about the technique you
-picked rather than the key reference. Practice is not timed and no record is
-kept of it — it is the same grid every time, so a time on it would be a
-record of having seen it before.
+picked rather than the key reference.
+
+### Being walked up to it
+
+Each of these grids wants its technique exactly once. A naked pair or an
+X-wing turns up on the third or fourth step and never again, and the thirty
+steps after it are singles — so there is one moment per grid to learn from,
+and the only help there was took it. `H` works the step out and plays it,
+and the moment is gone: somebody who had never seen an X-wing got one look
+at one, from the far side of having it done for them.
+
+`t` says things instead, a nudge at a time:
+
+```
+ Locked candidates: this is the moment.
+ Nothing simpler works from here. Look for 5. Press t again for where.
+
+ Locked candidates: look in row F.
+ Press t again for the cells it rests on.
+
+ Locked candidates: F4 and F5.
+ Those are the cells. Press t again for the argument.
+
+ Locked candidates: every 5 in the middle box is in row F.
+ So no 5 anywhere else in row F — F7 and F8 lose it.
+```
+
+The cells light up only once it has got as far as naming them, since
+lighting them at the first nudge would be the answer rather than a nudge.
+And it never touches the board, which is what makes it free to ask and free
+to ask again — the moment is still there afterwards, and so is the grid. `H`
+is still there to play the step for you; this is what to press instead of
+reaching for it.
+
+Ask before the moment and it sends you back to the easy work:
+
+```
+ Not yet — there is something simpler here.
+ Locked candidates first. Take that, and the X-wing will be next.
+```
+
+Which is a lesson of its own. The reasoning always takes the simplest step
+going, and so should the person doing it — an X-wing you found while a naked
+single was sitting there is an X-wing you did not need.
+
+None of it is written down anywhere. What a step rests on, which digits it is
+about and which unit it was read in are all carried on the step already, and
+they turn out to be exactly the rungs somebody wants, in that order: the
+digit, then where, then which cells, then why. The one thing the shape of the
+argument changes is *where* — a unit for the five read off one, the cell
+itself for a naked single, the lines that cross for an X-wing or a swordfish,
+and the pivot for an XY-wing, whose three cells need share nothing at all.
+
+Practice is not timed and no record is kept of it — it is the same grid
+every time, so a time on it would be a record of having seen it before.
 
 ## Looking for somewhere a digit can go
 

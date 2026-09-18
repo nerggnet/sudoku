@@ -7,6 +7,7 @@
 import gleam/dict
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/set
 import sudoku/board.{type Board}
 import sudoku/date
 import sudoku/generator.{type Puzzle}
@@ -66,6 +67,15 @@ pub type Game {
     showing: Option(logic.Step),
     /// The digit being looked for, if any.
     scan: Scan,
+    /// How far the tutor has been asked to go at the position the board is
+    /// in now.
+    ///
+    /// Unlike an offer or a hint's markings, this outlives a keystroke: the
+    /// whole point of being told where to look is looking, and a lesson that
+    /// went away the moment the cursor moved would be a lesson nobody could
+    /// act on. It goes when the board changes instead, the position it was
+    /// about having gone.
+    teaching: Teaching,
     /// A digit asked for and not yet given, until the next keystroke.
     asking: Asking,
     hints: Int,
@@ -228,6 +238,16 @@ pub fn unaided(game: Game) -> Bool {
   !game.aided
 }
 
+/// How many times over the tutor has been asked about this position.
+///
+/// A count rather than a named rung, because what each answer says depends
+/// on the step the position turns out to want, and that is worked out afresh
+/// every time rather than carried.
+pub type Teaching {
+  NotTeaching
+  Teaching(asked: Int)
+}
+
 /// The three ways a game can be over.
 pub type Ending {
   Solved
@@ -266,6 +286,7 @@ pub fn new(puzzle: Puzzle) -> Game {
     verdict: None,
     showing: None,
     scan: NotScanning,
+    teaching: NotTeaching,
     asking: NotAsking,
     hints: 0,
     mistakes: 0,
@@ -337,7 +358,27 @@ pub fn is_wrong(game: Game, index: Int) -> Bool {
 /// placed by a hint should land on the undo pile the same way and finish the
 /// puzzle the same way.
 pub fn with_board(game: Game, next: Board) -> Game {
-  Game(..game, board: next, message: "")
+  // The lesson was about the position, and this is a different one.
+  Game(..game, board: next, message: "", teaching: NotTeaching)
+}
+
+/// What the reasoning should read off a game: the candidates the grid
+/// allows, narrowed wherever the player has pencilled something in.
+///
+/// A player's marks are a position of their own — narrower than the grid
+/// alone allows wherever they have been working — and reasoning from them is
+/// what lets one step that rules candidates out lead to the next.
+pub fn reading(current: Game) -> logic.Pencil {
+  use marks, index <- list.fold(
+    board.indices(),
+    logic.pencil(current.board.values),
+  )
+
+  let theirs = board.marks_at(current.board, index)
+  case board.value(current.board, index) == 0 && !set.is_empty(theirs) {
+    True -> dict.insert(marks, index, theirs)
+    False -> marks
+  }
 }
 
 /// Put this moment on the pile to come back to, and throw away the way

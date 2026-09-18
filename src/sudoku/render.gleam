@@ -24,6 +24,7 @@ import sudoku/palette
 import sudoku/practice
 import sudoku/store
 import sudoku/term
+import sudoku/tutor
 
 /// How much room a frame needs: a window this wide and this tall, which is
 /// the eighty by twenty-four a terminal has been by default since before any
@@ -244,6 +245,13 @@ fn caption(left: String, right: String) -> String {
 /// row C — so the unit comes with it. A hint about two or three cells has
 /// named them, and lighting up their whole unit would bury them.
 fn pointed_at(current: Game) -> Set(Int) {
+  case current.teaching {
+    game.Teaching(asked) -> set.from_list(tutor.lesson(current, asked).lit)
+    game.NotTeaching -> hinted_at(current)
+  }
+}
+
+fn hinted_at(current: Game) -> Set(Int) {
   case current.showing {
     None -> set.new()
     Some(step) ->
@@ -440,7 +448,7 @@ fn status(current: Game, clashes: Set(Int)) -> List(String) {
   list.flatten([
     ["", term.styled(palette.dim(), facts) <> marks],
     tally,
-    said(current.message),
+    said(telling(current)),
   ])
 }
 
@@ -480,6 +488,23 @@ fn remaining(current: Game) -> String {
 /// which will not fit on the first alongside the name of the technique. It is
 /// kept whether or not there is anything to put in it, so that the board
 /// above never shifts a row between one message and the next.
+/// What goes under the board: the tutor while it is up, and whatever the
+/// last keystroke had to say otherwise.
+///
+/// The tutor wins because it was asked for and stays asked for. A message is
+/// about the keystroke that made it and is cleared by the next one, which is
+/// exactly what a lesson must not be — being told where to look is no use if
+/// looking puts the telling away.
+fn telling(current: Game) -> String {
+  case current.teaching {
+    game.NotTeaching -> current.message
+    game.Teaching(asked) -> {
+      let lesson = tutor.lesson(current, asked)
+      lesson.what <> "\n" <> lesson.why
+    }
+  }
+}
+
 fn said(message: String) -> List(String) {
   case string.split(message, "\n") {
     [what] -> [what, ""]
@@ -916,7 +941,14 @@ pub fn practice_frame() -> String {
         "   "
           <> term.styled(
           palette.dim(),
-          "playing for the page explaining the one you picked.",
+          "playing for the page explaining the one you picked, or ",
+        )
+          <> term.styled(palette.key(), "t")
+          <> term.styled(palette.dim(), " to be"),
+        "   "
+          <> term.styled(
+          palette.dim(),
+          "walked up to it a nudge at a time. The tutor never plays a move.",
         ),
         "",
         "   "

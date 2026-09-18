@@ -7,7 +7,6 @@
 //// is a fact about a grid, and which cell to point it at is a question about
 //// a person.
 
-import gleam/dict
 import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
@@ -108,7 +107,7 @@ fn elsewhere(current: game.Game) -> game.Game {
 fn here(current: game.Game) -> Result(logic.Step, Nil) {
   case board.value(current.board, current.cursor) {
     0 ->
-      case logic.settles_from(pencilled(current), current.cursor) {
+      case logic.settles_from(game.reading(current), current.cursor) {
         Ok(step) -> sound(current, step)
         Error(_) -> Error(Nil)
       }
@@ -123,7 +122,7 @@ fn here(current: game.Game) -> Result(logic.Step, Nil) {
 /// the wrong digit would be worse than no hint at all, so one that disagrees
 /// with the answer is dropped and the plain telling takes over.
 fn sound_step(current: game.Game) -> Result(logic.Step, Nil) {
-  case logic.next_from(current.board.values, pencilled(current)) {
+  case logic.next_from(current.board.values, game.reading(current)) {
     Error(_) -> Error(Nil)
     Ok(step) -> sound(current, step)
   }
@@ -139,20 +138,6 @@ fn sound_step(current: game.Game) -> Result(logic.Step, Nil) {
 ///
 /// Marks that are wrong, or left behind, can lead the reasoning astray. They
 /// cannot lead the player astray: every step is still checked against the
-/// answer before a hint acts on it.
-fn pencilled(current: game.Game) -> logic.Pencil {
-  use marks, index <- list.fold(
-    board.indices(),
-    logic.pencil(current.board.values),
-  )
-
-  let theirs = board.marks_at(current.board, index)
-  case board.value(current.board, index) == 0 && !set.is_empty(theirs) {
-    True -> dict.insert(marks, index, theirs)
-    False -> marks
-  }
-}
-
 fn sound(current: game.Game, step: logic.Step) -> Result(logic.Step, Nil) {
   case step.move {
     logic.Settle(index, digit) ->

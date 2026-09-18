@@ -840,3 +840,21 @@ pub fn the_menu_says_how_many_days_are_running_test() {
   // A day missed leaves nothing running.
   assert !string.contains(said(dict.from_list([#(before, 1)])), "running")
 }
+
+/// A frame with a lesson up is still a frame. The tutor writes into the two
+/// rows under the board that a hint writes into, so it cannot make the
+/// screen taller — but it can make a line longer than any hint does, the
+/// rungs being sentences of their own.
+pub fn a_frame_fits_while_the_tutor_is_talking_test() {
+  use technique <- list.each(practice.techniques())
+  let assert Ok(puzzle) = practice.puzzle(technique)
+  let started = game.new(puzzle)
+
+  use asked <- list.each([1, 2, 3, 4, 5])
+  let teaching = game.Game(..started, teaching: game.Teaching(asked))
+  let lines = helper.lines_of(render.frame(teaching))
+
+  assert list.length(lines) <= render.rows
+  use line <- list.each(helper.visible_lines(teaching))
+  assert string.length(line) < render.columns
+}

@@ -57,6 +57,9 @@ vocabulary:
 - **`render`** + **`palette`** + **`term`** — drawing, colours, and the
   terminal.
 - **`menu`** — what a keystroke means on the screens that choose a puzzle.
+- **`tutor`** — what to say to somebody being walked up to a technique on a
+  practice grid. Pure, and it never touches the board: every rung is worked
+  out from the `logic.Step` the position wants.
 - **`date`** — a day and its weekday, which is all the calendar the daily
   needs. Day arithmetic goes through the day count, not through subtraction.
 - **`sudoku.gleam`** — the loop: draw, read, act. Deliberately thin.
