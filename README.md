@@ -1142,3 +1142,8 @@ Tests live beside the subject they are about — `board_test`, `logic_test`,
 `hint_test` and the rest — with the puzzles and fixtures they share in
 `helper`. Gleeunit runs every function ending in `_test` anywhere under
 `test`, so `sudoku_test` holds nothing but the call that starts them.
+
+## Licence
+
+MIT. Do what you like with it, and keep the copyright notice — the whole of
+it is in [LICENSE](LICENSE), and it is nineteen lines.
