@@ -807,3 +807,36 @@ pub fn a_clock_runs_only_where_there_is_one_to_watch_test() {
   // halfway through being made.
   assert !render.clock_runs(False, playing)
 }
+
+/// The run of days, which is the only number on the menu a player can do
+/// anything about today.
+pub fn the_menu_says_how_many_days_are_running_test() {
+  let today = helper.a_day()
+  let yesterday = date.day_before(today)
+  let before = date.day_before(yesterday)
+
+  let said = fn(days) {
+    helper.lines_of(render.menu_frame(True, [], dict.new(), today, days))
+    |> list.filter(string.contains(_, "Daily"))
+    |> string.join(" ")
+  }
+
+  // Nothing kept, nothing said.
+  assert !string.contains(said(dict.new()), "running")
+
+  // Today done, and the days behind it counted in.
+  let three = dict.from_list([#(before, 1), #(yesterday, 1), #(today, 521_000)])
+  assert string.contains(said(three), "done in 08:41")
+  assert string.contains(said(three), "3 days running")
+
+  // Today not played yet, and the run still standing until the day is out.
+  let alive = dict.from_list([#(before, 1), #(yesterday, 1)])
+  assert string.contains(said(alive), "2 days running")
+  assert !string.contains(said(alive), "done in")
+
+  // One day is a day rather than days.
+  assert string.contains(said(dict.from_list([#(today, 1)])), "1 day running")
+
+  // A day missed leaves nothing running.
+  assert !string.contains(said(dict.from_list([#(before, 1)])), "running")
+}

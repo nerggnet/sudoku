@@ -351,9 +351,9 @@ pub fn settle(current: Game) -> game.Verdict {
         True -> game.BestYet
         False -> game.BestNotKept
       }
-    game.DailyDone ->
+    game.DailyDone(running) ->
       case write_dailies(with_day(current, days)) {
-        True -> game.DailyDone
+        True -> game.DailyDone(running)
         False -> game.DailyNotKept
       }
     verdict -> verdict
@@ -382,7 +382,10 @@ pub fn judge(current: Game, books: Bests, days: Dailies) -> game.Verdict {
     generator.Daily(on), Some(game.Solved), True ->
       case dict.get(days, on) {
         Ok(first) -> game.DailyAlready(first)
-        Error(_) -> game.DailyDone
+        // Counted with this day already in the book, because it is: the
+        // puzzle is solved and the writing down is a formality the player
+        // should not have to wait a day to see the effect of.
+        Error(_) -> game.DailyDone(streak(dict.insert(days, on, 0), on))
       }
 
     // Solved, but with the answer to hand one way or another.
@@ -440,6 +443,26 @@ pub type Dailies =
   Dict(Date, Int)
 
 const dailies_file = "dailies"
+
+/// How many days in a row, up to and including today, have been done.
+///
+/// A day nobody has played yet is not a day missed. A streak that reached
+/// yesterday is still standing while today is still going on, and saying
+/// otherwise would make the menu tell somebody their run had ended every
+/// morning before they had had a chance to keep it.
+pub fn streak(days: Dailies, today: Date) -> Int {
+  case dict.has_key(days, today) {
+    True -> running(days, today, 0)
+    False -> running(days, date.day_before(today), 0)
+  }
+}
+
+fn running(days: Dailies, on: Date, so_far: Int) -> Int {
+  case dict.has_key(days, on) {
+    False -> so_far
+    True -> running(days, date.day_before(on), so_far + 1)
+  }
+}
 
 pub fn dailies() -> Dailies {
   read_file(dailies_file) |> result.unwrap("") |> dailies_read

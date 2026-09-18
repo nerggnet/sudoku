@@ -103,6 +103,12 @@ pub fn day_name(day: Day) -> String {
   }
 }
 
+/// The day before this one.
+pub fn day_before(on: Date) -> Date {
+  let #(year, month, day) = before(on.year, on.month, on.day)
+  Date(year:, month:, day:)
+}
+
 @external(erlang, "sudoku_ffi", "today")
 fn today_parts() -> #(Int, Int, Int)
 
@@ -111,3 +117,6 @@ fn day_of_week(year: Int, month: Int, day: Int) -> Int
 
 @external(erlang, "sudoku_ffi", "valid_date")
 fn is_valid(year: Int, month: Int, day: Int) -> Bool
+
+@external(erlang, "sudoku_ffi", "day_before")
+fn before(year: Int, month: Int, day: Int) -> #(Int, Int, Int)

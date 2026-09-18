@@ -201,12 +201,14 @@ pub type Verdict {
   /// Not timed: a puzzle typed in has no difficulty to file a time under,
   /// and a game not won has no time to file.
   Untimed
-  /// The day's puzzle, done and written into the book of days.
+  /// The day's puzzle, done and written into the book of days, and how many
+  /// days in a row that makes.
   ///
   /// Not a best and not a personal record: there is one of these a day and
   /// everybody gets the same one, so the thing worth saying about a time is
-  /// that it is yours for that day rather than that it beat something.
-  DailyDone
+  /// that it is yours for that day rather than that it beat something. What
+  /// there is to beat is the run of days, and only your own.
+  DailyDone(running: Int)
   /// The same, but the book would not take it.
   DailyNotKept
   /// This day had already been done, in that time, and that time stands.

@@ -170,6 +170,21 @@ the clock where the player is sitting, not from UTC, because a daily belongs
 to somebody's morning rather than to a moment. It is also how you go back to
 one you missed.
 
+```
+   8  Daily     Friday 2026-09-18, Hard    done in 01:01, 3 days running
+```
+
+The run of days is counted back from today, and it is the only number on
+that line anybody can do anything about today. A day nobody has played yet
+is not a day missed: a run that reached yesterday goes on standing while
+today is still going on, since telling somebody their run had ended every
+morning before they had had a chance to keep it would be the surest way to
+make them stop. A day actually missed does end it.
+
+Nothing is stored for it. The book of days already knows every day that was
+done, so the run is worked out from it rather than kept beside it, and there
+is no second number to come apart from the first.
+
 Its times are kept in a book of their own rather than among the levels' best
 times. A best is the quickest of many puzzles at a level and goes on being
 beaten; a day is one puzzle that happened once, and its time is a fact about

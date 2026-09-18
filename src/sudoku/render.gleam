@@ -612,7 +612,12 @@ fn recorded(current: Game) -> String {
       term.styled(palette.dim(), " Your best is " <> clock(best) <> ".")
     Some(game.Aided) ->
       term.styled(palette.dim(), " Not recorded: unaided solves only.")
-    Some(game.DailyDone) -> term.styled(palette.good(), " The day is yours.")
+    Some(game.DailyDone(1)) -> term.styled(palette.good(), " The day is yours.")
+    Some(game.DailyDone(running)) ->
+      term.styled(
+        palette.good(),
+        " The day is yours, " <> int.to_string(running) <> " days running.",
+      )
     Some(game.DailyNotKept) ->
       term.styled(palette.good(), " The day is yours,")
       <> term.styled(palette.alarm(), " but it could not be saved.")
@@ -828,13 +833,31 @@ fn daily_aside(today: Date) -> String {
   <> generator.label(generator.daily_difficulty(today))
 }
 
-/// Today's time, where today has already been done. Not a best to beat —
-/// there is one puzzle a day and this was it — so it is said as a fact
-/// rather than as a target.
+/// What the book of days has to say on the menu: today's time where today
+/// has been done, and the run of days either way.
+///
+/// The time is said as a fact rather than as a target — there is one puzzle
+/// a day and that was it, so there is nothing to beat. The run is the thing
+/// there is: it is the only number here a player can do anything about
+/// today, and the only reason a daily is a daily rather than a puzzle that
+/// happens to be dated.
 fn done_on(today: Date, days: store.Dailies) -> String {
-  case dict.get(days, today) {
+  let done = case dict.get(days, today) {
     Error(_) -> ""
     Ok(taken) -> "    done in " <> clock(taken)
+  }
+
+  case done, store.streak(days, today) {
+    _, 0 -> done
+    "", running -> "    " <> in_a_row(running)
+    _, running -> done <> ", " <> in_a_row(running)
+  }
+}
+
+fn in_a_row(running: Int) -> String {
+  case running {
+    1 -> "1 day running"
+    _ -> int.to_string(running) <> " days running"
   }
 }
 

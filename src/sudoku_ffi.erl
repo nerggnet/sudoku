@@ -5,7 +5,7 @@
 -export([enable_raw/0, read_byte/0, read_byte_after/1, now_ms/0, shuffle/1]).
 -export([remembered/2]).
 -export([seed/1, fresh_seed/0]).
--export([today/0, day_of_week/3, valid_date/3]).
+-export([today/0, day_of_week/3, valid_date/3, day_before/3]).
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
 -export([arguments/0, columns/0, rows/0]).
@@ -148,6 +148,15 @@ today() ->
 %% and how a daily puzzle knows how hard to be.
 day_of_week(Y, M, D) ->
     calendar:day_of_the_week(Y, M, D).
+
+%% The day before, which is the only direction a run of days is counted in.
+%%
+%% Through the day count rather than by taking one off and tidying up after
+%% it: months are not all the same length, February is not the same length as
+%% itself, and a streak that lost a day every March would be a streak nobody
+%% believed.
+day_before(Y, M, D) ->
+    calendar:gregorian_days_to_date(calendar:date_to_gregorian_days(Y, M, D) - 1).
 
 %% Whether those three numbers are a day that happened. February 30th is
 %% typed often enough to be worth refusing by name.

@@ -168,7 +168,7 @@ pub fn a_day_done_for_the_first_time_is_written_down_test() {
   let won = helper.solved(daily_game("2026-09-17"))
 
   assert game.unaided(won)
-  assert store.judge(won, dict.new(), dict.new()) == game.DailyDone
+  assert store.judge(won, dict.new(), dict.new()) == game.DailyDone(1)
 }
 
 /// The first run at a day is the one kept. A day played again is a day whose
@@ -181,9 +181,11 @@ pub fn a_day_already_done_keeps_its_first_time_test() {
 
   assert store.judge(won, dict.new(), book) == game.DailyAlready(245_000)
 
-  // Another day's time in the book is another day's business.
+  // Another day's time in the book is another day's business — and the day
+  // before is the one day that is also this day's business, since it makes
+  // the two of them a run.
   let elsewhere = dict.from_list([#(on("2026-09-16"), 245_000)])
-  assert store.judge(won, dict.new(), elsewhere) == game.DailyDone
+  assert store.judge(won, dict.new(), elsewhere) == game.DailyDone(2)
 }
 
 pub fn a_day_solved_with_help_is_not_written_down_test() {
@@ -207,7 +209,7 @@ pub fn a_day_does_not_touch_the_difficulty_bests_test() {
   let bests = dict.from_list([#(generator.Medium, 1)])
 
   // An unbeatable Medium best standing does not make the day Behind.
-  assert store.judge(won, bests, dict.new()) == game.DailyDone
+  assert store.judge(won, bests, dict.new()) == game.DailyDone(1)
 }
 
 // ---------------------------------------------------------------------------
@@ -307,4 +309,67 @@ pub fn a_spoiled_line_costs_only_its_own_day_test() {
 
 pub fn an_empty_book_is_a_book_with_no_days_in_it_test() {
   assert store.dailies_read("") == dict.new()
+}
+
+// ---------------------------------------------------------------------------
+// Days in a row
+// ---------------------------------------------------------------------------
+
+fn book(days: List(String)) -> store.Dailies {
+  dict.from_list(list.map(days, fn(day) { #(on(day), 60_000) }))
+}
+
+pub fn a_run_of_days_is_counted_back_from_today_test() {
+  let today = on("2026-09-17")
+
+  assert store.streak(book([]), today) == 0
+  assert store.streak(book(["2026-09-17"]), today) == 1
+  assert store.streak(book(["2026-09-15", "2026-09-16", "2026-09-17"]), today)
+    == 3
+}
+
+/// A day nobody has played yet is not a day missed. A run that reached
+/// yesterday is still standing while today is still going on — telling
+/// somebody their run had ended every morning before they had had a chance
+/// to keep it would be the surest way to make them stop.
+pub fn today_being_unplayed_does_not_end_a_run_test() {
+  let today = on("2026-09-17")
+
+  assert store.streak(book(["2026-09-15", "2026-09-16"]), today) == 2
+
+  // A day missed does end it, though.
+  assert store.streak(book(["2026-09-14", "2026-09-15"]), today) == 0
+}
+
+/// Only the days up to now count. A run is what you have kept, not what the
+/// book holds altogether.
+pub fn a_gap_ends_the_run_at_the_gap_test() {
+  let today = on("2026-09-17")
+  let with_gap =
+    book(["2026-09-10", "2026-09-11", "2026-09-12", "2026-09-16", "2026-09-17"])
+
+  assert store.streak(with_gap, today) == 2
+}
+
+/// Months and years are not all the same length, and a run that lost a day
+/// every March would be a run nobody believed.
+pub fn a_run_crosses_months_and_years_test() {
+  assert store.streak(
+      book(["2026-02-27", "2026-02-28", "2026-03-01"]),
+      on("2026-03-01"),
+    )
+    == 3
+
+  // A leap year has the day that a common year has not.
+  assert store.streak(
+      book(["2024-02-28", "2024-02-29", "2024-03-01"]),
+      on("2024-03-01"),
+    )
+    == 3
+
+  assert store.streak(
+      book(["2025-12-30", "2025-12-31", "2026-01-01"]),
+      on("2026-01-01"),
+    )
+    == 3
 }
