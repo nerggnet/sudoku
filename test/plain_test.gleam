@@ -166,3 +166,30 @@ pub fn the_characters_are_not_settable_test() {
   use name <- list.each(["empty_cell", "crowded_cell", "pointer", "could_go"])
   assert !list.contains(palette.names(), name)
 }
+
+/// Anything said after the screen has been given back is ended the way a
+/// frame's lines are.
+///
+/// Raw mode does no newline translation and giving the screen back does not
+/// give that back — `shell:start_interactive` happens once. So a newline
+/// alone moves the cursor down without bringing it home, and the parting
+/// words walked off the right of the screen in steps, each line starting
+/// where the last one stopped.
+pub fn what_is_said_on_the_way_out_returns_the_carriage_test() {
+  use said <- list.each([
+    "Thanks for playing.",
+    "\nThis puzzle:",
+    "\nDealt at Easy from seed 42, which deals it again.",
+    "one\ntwo\nthree",
+  ])
+  let told = term.told(said)
+
+  // Every line of it ends CRLF, and none is left with a bare newline.
+  assert string.ends_with(told, "\r\n")
+  assert !string.contains(string.replace(told, "\r\n", ""), "\n")
+
+  // And the words themselves are untouched: split on the ending it was
+  // given and the lines that went in come back out.
+  assert string.split(told, "\r\n")
+    == list.append(string.split(said, "\n"), [""])
+}

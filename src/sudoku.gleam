@@ -50,7 +50,7 @@ pub fn main() -> Nil {
         }
       }
 
-      io.println("Thanks for playing.")
+      term.tell("Thanks for playing.")
       parting(played)
     }
   }
@@ -102,12 +102,12 @@ fn parting(played: Option(game.Game)) -> Nil {
 
   case store.keep(current) {
     store.NothingToKeep -> Nil
-    store.PutDown(where) -> io.println("\nSaved in " <> where)
-    store.Lost(where) -> io.println("\nCould not save in " <> where <> ".")
+    store.PutDown(where) -> term.tell("\nSaved in " <> where)
+    store.Lost(where) -> term.tell("\nCould not save in " <> where <> ".")
   }
 
-  io.println("\nThis puzzle:")
-  io.println(board.to_string(current.puzzle.board.values))
+  term.tell("\nThis puzzle:")
+  term.tell(board.to_string(current.puzzle.board.values))
 
   // And the shorter way to say the same thing, where there is one. Eighty-one
   // characters are for handing a puzzle to somebody who has never run this;
@@ -116,7 +116,7 @@ fn parting(played: Option(game.Game)) -> Nil {
   // to say why.
   case current.puzzle.seed, current.puzzle.origin {
     Some(seed), generator.Dealt(difficulty) ->
-      io.println(
+      term.tell(
         "\nDealt at "
         <> generator.label(difficulty)
         <> " from seed "
@@ -127,7 +127,7 @@ fn parting(played: Option(game.Game)) -> Nil {
     // once: it is what somebody else types to be handed the same grid, and
     // the only part of it worth passing on.
     _, generator.Daily(on) ->
-      io.println(
+      term.tell(
         "\nThe daily puzzle for "
         <> date.to_string(on)
         <> ", which deals it again.",

@@ -168,6 +168,24 @@ pub fn write(text: String) -> Nil {
   io.print(text)
 }
 
+/// Say something after the screen has been given back.
+///
+/// With CRLF, for the same reason a frame is drawn with it: raw mode does no
+/// newline translation, and giving the screen back does not give that back —
+/// `shell:start_interactive` is a thing that happens once. So a line ended
+/// with a newline alone moves the cursor down without bringing it home, and
+/// every line after the first starts where the last one stopped. The parting
+/// words walked off the right-hand side of the screen in steps.
+pub fn tell(said: String) -> Nil {
+  write(told(said))
+}
+
+/// The same, as the text it would write. Kept apart from the writing so that
+/// what goes out can be looked at without a terminal to write it to.
+pub fn told(said: String) -> String {
+  string.replace(said, "\n", "\r\n") <> "\r\n"
+}
+
 /// Paint a whole screen from the top down, one line per entry.
 ///
 /// Raw mode does no newline translation, so lines are joined with CRLF. Each
