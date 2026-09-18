@@ -6,12 +6,15 @@ description = "A Sudoku game for the terminal"
 # target is required, and OTP 26+ for keys that do not need Enter after them.
 #
 # OTP 27 is the floor all the same, and it is not ours: gleam_stdlib will not
-# compile under 26, its Erlang using syntax that arrived in 27. Nor is the
-# Gleam floor — stdlib asks for 1.14 — which is why the one written here for
-# years, 1.11, was a version nothing had ever built with. Both are asked in
-# the workflow now rather than asserted here.
+# compile below it, its Erlang using syntax that arrived in 27.
+#
+# Nor is the Gleam floor ours. stdlib asks for 1.14, but 1.14 does not build
+# this: gleeunit never compiles under it and the tests cannot find it. 1.15
+# is the lowest that does, and it was found by asking rather than by reading
+# what the dependencies say. Both floors are legs of the workflow now, so
+# neither can quietly stop being true.
 target = "erlang"
-gleam = ">= 1.14.0"
+gleam = ">= 1.15.0"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
