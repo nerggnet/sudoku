@@ -27,14 +27,16 @@ jobs:
           # anything but a person.
           - { os: macos-latest, otp: "29", gleam: "1.18.1" }
 
-          # The oldest runtime the game claims: `sudoku_ffi` says raw mode
-          # wants OTP 26, and nothing has ever checked that it still does.
-          - { os: ubuntu-latest, otp: "26", gleam: "1.18.1" }
-          - { os: macos-latest, otp: "26", gleam: "1.18.1" }
+          # The oldest runtime the game runs on at all. Raw mode has wanted
+          # OTP 26 since it was written, but gleam_stdlib will not compile
+          # below 27, so 27 is the floor whatever this game asks for.
+          - { os: ubuntu-latest, otp: "27", gleam: "1.18.1" }
+          - { os: macos-latest, otp: "27", gleam: "1.18.1" }
 
-          # The oldest Gleam `gleam.toml` claims. A claim in a manifest is
-          # read as a fact by whoever picks this up.
-          - { os: ubuntu-latest, otp: "29", gleam: "1.11.0" }
+          # The oldest Gleam that can build it, which stdlib sets rather than
+          # anything here. A claim in a manifest is read as a fact by whoever
+          # picks this up, so it is one this asks rather than one it makes.
+          - { os: ubuntu-latest, otp: "29", gleam: "1.14.0" }
     steps:
       - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1

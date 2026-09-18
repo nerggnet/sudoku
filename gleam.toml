@@ -4,8 +4,14 @@ description = "A Sudoku game for the terminal"
 
 # Raw keyboard input goes through shell:start_interactive/1, so the Erlang
 # target is required, and OTP 26+ for keys that do not need Enter after them.
+#
+# OTP 27 is the floor all the same, and it is not ours: gleam_stdlib will not
+# compile under 26, its Erlang using syntax that arrived in 27. Nor is the
+# Gleam floor — stdlib asks for 1.14 — which is why the one written here for
+# years, 1.11, was a version nothing had ever built with. Both are asked in
+# the workflow now rather than asserted here.
 target = "erlang"
-gleam = ">= 1.11.0"
+gleam = ">= 1.14.0"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
