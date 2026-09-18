@@ -199,23 +199,33 @@ pub fn the_status_line_counts_clashes_test() {
 }
 
 pub fn the_help_screen_lists_the_keys_test() {
-  // The board's keys on the first page, and what can be asked for on the
-  // second: too many for one page, once there were enough of them.
-  let first = helper.visible_lines(helper.step(helper.fixture(), key.Char("?")))
-  assert list.any(first, string.contains(_, "write a digit"))
-  assert list.any(first, string.contains(_, "pencil the candidates"))
+  // Three pages, because there are three kinds of key and too many of any
+  // two of them for one page: getting about the board, pencilling, and
+  // asking the game for something.
+  let pages = {
+    use turns <- list.map([0, 1, 2])
+    let opened = helper.step(helper.fixture(), key.Char("?"))
+    helper.visible_lines(
+      list.fold(list.repeat(Nil, turns), opened, fn(current, _) {
+        helper.step(current, key.Right)
+      }),
+    )
+  }
+  let assert [board, marking, asking] = pages
 
-  let second =
-    helper.visible_lines(helper.step(
-      helper.step(helper.fixture(), key.Char("?")),
-      key.Right,
-    ))
-  assert list.any(second, string.contains(_, "reveal the whole solution"))
-  assert list.any(second, string.contains(_, "draw the screen again"))
+  assert list.any(board, string.contains(_, "write a digit"))
+  assert list.any(board, string.contains(_, "draw the screen again"))
+
+  assert list.any(marking, string.contains(_, "pencil the candidates"))
+  assert list.any(marking, string.contains(_, "switch between writing"))
+
+  assert list.any(asking, string.contains(_, "reveal the whole solution"))
+  // The tutor is a thing asked for, so it is listed with the rest of them.
+  assert list.any(asking, string.contains(_, "nudge towards its technique"))
 
   // Help takes the screen over rather than sharing it with the board.
-  assert !list.any(first, helper.is_grid_row)
-  assert !list.any(second, helper.is_grid_row)
+  use page <- list.each(pages)
+  assert !list.any(page, helper.is_grid_row)
 }
 
 /// The status line is two rows whatever it has to say, so the board above it

@@ -30,13 +30,30 @@ const board_keys = [
   ),
   #("Tab, Shift-Tab", "to the next cell left empty, or the one before"),
   #("1 - 9", "write a digit, or pencil one in while marking"),
-  #("M then 1 - 9", "pencil one digit in, or rub it out"),
   #("0, space, backspace", "clear the cell, or its marks while marking"),
-  #("f", "pencil the candidates in; warns of a dead cell"),
-  #("S then 1 - 9", "mark out where that digit can go; S again stops"),
-  #("m", "switch between writing and marking"),
   #("u", "undo"),
   #("r", "do it again"),
+  #("?", "close this help"),
+  #("q", "quit, keeping a game in progress"),
+  #("Ctrl-L", "draw the screen again"),
+]
+
+const board_notes = [
+  "Clues are fixed and cannot be written over. A digit that clashes with one",
+  "already in its row, column or box turns red and is struck through as it",
+  "lands, so a clash says so by its shape as well as by its colour.",
+  "",
+  "The cells sharing a row, column or box with the cursor are shaded, and so",
+  "are the cells holding the digit it stands on. Tab goes to the next blank.",
+]
+
+/// Pencilling, which is its own page because it is its own half of the game:
+/// every technique past a naked single is an argument about candidates.
+const marking_keys = [
+  #("m", "switch between writing and marking"),
+  #("M then 1 - 9", "pencil one digit in, or rub it out"),
+  #("f", "pencil the candidates in; warns of a dead cell"),
+  #("S then 1 - 9", "mark out where that digit can go; S again stops"),
 ]
 
 /// How the game can be started, which the help says and the command line
@@ -112,13 +129,11 @@ pub fn usage() -> String {
 const asking_keys = [
   #("c c", "check for good; a fourth wrong digit forfeits"),
   #("H", "take the next step, and say why"),
+  #("t", "on a practice grid, a nudge towards its technique"),
   #("R", "reveal the whole solution, on a second R"),
   #("p", "pause: put the board away and stop the clock"),
   #("X", "start this puzzle again, on a second X"),
   #("n", "start a new puzzle"),
-  #("Ctrl-L", "draw the screen again"),
-  #("?", "close this help"),
-  #("q", "quit, keeping a game in progress"),
 ]
 
 const ask_notes = [
@@ -126,9 +141,11 @@ const ask_notes = [
   "press the key again to go ahead. Either one makes the game an aided one,",
   "which is not timed, and checking once on cannot be turned off again.",
   "",
-  "A hint takes the cell you are on whenever that cell can be worked out, and",
-  "names the technique that settled it. The pages after this one are those",
-  "techniques, one to a page, with a small board apiece showing them at work.",
+  "A hint takes the cell you are on whenever it can be worked out, and names",
+  "the technique that settled it. There is a page on each of those further on.",
+  "",
+  "On a practice grid t nudges you towards its technique instead of playing",
+  "it, and never touches the board, so the moment the grid kept survives.",
 ]
 
 const mark_notes = [
@@ -136,8 +153,10 @@ const mark_notes = [
   "one, an asterisk where it has several, and all of them in the status line.",
   "Writing a digit rubs out the marks it rules out, unless checking is on and",
   "the digit is wrong. M and a digit pencils one in without leaving writing,",
-  "and shift and a digit does the same where the game can read your number",
-  "row. S and a digit shades where a digit could still go, read off the grid.",
+  "and shift and a digit does the same in one keystroke, where the game can",
+  "read your number row. S and a digit shades every cell that digit could",
+  "still go in, read off the grid rather than off your marks — what you have",
+  "pencilled is your reasoning, and reasoning can be wrong.",
 ]
 
 /// A key reference, with a paragraph under it. Used for both the game's help
@@ -181,9 +200,10 @@ fn key_table(
 /// a page is the one thing it is about.
 pub fn page(page: game.Help) -> List(String) {
   let body = case page {
-    game.Keys -> key_table("Keys: the board", board_keys, mark_notes)
-    game.MoreKeys ->
-      key_table("Keys: asking and finishing", asking_keys, ask_notes)
+    game.Keys -> key_table("Keys: the board", board_keys, board_notes)
+    game.Marking -> key_table("Keys: pencil marks", marking_keys, mark_notes)
+    game.Asking ->
+      key_table("Keys: asking, and finishing", asking_keys, ask_notes)
     game.Starting -> key_table("Starting up", invocations, starting_notes)
     game.Repeating ->
       key_table(

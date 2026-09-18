@@ -100,8 +100,8 @@ before writing any.
 
 **Help pages must fit 24 rows** and `render_test` enforces it. Several pages
 sit at exactly 24. Adding a key row or a line of notes means taking one away
-somewhere, or splitting a page — `Keys`/`MoreKeys` and `Starting`/`Repeating`
-are both pairs for this reason.
+somewhere, or splitting a page. `Keys`/`Marking`/`Asking` are three for
+this reason and `Starting`/`Repeating` two.
 
 **The practice screen numbers techniques 1–9** and there are exactly nine. A
 tenth would be unreachable; a test says so.

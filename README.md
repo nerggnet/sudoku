@@ -651,7 +651,7 @@ reading about a technique and losing your place on the board.
 
  C1 and C3 take 7 and 9, so C4 is down to a 1 or a 3.
 
- ← →  page 5 of 13     any other key returns
+ ← →  page 9 of 14     any other key returns
 ```
 
 The strips show what the cells of one unit have left in them. Where a
@@ -673,7 +673,7 @@ where the reasoning has just shut it out:
 ```
 
 The clock waits while the help is up. Reading about a technique is not
-playing, and thirteen pages is long enough that it would otherwise show. `p`
+playing, and fourteen pages is long enough that it would otherwise show. `p`
 does the same thing on purpose — see below.
 
 The examples are drawn by hand rather than lifted from a real grid, since a

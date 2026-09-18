@@ -177,8 +177,13 @@ pub type Asking {
 /// The help, a page at a time: the keys, and then a page on each way of
 /// working a digit out.
 pub type Help {
+  /// Getting about the board and putting digits on it, and the three keys
+  /// that mean the same thing wherever they are pressed.
   Keys
-  MoreKeys
+  /// Pencilling, and what the grid beside the board is showing.
+  Marking
+  /// Asking the game for something, and the ways a game ends.
+  Asking
   Starting
   /// The ways of being handed a puzzle somebody else had: a seed, and the
   /// day. A page of its own because the one before it was full, which is
@@ -189,7 +194,14 @@ pub type Help {
 
 /// Every page, in the order they are paged through.
 pub fn pages() -> List(Help) {
-  [Keys, MoreKeys, Starting, Repeating, ..list.map(logic.techniques, About)]
+  [
+    Keys,
+    Marking,
+    Asking,
+    Starting,
+    Repeating,
+    ..list.map(logic.techniques, About)
+  ]
 }
 
 /// What the record books make of a game that is over.
