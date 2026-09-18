@@ -868,3 +868,25 @@ pub fn a_frame_fits_while_the_tutor_is_talking_test() {
   use line <- list.each(helper.visible_lines(teaching))
   assert string.length(line) < render.columns
 }
+
+/// The drill screen offers the same nine, and says how many positions each
+/// has kept for it.
+pub fn the_drill_screen_offers_every_technique_test() {
+  let lines = helper.lines_of(render.drill_frame())
+
+  assert list.length(lines) <= render.rows
+  use line <- list.each(lines)
+  assert string.length(line) < render.columns
+}
+
+pub fn the_drill_screen_counts_what_is_kept_test() {
+  let lines = helper.lines_of(render.drill_frame())
+
+  use technique, at <- list.index_map(practice.techniques())
+  let kept = list.length(practice.drills_for(technique))
+
+  assert list.any(lines, fn(line) {
+    string.contains(line, int.to_string(at + 1))
+    && string.contains(line, int.to_string(kept) <> " position")
+  })
+}

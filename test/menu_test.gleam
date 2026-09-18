@@ -11,6 +11,7 @@ import sudoku/date
 import sudoku/game
 import sudoku/generator
 import sudoku/key
+import sudoku/logic
 import sudoku/menu
 import sudoku/practice
 
@@ -164,4 +165,42 @@ pub fn a_digit_below_the_first_settles_nothing_test() {
   use screen <- list.each([menu.Choosing, menu.PickingUp, menu.Practising])
   assert menu.answered(screen, key.Digit(0), [helper.fixture()], helper.a_day())
     == menu.Stands
+}
+
+// ---------------------------------------------------------------------------
+// Drilling
+// ---------------------------------------------------------------------------
+
+/// The kept grid teaches a technique once. `d` is where to go after that,
+/// and it is a screen of its own because it asks a different question: not
+/// which technique, but which technique again.
+pub fn d_opens_the_drills_test() {
+  assert answered(menu.Practising, key.Char("d")) == menu.Opens(menu.Drilling)
+  assert answered(menu.Practising, key.Char("D")) == menu.Opens(menu.Drilling)
+
+  // And only from there. On the board's own menu it means nothing.
+  assert answered(menu.Choosing, key.Char("d")) == menu.Stands
+}
+
+pub fn the_digits_drill_every_technique_test() {
+  use technique, at <- list.index_map(practice.techniques())
+  assert answered(menu.Drilling, key.Digit(at + 1))
+    == menu.Picked(menu.Drill(technique))
+}
+
+/// Which of the positions kept for a technique is not settled here. Picking
+/// one needs chance and building it needs a deal, and neither belongs in a
+/// function that is only supposed to read a keystroke.
+pub fn drilling_names_the_technique_and_not_the_position_test() {
+  let assert menu.Picked(menu.Drill(technique)) =
+    answered(menu.Drilling, key.Digit(9))
+
+  assert technique == logic.Swordfish
+}
+
+pub fn drilling_behaves_like_the_other_screens_test() {
+  assert answered(menu.Drilling, key.Digit(0)) == menu.Stands
+  assert answered(menu.Drilling, key.Unknown) == menu.Stands
+  assert answered(menu.Drilling, key.Char("z")) == menu.Opens(menu.Choosing)
+  assert answered(menu.Drilling, key.Char("q")) == menu.Picked(menu.Stop)
 }

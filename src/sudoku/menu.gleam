@@ -18,6 +18,7 @@ import sudoku/date.{type Date}
 import sudoku/game.{type Game}
 import sudoku/generator.{type Difficulty, type Puzzle}
 import sudoku/key.{type Key}
+import sudoku/logic
 import sudoku/practice
 
 /// What the opening screens can settle on, and what the command line can ask
@@ -30,6 +31,10 @@ pub type Choice {
   Compose
   Resume(Game)
   Play(Puzzle)
+  /// A position where this technique is the step that comes next. Which of
+  /// the ones kept for it is not settled here: picking one needs chance, and
+  /// building it needs a deal.
+  Drill(technique: logic.Technique)
   Stop
 }
 
@@ -40,8 +45,10 @@ pub type Screen {
   /// Which of several games put down to have back. Only ever reached with
   /// more than one waiting: one is no question.
   PickingUp
-  /// Which technique to practise.
+  /// Which technique to practise, on the one grid kept for it.
   Practising
+  /// Which technique to drill, on a fresh position every time.
+  Drilling
 }
 
 /// What a keystroke settles, on whichever screen it was pressed.
@@ -76,6 +83,7 @@ pub fn answered(
     Choosing -> choosing(pressed, saved, today)
     PickingUp -> picking_up(pressed, saved)
     Practising -> practising(pressed)
+    Drilling -> drilling(pressed)
   }
 }
 
@@ -135,6 +143,11 @@ fn picking_up(pressed: Key, saved: List(Game)) -> Answer {
 fn practising(pressed: Key) -> Answer {
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Picked(Stop)
+    // The grid kept for a technique teaches it once. A drill is where to go
+    // after that, and it is on a screen of its own because it is a different
+    // question: not which technique, but which technique again.
+    key.Char("d") | key.Char("D") -> Opens(Drilling)
+
     key.Digit(picked) ->
       case nth(practice.techniques(), picked) {
         Ok(technique) ->
@@ -144,6 +157,25 @@ fn practising(pressed: Key) -> Answer {
             // which is what the tests are for. Nothing to say about it that
             // the player could act on, so the screen simply stands.
             Error(_) -> Stands
+          }
+        Error(_) -> Stands
+      }
+    _ -> thought_better(pressed)
+  }
+}
+
+/// Pick a technique to drill, on a position taken out of a real deal.
+fn drilling(pressed: Key) -> Answer {
+  case pressed {
+    key.Quit | key.Char("q") | key.Char("Q") -> Picked(Stop)
+    key.Digit(picked) ->
+      case nth(practice.techniques(), picked) {
+        // Only a technique nothing is kept for, which is none of them and
+        // is what the tests are for.
+        Ok(technique) ->
+          case practice.drills_for(technique) {
+            [] -> Stands
+            [_, ..] -> Picked(Drill(technique))
           }
         Error(_) -> Stands
       }

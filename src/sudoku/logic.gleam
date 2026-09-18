@@ -167,6 +167,27 @@ pub fn unfold(grid: Grid) -> #(List(Step), Grid) {
   work(grid, pencil(grid), [])
 }
 
+/// The position a grid is in after the first `taken` steps of reasoning:
+/// what is on it, and what its cells have left in them.
+///
+/// The candidates are the point. A grid alone cannot say what has been ruled
+/// out of it — an elimination leaves no mark on the digits — so a position
+/// part way through an argument is only a position if it carries both, and
+/// is only reachable by walking there from the start.
+pub fn unfolded(grid: Grid, taken: Int) -> #(Grid, Pencil) {
+  walked(grid, pencil(grid), taken)
+}
+
+fn walked(grid: Grid, marks: Pencil, left: Int) -> #(Grid, Pencil) {
+  case left, step(grid, marks) {
+    0, _ | _, Error(_) -> #(grid, marks)
+    _, Ok(found) -> {
+      let #(grid, marks) = apply(grid, marks, found)
+      walked(grid, marks, left - 1)
+    }
+  }
+}
+
 fn work(grid: Grid, marks: Pencil, taken: List(Step)) -> #(List(Step), Grid) {
   case step(grid, marks) {
     Error(_) -> #(list.reverse(taken), grid)

@@ -2,6 +2,7 @@
 
 import gleam/int
 import gleam/io
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import sudoku/board
 import sudoku/date
@@ -12,6 +13,7 @@ import sudoku/help
 import sudoku/invocation
 import sudoku/key
 import sudoku/menu
+import sudoku/practice
 import sudoku/random
 import sudoku/render
 import sudoku/rules
@@ -208,6 +210,7 @@ fn showing(
       render.menu_frame(raw, saved, store.bests(), today, store.dailies())
     menu.PickingUp -> render.saved_frame(saved)
     menu.Practising -> render.practice_frame()
+    menu.Drilling -> render.drill_frame()
   }
   term.write(frame)
 
@@ -237,6 +240,26 @@ fn follow(raw: Bool, chosen: menu.Choice) -> Option(game.Game) {
         })
 
       start(raw, game.new(dealt))
+    }
+
+    // Which of the positions kept for it is chance's to settle, and getting
+    // back to one means dealing the puzzle it came out of — which is why the
+    // carving screen goes up for it, the same as for a deal.
+    menu.Drill(technique) -> {
+      let kept = practice.drills_for(technique)
+      let at = random.fresh_seed() % int.max(list.length(kept), 1)
+
+      case list.drop(kept, at) {
+        [drill, ..] -> {
+          let position =
+            practice.drilled(technique, drill, fn(carving) {
+              term.write(render.generating(drill.difficulty, carving))
+            })
+          start(raw, game.new(position))
+        }
+        // Nothing kept for it, which the menu does not offer.
+        [] -> run(raw)
+      }
     }
 
     menu.Day(on) -> {

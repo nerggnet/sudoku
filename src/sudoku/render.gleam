@@ -952,12 +952,77 @@ pub fn practice_frame() -> String {
         ),
         "",
         "   "
+          <> term.styled(palette.key(), "d")
+          <> term.styled(
+          palette.dim(),
+          "  for a fresh position instead, once the grid has taught you once.",
+        ),
+        "",
+        "   "
           <> term.styled(palette.key(), "q")
           <> "  quit"
           <> term.styled(palette.dim(), "        any other key goes back"),
       ],
     ]),
   )
+}
+
+/// The same list, asked a different question: not which technique to be
+/// taught, but which to meet again.
+pub fn drill_frame() -> String {
+  let options = {
+    use technique, index <- list.index_map(practice.techniques())
+    "   "
+    <> term.styled(palette.key(), int.to_string(index + 1))
+    <> "  "
+    <> string.pad_end(capitalised(logic.label(technique)), 20, " ")
+    <> term.styled(
+      palette.dim(),
+      said_of(list.length(practice.drills_for(technique))),
+    )
+  }
+
+  term.screen(
+    list.flatten([
+      [
+        term.styled(palette.title(), "S U D O K U"),
+        "",
+        "Drill which technique?",
+        "",
+      ],
+      options,
+      [
+        "",
+        "   "
+          <> term.styled(
+          palette.dim(),
+          "A position out of a real deal, with the candidates already",
+        ),
+        "   "
+          <> term.styled(
+          palette.dim(),
+          "pencilled in and the technique the very next step. A different",
+        ),
+        "   "
+          <> term.styled(
+          palette.dim(),
+          "one each time, and nothing is timed. t nudges here too.",
+        ),
+        "",
+        "   "
+          <> term.styled(palette.key(), "q")
+          <> "  quit"
+          <> term.styled(palette.dim(), "        any other key goes back"),
+      ],
+    ]),
+  )
+}
+
+fn said_of(kept: Int) -> String {
+  case kept {
+    1 -> "1 position"
+    _ -> int.to_string(kept) <> " positions"
+  }
 }
 
 fn capitalised(name: String) -> String {

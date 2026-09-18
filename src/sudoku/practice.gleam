@@ -18,6 +18,7 @@
 //// timed and no record is kept of them.
 
 import gleam/list
+import gleam/option
 import gleam/result
 import sudoku/board
 import sudoku/generator.{type Puzzle}
@@ -65,6 +66,140 @@ pub const grids = [
     "486217593913..54275279436812947.1.56378596214651.2.....451.2...162.79..5.39.5.1.2",
   ),
 ]
+
+/// A position to drill a technique on, named rather than written out.
+///
+/// Three numbers instead of eighty-one characters and a page of marks. A
+/// deal is the same deal every time it is asked for, so naming the seed and
+/// how far its reasoning had got is naming the position exactly — and a
+/// position is what a drill is, since the candidates are half of it and a
+/// grid alone cannot carry those.
+pub type Drill {
+  Drill(difficulty: generator.Difficulty, seed: Int, taken: Int)
+}
+
+/// Positions where each technique is the step that comes next.
+///
+/// The grid above gives one instance of its technique and never another —
+/// it is the same grid every time, so a second run at it is remembering
+/// rather than seeing. These are for after that: a different position every
+/// time, all of them out of real deals, each of them at the moment.
+///
+/// Found by dealing and watching where the reasoning reached for each. The
+/// harder ones had to be hunted for, a swordfish turning up about once in
+/// twenty-five Master deals.
+pub const drills = [
+  #(
+    logic.NakedSingle,
+    [
+      Drill(generator.Hard, 7919, 15),
+      Drill(generator.Hard, 15_838, 18),
+      Drill(generator.Hard, 23_757, 13),
+      Drill(generator.Hard, 31_676, 11),
+    ],
+  ),
+  #(
+    logic.HiddenSingle,
+    [
+      Drill(generator.Expert, 7919, 1),
+      Drill(generator.Expert, 15_838, 1),
+      Drill(generator.Expert, 39_595, 8),
+      Drill(generator.Master, 237_570, 25),
+    ],
+  ),
+  #(
+    logic.LockedCandidates,
+    [
+      Drill(generator.Hard, 7919, 20),
+      Drill(generator.Hard, 15_838, 17),
+      Drill(generator.Hard, 23_757, 12),
+      Drill(generator.Hard, 31_676, 7),
+    ],
+  ),
+  #(
+    logic.NakedPair,
+    [
+      Drill(generator.Expert, 15_838, 6),
+      Drill(generator.Expert, 39_595, 21),
+      Drill(generator.Expert, 47_514, 11),
+      Drill(generator.Expert, 71_271, 14),
+    ],
+  ),
+  #(
+    logic.HiddenPair,
+    [
+      Drill(generator.Expert, 7919, 18),
+      Drill(generator.Expert, 23_757, 11),
+      Drill(generator.Expert, 31_676, 9),
+      Drill(generator.Expert, 55_433, 11),
+    ],
+  ),
+  #(
+    logic.NakedTriple,
+    [
+      Drill(generator.Expert, 134_623, 19),
+      Drill(generator.Expert, 467_221, 16),
+      Drill(generator.Master, 277_165, 23),
+      Drill(generator.Master, 498_897, 24),
+    ],
+  ),
+  #(
+    logic.XWing,
+    [
+      Drill(generator.Expert, 150_461, 16),
+      Drill(generator.Expert, 182_137, 27),
+      Drill(generator.Expert, 300_922, 26),
+      Drill(generator.Expert, 324_679, 18),
+    ],
+  ),
+  #(
+    logic.XYWing,
+    [
+      Drill(generator.Master, 7919, 45),
+      Drill(generator.Master, 15_838, 32),
+      Drill(generator.Master, 23_757, 37),
+      Drill(generator.Master, 39_595, 28),
+    ],
+  ),
+  #(
+    logic.Swordfish,
+    [
+      Drill(generator.Master, 229_651, 15),
+      Drill(generator.Master, 554_330, 27),
+      Drill(generator.Master, 768_143, 23),
+    ],
+  ),
+]
+
+pub fn drills_for(technique: Technique) -> List(Drill) {
+  list.key_find(drills, technique) |> result.unwrap([])
+}
+
+/// The puzzle a drill names: the board as the reasoning had left it, the
+/// marks with it, and the answer it is all heading for.
+///
+/// The cells already filled become clues. They are all right — the
+/// reasoning put them there — and a drill is not the place to be taking
+/// back somebody else's working.
+///
+/// Told as it goes, because getting back to a position means dealing the
+/// puzzle it came out of, and a Master deal takes a second or two.
+pub fn drilled(
+  technique: Technique,
+  drill: Drill,
+  telling: fn(generator.Carving) -> Nil,
+) -> Puzzle {
+  let dealt = generator.generate_telling(drill.seed, drill.difficulty, telling)
+  let #(grid, marks) = logic.unfolded(dealt.board.values, drill.taken)
+  let stood = board.from_grid(grid)
+
+  generator.Puzzle(
+    board: board.Board(..stood, marks: marks),
+    solution: dealt.solution,
+    origin: generator.Practising(technique),
+    seed: option.None,
+  )
+}
 
 /// The number the menu offers practice under: the one after the puzzles
 /// there are to deal, whatever those turn out to be.

@@ -402,6 +402,37 @@ and the pivot for an XY-wing, whose three cells need share nothing at all.
 Practice is not timed and no record is kept of it — it is the same grid
 every time, so a time on it would be a record of having seen it before.
 
+### Another one
+
+The same grid every time is the trouble, once it has taught you once. Each
+of these grids wants its technique exactly once, so a second run at it is
+remembering rather than seeing, and one instance is not enough to learn a
+shape by. `d` on the practice screen asks the other question:
+
+```
+ Drill which technique?
+
+    7  X-wing              4 positions
+    8  XY-wing             4 positions
+    9  Swordfish           3 positions
+```
+
+A drill is a position rather than a puzzle: taken out of a real deal, with
+the candidates already pencilled in and the technique the very next step. A
+different one each time. `t` nudges there too, and nothing is timed.
+
+None of them is written down as a grid. A deal is the same deal every time
+it is asked for, so a position is named by the seed it came from, the level
+it was dealt at, and how far the reasoning had got — three numbers instead
+of eighty-one characters and a page of marks. Asking for one deals that
+puzzle again and walks it back to the moment, which is why the carving
+screen goes up for a swordfish the same as for a deal.
+
+They were found by dealing and watching where the reasoning reached for
+each. The hard ones had to be hunted: a swordfish turns up about once in
+twenty-five Master deals, which is exactly why one grid apiece was never
+going to be enough.
+
 ## Looking for somewhere a digit can go
 
 Pick a digit and sweep the grid asking "where can a 7 still go in this box?"
