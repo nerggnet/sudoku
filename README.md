@@ -878,13 +878,31 @@ Where there is more than one to come back to, `r` asks which:
     1  Hard, 24 to go, 12:04
     2  Easy, 40 to go, 03:20
 
-    The one put down most recently is first.
+    The one put down most recently is first.  x  forget one.
 ```
 
 The menu says `Resume    one of 2 games put down` rather than picking one of
 them to describe. Nine are kept, that being how many a screen can put a digit
 in front of; starting a tenth forgets the oldest. `gleam run -- resume` cannot
 be asked which and takes the most recent.
+
+Being the oldest when a tenth arrives used to be the only way one ever left.
+`x` throws one away, from the menu or from the list itself:
+
+```
+ Which game do you want to forget?
+
+    1  Hard, 24 to go, 12:04
+    2  Easy, 40 to go, 03:20
+
+    Gone for good, and the puzzle with it.
+```
+
+A screen of its own rather than a key on the one beside it, and that is the
+whole of the asking twice: getting here is a keystroke that does nothing but
+say what the next one will do. The list comes back afterwards, since somebody
+tidying up is rarely tidying up one, and the menu comes back instead when the
+last of them has gone.
 
 Everything that cannot be worked out again goes into the file: the clues, the
 answer, what has been written and pencilled in since, where the cursor was,
