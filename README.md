@@ -1431,7 +1431,14 @@ and nine techniques. And carving is a promise rather than an implementation
 detail, so changing a band or the week's ramp changes puzzles somebody may
 already have played.
 
+## Contributing
+
+Fork it, work on a branch of your fork, and open a pull request against
+`master`. [CONTRIBUTING.md](CONTRIBUTING.md) says what to run before you do
+and which of the things this game does are promises rather than details.
+
 ## Licence
 
 MIT. Do what you like with it, and keep the copyright notice — the whole of
-it is in [LICENSE](LICENSE), and it is nineteen lines.
+it is in [LICENSE](LICENSE), and it is nineteen lines. Anything contributed
+goes in under the same terms.
