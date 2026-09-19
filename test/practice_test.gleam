@@ -13,6 +13,7 @@ import helper
 import sudoku/board
 import sudoku/game
 import sudoku/generator
+import sudoku/key
 import sudoku/logic
 import sudoku/practice
 import sudoku/solver
@@ -85,8 +86,39 @@ pub fn the_opening_line_says_what_is_being_practised_test() {
   assert string.contains(started.message, logic.labels(technique))
   assert string.contains(started.message, "?")
 
-  // And the header says it is practice rather than naming a difficulty.
-  assert generator.origin_label(puzzle.origin) == "Practice"
+  // And the header names the technique rather than a difficulty, so that
+  // which grid this is survives the opening line being written over.
+  assert generator.origin_label(puzzle.origin) == logic.title(technique)
+}
+
+/// The header keeps saying it. The opening line goes the moment anything
+/// else needs the row — a hint, a clash, a word about marking — and before
+/// this there was then nothing on the screen to say which grid you were on.
+pub fn the_header_keeps_saying_what_is_being_practised_test() {
+  use technique <- list.each(practice.techniques())
+  let assert Ok(puzzle) = practice.puzzle(technique)
+
+  // Somebody has played a little and the opening line is long gone.
+  let played =
+    helper.step(helper.step(game.new(puzzle), key.Char("m")), key.Char("m"))
+  assert !string.contains(played.message, logic.labels(technique))
+
+  let assert [title, ..] = helper.visible_lines(played)
+  assert string.contains(title, logic.title(technique))
+}
+
+/// Nothing on a practice grid is timed, so there is no time for help to
+/// have cost and nothing for the header to qualify. What the solve was done
+/// with is still said in the panel at the end.
+pub fn a_practice_grid_is_never_called_aided_test() {
+  let assert Ok(puzzle) = practice.puzzle(logic.XWing)
+  let checked = helper.checked(game.new(puzzle))
+
+  assert !game.unaided(checked)
+  assert !game.timed(checked)
+
+  let assert [title, ..] = helper.visible_lines(checked)
+  assert !string.contains(title, "aided")
 }
 
 /// The screen offering them puts a digit in front of each, so there is room

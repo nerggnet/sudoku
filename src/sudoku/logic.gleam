@@ -448,7 +448,9 @@ fn these(cells: List(Int)) -> String {
   }
 }
 
-fn title(technique: Technique) -> String {
+/// The technique's name with a capital on it, for where a sentence or a
+/// heading starts with it.
+pub fn title(technique: Technique) -> String {
   let name = label(technique)
   string.uppercase(string.slice(name, 0, 1))
   <> string.slice(name, 1, string.length(name) - 1)

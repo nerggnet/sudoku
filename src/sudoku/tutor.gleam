@@ -106,7 +106,7 @@ pub fn anything_to_say(current: Game) -> Bool {
 /// since that is the one somebody came to meet and is worth knowing when it
 /// arrives. The rest of the ladder is the same either way: a step is a step.
 fn rung(step: logic.Step, came_for: Bool, asked: Int) -> Lesson {
-  let named = capitalised(logic.label(step.technique))
+  let named = logic.title(step.technique)
 
   case asked {
     1 ->
@@ -251,9 +251,4 @@ fn joined(words: List(String)) -> String {
     [last, ..rest] ->
       { rest |> list.reverse |> string.join(", ") } <> " and " <> last
   }
-}
-
-fn capitalised(name: String) -> String {
-  string.uppercase(string.slice(name, 0, 1))
-  <> string.slice(name, 1, string.length(name) - 1)
 }

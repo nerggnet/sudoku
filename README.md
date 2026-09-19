@@ -346,7 +346,22 @@ grid is the fullest of the lot and the hidden-single grid the barest.
 
 Each technique page in the help ends with the two keys that reach its grid,
 and while you are playing one, `?` opens the page about the technique you
-picked rather than the key reference.
+picked rather than the key reference. The header names the technique for as
+long as the grid is up:
+
+```
+ S U D O K U    Locked candidates    marking
+```
+
+It used to say `Practice`, on the grounds that you had just chosen the
+technique from a screen saying so and were told again as the puzzle opened.
+But that line goes the moment anything else needs the row, and then there
+was nothing left on the screen to say which grid you were on.
+
+Nor does it ever say `(aided)` there. That badge qualifies a difficulty,
+and a practice grid has none: nothing about it is timed, so there is no time
+for help to have cost. What the solve was done with is still said in the
+panel at the end.
 
 ### Being walked up to it
 

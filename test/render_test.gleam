@@ -890,3 +890,32 @@ pub fn the_drill_screen_counts_what_is_kept_test() {
     && string.contains(line, int.to_string(kept) <> " position")
   })
 }
+
+/// The title row is the crowded one, and it has been at the edge more than
+/// once. This is the worst it can get: the longest technique name there is,
+/// marking and a scan both up, checking on with a tally, and a game that has
+/// been helped along.
+///
+/// Written out rather than trusted to the frames the other tests happen to
+/// build, because the thing that keeps nearly going wrong is a row that fits
+/// everything anybody thought to try and not the one combination nobody did.
+pub fn the_title_row_fits_with_everything_on_it_test() {
+  let assert Ok(puzzle) = practice.puzzle(logic.LockedCandidates)
+  let crowded =
+    game.Game(
+      ..game.new(puzzle),
+      marking: True,
+      scan: game.ScanningFor(7),
+      checking: True,
+      mistakes: 2,
+      aided: True,
+    )
+
+  let assert [title, ..] = helper.visible_lines(crowded)
+
+  assert string.contains(title, "Locked candidates")
+  assert string.contains(title, "marking")
+  assert string.contains(title, "looking for 7")
+  assert string.contains(title, "checking 2/3")
+  assert string.length(title) < render.columns
+}

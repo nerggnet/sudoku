@@ -67,8 +67,11 @@ pub fn frame(current: Game) -> String {
     |> list.filter(fn(said) { said != "" })
     |> string.join("    ")
   // A game helped along says so beside its difficulty, since that is what
-  // the difficulty no longer quite means.
-  let named = case game.unaided(current) {
+  // the difficulty no longer quite means. Only where the difficulty meant a
+  // time in the first place: a practice grid and a puzzle typed in are not
+  // timed at all, so there is nothing for "aided" to be qualifying, and the
+  // panel at the end says what the solve was done with either way.
+  let named = case game.unaided(current) || !game.timed(current) {
     True -> generator.origin_label(current.puzzle.origin)
     False -> generator.origin_label(current.puzzle.origin) <> " (aided)"
   }

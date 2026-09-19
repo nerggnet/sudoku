@@ -91,10 +91,12 @@ pub fn origin_label(origin: Origin) -> String {
     // is for what kind of puzzle this is. The difficulty goes with it, since
     // it is not a thing the player chose and is worth knowing.
     Daily(date) -> "Daily " <> label(daily_difficulty(date))
-    // Not the technique: which one it is was just chosen from a screen that
-    // said so, and is said again in the line under the board as the puzzle
-    // opens. What the header is for is which kind of puzzle this is.
-    Practising(_) -> "Practice"
+    // The technique itself, which is what kind of puzzle a practice grid is.
+    // It used to say "Practice" on the grounds that the technique had just
+    // been chosen from a screen saying so and was said again as the puzzle
+    // opened — but that line goes the moment anything else needs saying, and
+    // then there is nothing on the screen to say which grid this is.
+    Practising(technique) -> logic.title(technique)
   }
 }
 

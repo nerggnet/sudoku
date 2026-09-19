@@ -253,7 +253,7 @@ fn about(technique: logic.Technique) -> List(String) {
   let #(what, example, so) = teaching(technique)
 
   list.flatten([
-    [term.styled("1", capitalised(logic.label(technique))), ""],
+    [term.styled("1", logic.title(technique)), ""],
     list.map(what, term.styled(palette.dim(), _)),
     [""],
     example,
@@ -267,11 +267,6 @@ fn at(technique: logic.Technique) -> Int {
   let before =
     list.take_while(practice.techniques(), fn(other) { other != technique })
   list.length(before) + 1
-}
-
-fn capitalised(name: String) -> String {
-  string.uppercase(string.slice(name, 0, 1))
-  <> string.slice(name, 1, string.length(name) - 1)
 }
 
 /// What each technique is, what it looks like, and what it settles.
