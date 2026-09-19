@@ -209,6 +209,7 @@ fn showing(
     menu.Choosing ->
       render.menu_frame(raw, saved, store.bests(), today, store.dailies())
     menu.PickingUp -> render.saved_frame(saved)
+    menu.Forgetting -> render.forgetting_frame(saved)
     menu.Practising -> render.practice_frame()
     menu.Drilling -> render.drill_frame()
   }
@@ -218,6 +219,19 @@ fn showing(
     menu.Picked(chosen) -> chosen
     menu.Opens(next) -> showing(raw, next, saved)
     menu.Stands -> showing(raw, screen, saved)
+
+    // Thrown away, and then the list again so that more can go the same way
+    // — which is the point of the screen, a list that only ever lost its
+    // oldest being the thing that made it worth having. The games are read
+    // afresh rather than filtered here: what is on the disk is what there is.
+    menu.Forgets(gone) -> {
+      store.forget(gone.id)
+
+      case store.saved_games() {
+        [] -> showing(raw, menu.Choosing, [])
+        left -> showing(raw, menu.Forgetting, left)
+      }
+    }
   }
 }
 

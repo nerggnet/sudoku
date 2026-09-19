@@ -785,7 +785,10 @@ fn resuming(said: String) -> List(String) {
       <> term.styled(palette.key(), "r")
       <> "  "
       <> string.pad_end("Resume", 10, " ")
-      <> term.styled(palette.dim(), said),
+      <> term.styled(palette.dim(), said)
+      <> term.styled(palette.dim(), "    ")
+      <> term.styled(palette.key(), "x")
+      <> term.styled(palette.dim(), "  forget one"),
   ]
 }
 
@@ -819,7 +822,49 @@ pub fn saved_frame(saved: List(game.Game)) -> String {
         "   "
           <> term.styled(
           palette.dim(),
-          "The one put down most recently is first.",
+          "The one put down most recently is first.  ",
+        )
+          <> term.styled(palette.key(), "x")
+          <> term.styled(palette.dim(), "  forget one."),
+        "",
+        "   "
+          <> term.styled(palette.key(), "q")
+          <> "  quit"
+          <> term.styled(palette.dim(), "        any other key goes back"),
+      ],
+    ]),
+  )
+}
+
+/// The same list, asked the opposite question.
+///
+/// It says what it will cost before it costs it, which is all the asking
+/// twice there is: getting to this screen is a keystroke that does nothing
+/// but say what the next one will do.
+pub fn forgetting_frame(saved: List(game.Game)) -> String {
+  let options = {
+    use current, index <- list.index_map(saved)
+    "   "
+    <> term.styled(palette.key(), int.to_string(index + 1))
+    <> "  "
+    <> term.styled(palette.dim(), summary(current))
+  }
+
+  term.screen(
+    list.flatten([
+      [
+        term.styled(palette.title(), "S U D O K U"),
+        "",
+        "Which game do you want to forget?",
+        "",
+      ],
+      options,
+      [
+        "",
+        "   "
+          <> term.styled(
+          palette.alarm(),
+          "Gone for good, and the puzzle with it.",
         ),
         "",
         "   "

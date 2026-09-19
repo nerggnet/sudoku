@@ -919,3 +919,48 @@ pub fn the_title_row_fits_with_everything_on_it_test() {
   assert string.contains(title, "checking 2/3")
   assert string.length(title) < render.columns
 }
+
+/// The list, asked the opposite question, and saying so plainly.
+pub fn the_forgetting_screen_says_what_it_will_do_test() {
+  let saved = [helper.fixture(), helper.playing(helper.puzzle_text)]
+  let lines = helper.lines_of(render.forgetting_frame(saved))
+
+  assert list.any(lines, string.contains(_, "forget"))
+  assert list.any(lines, string.contains(_, "Gone for good"))
+
+  // A digit in front of each, the same as the screen it comes from.
+  use _, at <- list.index_map(saved)
+  assert list.any(lines, string.contains(_, int.to_string(at + 1)))
+}
+
+pub fn the_forgetting_screen_fits_a_full_list_test() {
+  let full = list.repeat(helper.fixture(), 9)
+  let lines = helper.lines_of(render.forgetting_frame(full))
+
+  assert list.length(lines) <= render.rows
+  use line <- list.each(lines)
+  assert string.length(line) < render.columns
+}
+
+/// Both screens that show games put down offer the way out of them.
+pub fn the_menu_offers_forgetting_where_there_is_anything_to_forget_test() {
+  let with_one =
+    helper.lines_of(render.menu_frame(
+      True,
+      [helper.fixture()],
+      dict.new(),
+      helper.a_day(),
+      dict.new(),
+    ))
+  assert list.any(with_one, string.contains(_, "forget one"))
+
+  let with_none =
+    helper.lines_of(render.menu_frame(
+      True,
+      [],
+      dict.new(),
+      helper.a_day(),
+      dict.new(),
+    ))
+  assert !list.any(with_none, string.contains(_, "forget"))
+}

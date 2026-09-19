@@ -49,6 +49,9 @@ pub type Screen {
   Practising
   /// Which technique to drill, on a fresh position every time.
   Drilling
+  /// Which game put down to forget. The same list as `PickingUp`, asked the
+  /// opposite question.
+  Forgetting
 }
 
 /// What a keystroke settles, on whichever screen it was pressed.
@@ -60,6 +63,9 @@ pub type Answer {
   /// Nothing was settled. The screen stands as it is, which is the answer to
   /// a key that means nothing here — and to one nobody pressed.
   Stands
+  /// Throw this game away. Not a `Choice`, since nothing is being chosen to
+  /// play: it is the one thing these screens do that is not starting a game.
+  Forgets(Game)
 }
 
 /// Which number on the menu reaches the daily puzzle.
@@ -84,6 +90,7 @@ pub fn answered(
     PickingUp -> picking_up(pressed, saved)
     Practising -> practising(pressed)
     Drilling -> drilling(pressed)
+    Forgetting -> forgetting(pressed, saved)
   }
 }
 
@@ -104,6 +111,11 @@ fn choosing(pressed: Key, saved: List(Game), today: Date) -> Answer {
     // and r falls through to meaning nothing.
     key.Char("r"), [only] | key.Char("R"), [only] -> Picked(Resume(only))
     key.Char("r"), [_, _, ..] | key.Char("R"), [_, _, ..] -> Opens(PickingUp)
+
+    // Games put down pile up, nine being as many as a screen can put a digit
+    // in front of, and the only way one ever left was being the oldest when
+    // a tenth arrived.
+    key.Char("x"), [_, ..] | key.Char("X"), [_, ..] -> Opens(Forgetting)
 
     key.Digit(picked), _ if picked == practice_at -> Opens(Practising)
     key.Digit(picked), _ if picked == daily_at -> Picked(Day(today))
@@ -129,6 +141,7 @@ fn choosing(pressed: Key, saved: List(Game), today: Date) -> Answer {
 fn picking_up(pressed: Key, saved: List(Game)) -> Answer {
   case pressed {
     key.Quit | key.Char("q") | key.Char("Q") -> Picked(Stop)
+    key.Char("x") | key.Char("X") -> Opens(Forgetting)
     key.Digit(picked) ->
       case nth(saved, picked) {
         Ok(current) -> Picked(Resume(current))
@@ -158,6 +171,24 @@ fn practising(pressed: Key) -> Answer {
             // the player could act on, so the screen simply stands.
             Error(_) -> Stands
           }
+        Error(_) -> Stands
+      }
+    _ -> thought_better(pressed)
+  }
+}
+
+/// Pick a game put down to throw away.
+///
+/// A screen of its own rather than a key on the one beside it, and that is
+/// the whole of the asking-twice. Forgetting a game cannot be undone and an
+/// hour of somebody's puzzle is a thing to lose, so getting here is a
+/// keystroke that does nothing but say what the next one will do.
+fn forgetting(pressed: Key, saved: List(Game)) -> Answer {
+  case pressed {
+    key.Quit | key.Char("q") | key.Char("Q") -> Picked(Stop)
+    key.Digit(picked) ->
+      case nth(saved, picked) {
+        Ok(current) -> Forgets(current)
         Error(_) -> Stands
       }
     _ -> thought_better(pressed)

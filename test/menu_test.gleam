@@ -204,3 +204,63 @@ pub fn drilling_behaves_like_the_other_screens_test() {
   assert answered(menu.Drilling, key.Char("z")) == menu.Opens(menu.Choosing)
   assert answered(menu.Drilling, key.Char("q")) == menu.Picked(menu.Stop)
 }
+
+// ---------------------------------------------------------------------------
+// Forgetting a game put down
+// ---------------------------------------------------------------------------
+
+/// Games put down pile up. Nine is as many as a screen can put a digit in
+/// front of, and until now the only way one ever left was being the oldest
+/// when a tenth arrived.
+pub fn x_opens_the_forgetting_test() {
+  let saved = [helper.fixture(), helper.playing(helper.puzzle_text)]
+
+  // From the menu, where somebody not resuming will be.
+  assert with_saved(menu.Choosing, key.Char("x"), saved)
+    == menu.Opens(menu.Forgetting)
+  assert with_saved(menu.Choosing, key.Char("X"), saved)
+    == menu.Opens(menu.Forgetting)
+
+  // And from the list itself, which is where you can see what you are doing.
+  assert with_saved(menu.PickingUp, key.Char("x"), saved)
+    == menu.Opens(menu.Forgetting)
+
+  // Nothing put down is nothing to forget.
+  assert with_saved(menu.Choosing, key.Char("x"), []) == menu.Stands
+}
+
+pub fn the_digits_pick_which_game_to_forget_test() {
+  let one = helper.fixture()
+  let other = helper.playing(helper.puzzle_text)
+  let saved = [one, other]
+
+  assert with_saved(menu.Forgetting, key.Digit(1), saved) == menu.Forgets(one)
+  assert with_saved(menu.Forgetting, key.Digit(2), saved) == menu.Forgets(other)
+  assert with_saved(menu.Forgetting, key.Digit(3), saved) == menu.Stands
+}
+
+/// Getting to the screen is the whole of the asking twice. Forgetting cannot
+/// be undone and an hour of somebody's puzzle is a thing to lose, so the
+/// keystroke before the one that does it does nothing but say what is coming.
+pub fn nothing_is_forgotten_by_arriving_test() {
+  let saved = [helper.fixture()]
+
+  let assert menu.Opens(menu.Forgetting) =
+    with_saved(menu.Choosing, key.Char("x"), saved)
+
+  // Every way off the screen that is not a digit leaves the list alone.
+  use pressed <- list.each([key.Char("z"), key.Unknown, key.Char("q")])
+  assert with_saved(menu.Forgetting, pressed, saved)
+    != menu.Forgets(helper.fixture())
+}
+
+pub fn forgetting_behaves_like_the_other_screens_test() {
+  let saved = [helper.fixture()]
+
+  assert with_saved(menu.Forgetting, key.Digit(0), saved) == menu.Stands
+  assert with_saved(menu.Forgetting, key.Unknown, saved) == menu.Stands
+  assert with_saved(menu.Forgetting, key.Char("z"), saved)
+    == menu.Opens(menu.Choosing)
+  assert with_saved(menu.Forgetting, key.Char("q"), saved)
+    == menu.Picked(menu.Stop)
+}
