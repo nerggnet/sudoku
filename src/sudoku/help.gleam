@@ -67,6 +67,7 @@ pub const invocations = [
   #("gleam run -- <puzzle>", "play that puzzle"),
   #("gleam run -- --plain", "draw without colour"),
   #("gleam run -- --help", "say all this and stop"),
+  #("gleam run -- --version", "say which build this is and stop"),
 ]
 
 /// The ways of being handed a puzzle that somebody else had, or that you had

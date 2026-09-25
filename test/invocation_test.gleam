@@ -115,11 +115,39 @@ pub fn asking_what_the_command_line_takes_is_not_a_mistake_test() {
   assert plainly.plain
 }
 
+pub fn asking_which_build_this_is_is_not_a_mistake_either_test() {
+  use flag <- list.each(invocation.version_flags)
+  let assert Ok(asked) = invocation.read([flag])
+  assert asked.asked == invocation.Name
+
+  // Indulged the same way, and for a better reason than --help is: the line
+  // carrying it is most often one being pasted into a bug report, beside
+  // whatever the game was started with when it went wrong.
+  let assert Ok(beside) = invocation.read(["hard", "--seed", "7", flag])
+  assert beside.asked == invocation.Name
+
+  let assert Ok(muddled) = invocation.read([flag, "--nonsense"])
+  assert muddled.asked == invocation.Name
+}
+
+pub fn a_line_asking_both_questions_is_answered_with_the_larger_one_test() {
+  // Somebody who typed both wants to be told what the game takes, and the
+  // usage says how to ask for the version anyway — so the help wins and the
+  // answer they did not get is one line away.
+  let assert Ok(both) = invocation.read(["--version", "--help"])
+  assert both.asked == invocation.Explain
+}
+
 pub fn the_usage_says_how_to_ask_for_it_test() {
   // One row for the two spellings, since -h is the same question in fewer
   // letters and a second row saying so would be a row about nothing.
   assert string.contains(help.usage(), "--help")
   assert invocation.help_flags == ["--help", "-h"]
+
+  // The same, for the same reason. Capital V, the lowercase one meaning
+  // something else wherever it means anything.
+  assert string.contains(help.usage(), "--version")
+  assert invocation.version_flags == ["--version", "-V"]
 }
 
 pub fn a_seed_is_read_either_way_round_test() {

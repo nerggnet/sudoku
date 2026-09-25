@@ -13,9 +13,20 @@ after the work.
 ## Before you open it
 
 ```sh
-gleam test                    # 432 of them, about half a minute
+gleam test                    # 434 of them, about half a minute
 gleam format src test         # CI refuses a diff, so run it
 ```
+
+If you touched how the command line is read, build the executable and try it
+there as well:
+
+```sh
+./package.sh && ./build/sudoku --version
+```
+
+A packaged game does not see quite the command line `gleam run` does —
+[CLAUDE.md](CLAUDE.md) says why — so that is the one part of the game a green
+`gleam test` is not evidence about.
 
 The suite is slow for a reason: it deals thirty-five real puzzles to check
 that the drill positions are still where the table says they are. There is

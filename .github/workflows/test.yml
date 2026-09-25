@@ -47,6 +47,20 @@ jobs:
       - run: gleam deps download
       - run: gleam test
 
+      # The packaged executable has to build and start on every runtime this
+      # game claims to run on, and it is the one artefact nobody here builds
+      # by hand. Invoked through escript rather than by its shebang, so that
+      # what is being asked is whether the archive is sound rather than
+      # whether the kernel liked the first line of it.
+      #
+      # --version is the cheapest question that proves the whole thing
+      # works: it loads the application, which means the archive is on the
+      # code path, and it reads a command line, which is the part that
+      # differs between a packaged game and `gleam run`.
+      - run: gleam export erlang-shipment
+      - run: escript scripts/package.escript build/erlang-shipment build/sudoku
+      - run: escript build/sudoku --version
+
   # How the source is written is a fact about the source rather than about
   # the runtime under it, so it is asked once and on the version the game is
   # written on.

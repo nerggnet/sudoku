@@ -75,6 +75,11 @@ fn opening(arguments: List(String)) -> Opening {
     Ok(asked) ->
       case asked.asked {
         invocation.Explain -> Say(help.usage(), True)
+        // The one answer here that cannot be worked out from the words
+        // alone, the version being a fact about the build rather than about
+        // the line. Which is why it is settled here rather than in
+        // `invocation`, where nothing is allowed to ask the world anything.
+        invocation.Name -> Say("sudoku " <> term.version(), True)
         invocation.Menu -> Start(None, asked.plain)
         invocation.Compose -> Start(Some(menu.Compose), asked.plain)
         invocation.Deal(difficulty) ->

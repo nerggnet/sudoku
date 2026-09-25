@@ -1,0 +1,57 @@
+name: release
+
+# A tag is the whole of the trigger. Nothing here runs on a push to master,
+# because a release is a thing somebody decided to make rather than a thing
+# that falls out of writing code, and the decision is the tag.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          gleam-version: "1.18.1"
+          rebar3-version: "3"
+      - run: gleam deps download
+
+      # The one number said twice, and the only place it can be caught. The
+      # executable reports the version out of `gleam.toml`, so a tag that
+      # disagrees with it ships a binary calling itself something other than
+      # what it was downloaded as — which is precisely the confusion
+      # --version exists to prevent. Refused here rather than discovered in a
+      # bug report.
+      - name: Check the tag is the version
+        run: |
+          declared=$(sed -n 's/^version *= *"\(.*\)"/\1/p' gleam.toml)
+          if [ "v$declared" != "$GITHUB_REF_NAME" ]; then
+            echo "gleam.toml says $declared, the tag says $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+
+      # Nothing ships that does not pass its tests. The full matrix ran on
+      # the commit this tag is on; this is the one leg that has to be true
+      # again at the moment the artefact is built from it.
+      - run: gleam test
+      - run: ./package.sh build/sudoku
+      - name: Check the executable runs
+        run: ./build/sudoku --version
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/sudoku \
+            --title "sudoku $GITHUB_REF_NAME" \
+            --notes 'One self-contained executable. It needs Erlang/OTP 27 or later on the machine that runs it, but not Gleam.
+
+              curl -LO https://github.com/nerggnet/sudoku/releases/download/'"$GITHUB_REF_NAME"'/sudoku
+              chmod +x sudoku
+              ./sudoku'

@@ -40,6 +40,14 @@ pub type Asked {
   /// Nothing to play: what the command line takes, which is a question
   /// about the game rather than a game.
   Explain
+  /// Nothing to play: which build of the game this is, which is a question
+  /// about the copy in front of you rather than about the game.
+  ///
+  /// Worth its own way in because of the one way this game is handed out
+  /// that is not a repository. Somebody who downloaded an executable has no
+  /// `gleam.toml` to read and no commit to name, and a bug report that
+  /// cannot say which build it is about is a bug report about nothing.
+  Name
 }
 
 /// That, and how the game should look while it does it, and which deal to
@@ -53,6 +61,11 @@ pub const plain_flag = "--plain"
 
 /// Both spellings of asking what any of this takes.
 pub const help_flags = ["--help", "-h"]
+
+/// Both spellings of asking which build this is. Capital `V`, the lowercase
+/// one being taken by nothing here but taken by half the world elsewhere for
+/// something else entirely.
+pub const version_flags = ["--version", "-V"]
 
 /// Asking for one deal in particular rather than whichever one comes up.
 pub const seed_flag = "--seed"
@@ -71,14 +84,25 @@ pub const daily_word = "daily"
 /// its own, and that word would otherwise be read as a puzzle and refused
 /// for not being one.
 pub fn read(arguments: List(String)) -> Result(Invocation, String) {
-  // Asked for outright, and answered before anything else is read. Somebody
-  // who types --help wants to be told what the words mean, and nothing else
-  // on the line can turn that into a mistake — not a puzzle beside it, not
-  // another flag that would have been one on its own, and not a seed that
-  // is not a number.
-  case list.any(arguments, fn(word) { list.contains(help_flags, word) }) {
-    True -> Ok(Invocation(Explain, list.contains(arguments, plain_flag), None))
-    False -> {
+  // The two questions about the game rather than about a puzzle, asked
+  // outright and answered before anything else is read. Somebody who types
+  // --help wants to be told what the words mean, and nothing else on the
+  // line can turn that into a mistake — not a puzzle beside it, not another
+  // flag that would have been one on its own, and not a seed that is not a
+  // number. --version is the same kind of question and gets the same
+  // indulgence, not least because the line most likely to carry it is one
+  // being pasted into a bug report.
+  case
+    list.any(arguments, fn(word) { list.contains(help_flags, word) }),
+    list.any(arguments, fn(word) { list.contains(version_flags, word) })
+  {
+    True, _ ->
+      Ok(Invocation(Explain, list.contains(arguments, plain_flag), None))
+    // Second, and for the same reason: a line that asks two questions at
+    // once is answered with the larger one, and the usage names the version
+    // flag anyway.
+    _, True -> Ok(Invocation(Name, list.contains(arguments, plain_flag), None))
+    _, _ -> {
       // Taken out before the rest is picked apart, since a seed is the one
       // flag that carries a word of its own and that word is not a puzzle.
       use #(seed, arguments) <- result.try(seed_taken_from(arguments))

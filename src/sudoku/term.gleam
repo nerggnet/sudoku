@@ -42,6 +42,15 @@ pub fn new_id() -> String
 @external(erlang, "sudoku_ffi", "arguments")
 pub fn arguments() -> List(String)
 
+/// Which version of the game this is.
+///
+/// Read out of the compiled application rather than written down anywhere in
+/// the source, so that it is the version this build was built from and not
+/// the version somebody last remembered to update. `gleam.toml` is the one
+/// place it is said.
+@external(erlang, "sudoku_ffi", "version")
+pub fn version() -> String
+
 /// How wide and how tall the terminal is, or -1 where it will not say.
 @external(erlang, "sudoku_ffi", "columns")
 pub fn columns() -> Int

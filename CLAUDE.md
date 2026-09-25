@@ -9,6 +9,7 @@ gleam run                     # play; see README for the arguments
 gleam test                    # all of them, 384 at the time of writing
 gleam format src test         # CI runs `gleam format --check src test`
 gleam docs build              # uses the metadata in gleam.toml
+./package.sh                  # one self-contained executable, build/sudoku
 ```
 
 There is no way to run one test through `gleam test` — gleeunit finds every
@@ -69,6 +70,10 @@ vocabulary:
 - **`date`** — a day and its weekday, which is all the calendar the daily
   needs. Day arithmetic goes through the day count, not through subtraction.
 - **`sudoku.gleam`** — the loop: draw, read, act. Deliberately thin.
+- **`sudoku_escript`** + **`scripts/package.escript`** — how the game leaves
+  the repository: a zip of every compiled module with a shebang on the front,
+  which is what a release is. Nothing else imports either of them and nothing
+  in the game knows they exist.
 
 ## The convention that matters most
 
@@ -129,6 +134,24 @@ live), `term.Basic` (sixteen, one grey for all four washes plus the `›`/`+`
 marks), `term.Plain`. `palette` colours are functions because
 `~/.config/sudoku/palette` can override them; the characters are constants
 because a glyph of the wrong width breaks the grid.
+
+**A packaged game reads its command line differently**, and this is the one
+thing about the executable that is not plumbing. `init:get_plain_arguments/0`
+is where `term.arguments` looks, and under escript it answers with the path
+the executable was invoked by on the front of the list — which this game,
+being strict about what a word on its command line may be, refuses as a
+puzzle that is not one. So `sudoku_escript:main/1` puts what it was actually
+handed into a `persistent_term` and `arguments/0` prefers that. Anything that
+changes how arguments are read has to be tried against `./build/sudoku` and
+not only against `gleam run`, because the two do not agree.
+
+**A release is a tag and nothing else.** `v1.2.3` pushed to GitHub builds the
+executable and publishes it; a push to master does not. The workflow refuses
+a tag that disagrees with the version in `gleam.toml`, since the executable
+reports that version and a binary calling itself something other than what it
+was downloaded as is the exact confusion `--version` exists to prevent. So
+bumping `gleam.toml` is part of making a release rather than a thing to
+remember afterwards.
 
 **Floors are OTP 27 and Gleam 1.15**, neither of them ours — stdlib sets
 both. CI is a matrix over those and macOS precisely because a local

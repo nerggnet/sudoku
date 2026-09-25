@@ -13,6 +13,7 @@ gleam run -- 53..7....6..1..  # play that puzzle, dots for the blanks
 gleam run -- hard --seed 7    # deal the puzzle that seed deals
 gleam run -- --plain          # draw without colour
 gleam run -- --help           # say all this and stop
+gleam run -- --version        # say which build this is and stop
 ```
 
 Pick a difficulty, then play. Puzzles are generated fresh each time, always
@@ -40,6 +41,38 @@ newspaper.
    └───────┴───────┴───────┘      └───────┴───────┴───────┘
 
  empty 45  │  clashes 0  │  time 00:00  │  A1 marked 1 3 5
+```
+
+## Getting it
+
+Every release carries one file, and the file is the game:
+
+```sh
+curl -LO https://github.com/nerggnet/sudoku/releases/latest/download/sudoku
+chmod +x sudoku
+./sudoku
+```
+
+It needs Erlang on the machine that runs it — OTP 27 or later, which is what
+`gleam_stdlib` asks for rather than what this asks for — and nothing else. Not
+Gleam, not this repository, and nothing to install beyond moving the file
+somewhere on your `PATH`. It is bytecode rather than native code, so the same
+file is the file for every machine, which is why there is only ever one of
+them on a release.
+
+`./sudoku --version` says which build it is. Worth knowing before saying
+anything went wrong with it, since a downloaded file has no commit to name and
+no `gleam.toml` to read: the number comes out of the application it was built
+from, so it is the version and not a version somebody remembered to write down.
+
+Everything the command line takes it takes the same way, `./sudoku hard` where
+this page says `gleam run -- hard`. The `--` is a thing `gleam run` needs and
+the game never did.
+
+Or build it yourself, which is the same executable by the same route CI takes:
+
+```sh
+./package.sh          # writes build/sudoku
 ```
 
 ## Keys
@@ -1048,6 +1081,13 @@ There is no game waiting to be picked up.    # on standard error, exit 1
 That matters for the one way this game gets scripted: `gleam run -- <puzzle>`
 with a line somebody sent you. A puzzle that turns out not to be one now says
 so where a script can hear it.
+
+`--version`, or `-V`, says which build of the game this is and stops, and is
+indulged the same way `--help` is: nothing beside it turns it into a mistake.
+That is deliberate rather than convenient. The line most likely to carry it is
+one being pasted into a bug report, beside whatever the game was started with
+when it went wrong, and a version flag that refused such a line would be a
+version flag nobody could use at the one moment it is for.
 
 ## When the terminal gets in the way
 

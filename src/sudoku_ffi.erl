@@ -8,9 +8,16 @@
 -export([today/0, day_of_week/3, valid_date/3, day_before/3]).
 -export([file_path/1, write_file/2, read_file/1, forget_file/1, kept_files/1]).
 -export([new_id/0]).
--export([arguments/0, columns/0, rows/0]).
+-export([arguments/0, typed/1, columns/0, rows/0, version/0]).
 -export([colours/0, colouring/1, theme/0]).
 -export([protected/2, stop/1]).
+
+%% Where the packaged executable leaves the words it was started with. A
+%% persistent_term rather than an application env or a process dictionary
+%% because it is read on every start-up and written once, which is the one
+%% shape persistent_term is for — the same reason the board's geometry lives
+%% in one.
+-define(typed, {sudoku, arguments}).
 
 %% Put the terminal into raw mode: one byte at a time, no echo, no line
 %% editing. Requires OTP 26 or later; returns false when unavailable (for
@@ -302,9 +309,51 @@ forget_file(Name) ->
     nil.
 
 %% What was asked for on the command line, after the `--`.
+%%
+%% Two ways in, because the game has two ways of being started and they do
+%% not agree about what a plain argument is. Under `gleam run` the words
+%% typed are all there is, and init has them. Under the packaged executable
+%% escript puts the path the thing was invoked by on the front of that list,
+%% which would be read as a puzzle and refused for not being one — so the
+%% escript entry point says outright what it was handed, and what it says
+%% wins.
 arguments() ->
-    [unicode:characters_to_binary(Argument)
-     || Argument <- init:get_plain_arguments()].
+    case persistent_term:get(?typed, undefined) of
+        undefined ->
+            [unicode:characters_to_binary(Argument)
+             || Argument <- init:get_plain_arguments()];
+        Arguments ->
+            Arguments
+    end.
+
+%% Say what the command line actually was, before the game asks. Called once,
+%% from the escript entry point, and from nowhere else: `gleam run` has no
+%% entry point of its own to call it from and does not need one.
+typed(Arguments) ->
+    persistent_term:put(?typed,
+                        [unicode:characters_to_binary(Argument)
+                         || Argument <- Arguments]),
+    nil.
+
+%% Which version of the game this is, read out of the compiled application
+%% rather than written down here.
+%%
+%% `vsn` comes from the `.app` file the compiler writes, which is filled in
+%% from `gleam.toml` — so a build always reports the version it was built
+%% from, and there is no second copy of the number to go stale. It matters
+%% for the packaged executable most of all: somebody who downloaded one has
+%% no repository to look in and nothing else to name when they say what went
+%% wrong.
+%%
+%% The load is explicit because nothing else needs the application started:
+%% the game is a program rather than an OTP application, so without this the
+%% key would simply not be there.
+version() ->
+    _ = application:load(sudoku),
+    case application:get_key(sudoku, vsn) of
+        {ok, Vsn} -> unicode:characters_to_binary(Vsn);
+        _ -> <<"unknown">>
+    end.
 
 %% How much colour the terminal has: none, sixteen, or the 256 the washes
 %% behind the board are painted in.
