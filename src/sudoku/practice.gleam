@@ -89,86 +89,59 @@ pub type Drill {
 /// harder ones had to be hunted for, a swordfish turning up about once in
 /// twenty-five Master deals.
 pub const drills = [
-  #(
-    logic.NakedSingle,
-    [
-      Drill(generator.Hard, 7919, 15),
-      Drill(generator.Hard, 15_838, 18),
-      Drill(generator.Hard, 23_757, 13),
-      Drill(generator.Hard, 31_676, 11),
-    ],
-  ),
-  #(
-    logic.HiddenSingle,
-    [
-      Drill(generator.Expert, 7919, 1),
-      Drill(generator.Expert, 15_838, 1),
-      Drill(generator.Expert, 39_595, 8),
-      Drill(generator.Master, 237_570, 25),
-    ],
-  ),
-  #(
-    logic.LockedCandidates,
-    [
-      Drill(generator.Hard, 7919, 20),
-      Drill(generator.Hard, 15_838, 17),
-      Drill(generator.Hard, 23_757, 12),
-      Drill(generator.Hard, 31_676, 7),
-    ],
-  ),
-  #(
-    logic.NakedPair,
-    [
-      Drill(generator.Expert, 15_838, 6),
-      Drill(generator.Expert, 39_595, 21),
-      Drill(generator.Expert, 47_514, 11),
-      Drill(generator.Expert, 71_271, 14),
-    ],
-  ),
-  #(
-    logic.HiddenPair,
-    [
-      Drill(generator.Expert, 7919, 18),
-      Drill(generator.Expert, 23_757, 11),
-      Drill(generator.Expert, 31_676, 9),
-      Drill(generator.Expert, 55_433, 11),
-    ],
-  ),
-  #(
-    logic.NakedTriple,
-    [
-      Drill(generator.Expert, 134_623, 19),
-      Drill(generator.Expert, 467_221, 16),
-      Drill(generator.Master, 277_165, 23),
-      Drill(generator.Master, 498_897, 24),
-    ],
-  ),
-  #(
-    logic.XWing,
-    [
-      Drill(generator.Expert, 150_461, 16),
-      Drill(generator.Expert, 182_137, 27),
-      Drill(generator.Expert, 300_922, 26),
-      Drill(generator.Expert, 324_679, 18),
-    ],
-  ),
-  #(
-    logic.XYWing,
-    [
-      Drill(generator.Master, 7919, 45),
-      Drill(generator.Master, 15_838, 32),
-      Drill(generator.Master, 23_757, 37),
-      Drill(generator.Master, 39_595, 28),
-    ],
-  ),
-  #(
-    logic.Swordfish,
-    [
-      Drill(generator.Master, 229_651, 15),
-      Drill(generator.Master, 554_330, 27),
-      Drill(generator.Master, 768_143, 23),
-    ],
-  ),
+  #(logic.NakedSingle, [
+    Drill(generator.Hard, 7919, 15),
+    Drill(generator.Hard, 15_838, 18),
+    Drill(generator.Hard, 23_757, 13),
+    Drill(generator.Hard, 31_676, 11),
+  ]),
+  #(logic.HiddenSingle, [
+    Drill(generator.Expert, 7919, 1),
+    Drill(generator.Expert, 15_838, 1),
+    Drill(generator.Expert, 39_595, 8),
+    Drill(generator.Master, 237_570, 25),
+  ]),
+  #(logic.LockedCandidates, [
+    Drill(generator.Hard, 7919, 20),
+    Drill(generator.Hard, 15_838, 17),
+    Drill(generator.Hard, 23_757, 12),
+    Drill(generator.Hard, 31_676, 7),
+  ]),
+  #(logic.NakedPair, [
+    Drill(generator.Expert, 15_838, 6),
+    Drill(generator.Expert, 39_595, 21),
+    Drill(generator.Expert, 47_514, 11),
+    Drill(generator.Expert, 71_271, 14),
+  ]),
+  #(logic.HiddenPair, [
+    Drill(generator.Expert, 7919, 18),
+    Drill(generator.Expert, 23_757, 11),
+    Drill(generator.Expert, 31_676, 9),
+    Drill(generator.Expert, 55_433, 11),
+  ]),
+  #(logic.NakedTriple, [
+    Drill(generator.Expert, 134_623, 19),
+    Drill(generator.Expert, 467_221, 16),
+    Drill(generator.Master, 277_165, 23),
+    Drill(generator.Master, 498_897, 24),
+  ]),
+  #(logic.XWing, [
+    Drill(generator.Expert, 150_461, 16),
+    Drill(generator.Expert, 182_137, 27),
+    Drill(generator.Expert, 300_922, 26),
+    Drill(generator.Expert, 324_679, 18),
+  ]),
+  #(logic.XYWing, [
+    Drill(generator.Master, 7919, 45),
+    Drill(generator.Master, 15_838, 32),
+    Drill(generator.Master, 23_757, 37),
+    Drill(generator.Master, 39_595, 28),
+  ]),
+  #(logic.Swordfish, [
+    Drill(generator.Master, 229_651, 15),
+    Drill(generator.Master, 554_330, 27),
+    Drill(generator.Master, 768_143, 23),
+  ]),
 ]
 
 pub fn drills_for(technique: Technique) -> List(Drill) {

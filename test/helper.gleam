@@ -22,7 +22,8 @@ import sudoku/store
 import sudoku/term
 
 // A puzzle with a single solution, and that solution.
-pub const puzzle_text = "
+pub const puzzle_text =
+  "
   53. .7. ...
   6.. 195 ...
   .98 ... .6.
@@ -34,7 +35,8 @@ pub const puzzle_text = "
   ... .8. .79
 "
 
-pub const solution_text = "
+pub const solution_text =
+  "
   534 678 912
   672 195 348
   198 342 567
@@ -54,7 +56,8 @@ pub fn grid(text: String) -> board.Grid {
 /// Puzzles hunted out of generated ones until each of the rarer techniques
 /// was called for. A generated puzzle needs them only now and then, so they
 /// are kept here to make sure the techniques that find them stay honest.
-pub const needs_naked_pair = "
+pub const needs_naked_pair =
+  "
   ... ... .51
   27. 8.. 46.
   ... 39. 2..
@@ -66,7 +69,8 @@ pub const needs_naked_pair = "
   9.. ... ...
 "
 
-pub const needs_hidden_pair = "
+pub const needs_hidden_pair =
+  "
   8.. ... 7..
   ..5 7.4 ...
   6.. .3. .9.
@@ -78,7 +82,8 @@ pub const needs_hidden_pair = "
   ..6 ... ..7
 "
 
-pub const needs_naked_triple = "
+pub const needs_naked_triple =
+  "
   ... ..4 1.3
   ... 1.. ...
   9.. ..5 .46
@@ -90,7 +95,8 @@ pub const needs_naked_triple = "
   1.5 6.. ...
 "
 
-pub const needs_x_wing = "
+pub const needs_x_wing =
+  "
   .6. 32. .7.
   ... 5.8 42.
   ... 7.4 6..
@@ -102,7 +108,8 @@ pub const needs_x_wing = "
   ... ..3 .6.
 "
 
-pub const needs_xy_wing = "
+pub const needs_xy_wing =
+  "
   6.. 718 .29
   271 459 .6.
   98. 362 7..
@@ -114,7 +121,8 @@ pub const needs_xy_wing = "
   .69 5.4 23.
 "
 
-pub const needs_swordfish = "
+pub const needs_swordfish =
+  "
   486 217 593
   913 ..5 427
   527 943 681

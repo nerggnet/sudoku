@@ -20,18 +20,18 @@ jobs:
         include:
           # What the game is written on, and what it was written on before
           # this file asked anything else.
-          - { os: ubuntu-latest, otp: "29", gleam: "1.18.1" }
+          - { os: ubuntu-latest, otp: "29", gleam: "1.19.1" }
 
           # Where it is actually played. The terminal shim is the most
           # platform-minded code here and had never been run on a Mac by
           # anything but a person.
-          - { os: macos-latest, otp: "29", gleam: "1.18.1" }
+          - { os: macos-latest, otp: "29", gleam: "1.19.1" }
 
           # The oldest runtime the game runs on at all. Raw mode has wanted
           # OTP 26 since it was written, but gleam_stdlib will not compile
           # below 27, so 27 is the floor whatever this game asks for.
-          - { os: ubuntu-latest, otp: "27", gleam: "1.18.1" }
-          - { os: macos-latest, otp: "27", gleam: "1.18.1" }
+          - { os: ubuntu-latest, otp: "27", gleam: "1.19.1" }
+          - { os: macos-latest, otp: "27", gleam: "1.19.1" }
 
           # The oldest Gleam that can build it, which stdlib sets rather than
           # anything here. A claim in a manifest is read as a fact by whoever
@@ -71,6 +71,6 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "29"
-          gleam-version: "1.18.1"
+          gleam-version: "1.19.1"
           rebar3-version: "3"
       - run: gleam format --check src test

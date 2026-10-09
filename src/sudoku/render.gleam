@@ -1225,4 +1225,5 @@ fn editor_status(current: Editor, clashes: Set(Int)) -> List(String) {
   ["", term.styled(palette.dim(), facts), current.message]
 }
 
-const editor_key_hints = "arrows/hjkl move  \u{2502}  1-9 type  \u{2502}  0 gap  \u{2502}  p play  \u{2502}  ? help  \u{2502}  q quit"
+const editor_key_hints =
+  "arrows/hjkl move  \u{2502}  1-9 type  \u{2502}  0 gap  \u{2502}  p play  \u{2502}  ? help  \u{2502}  q quit"
